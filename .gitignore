@@ -1,0 +1,9 @@
+.env
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+postgres-data/
+redis-data/
