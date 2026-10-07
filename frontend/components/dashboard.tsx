@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { api } from "../lib/api";
 import { Shell, ShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -21,14 +21,9 @@ type DashboardData = {
   lifetime_withdrawn: Amount;
   currency: string;
   user: ShellUser & {
-    id: string;
-    country: string;
-    referral_code: string;
     referral_url: string;
-    created_at: string;
   };
   stats: {
-    completed_offers: number;
     referrals: number;
     active_referrals: number;
     today_earnings: Amount;
@@ -38,48 +33,6 @@ type DashboardData = {
     pending_referral_earnings: Amount;
   };
   earnings_chart: Array<{ date: string; amount: Amount }>;
-  recent_transactions: Array<{
-    id: string;
-    type: string;
-    amount: Amount;
-    currency: string;
-    status: string;
-    description: string;
-    created_at: string;
-  }>;
-  withdrawal_summary: {
-    enabled: boolean;
-    minimum_amount: Amount;
-    pending_request: {
-      id: string;
-      amount: Amount;
-      currency: string;
-      status: string;
-      created_at: string;
-    } | null;
-    last_request: {
-      id: string;
-      amount: Amount;
-      currency: string;
-      status: string;
-      created_at: string;
-    } | null;
-  };
-};
-
-type Offer = {
-  id: string;
-  title: string;
-  short_description: string;
-  category: string;
-  country: string;
-  device_type: string;
-  user_reward: Amount;
-  currency: string;
-  estimated_time_minutes: number;
-  difficulty: string;
-  featured: boolean;
-  is_demo: boolean;
 };
 
 const ranges = [
@@ -102,11 +55,6 @@ function dateLabel(value: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function transactionLabel(type: string, description: string) {
-  if (description) return description;
-  return type.toLocaleLowerCase().replaceAll("_", " ");
 }
 
 function DashboardSkeleton() {
@@ -199,17 +147,11 @@ function EarningsChart({ points, currency }: { points: DashboardData["earnings_c
 }
 
 export function Dashboard() {
-  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
-  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [offersLoading, setOffersLoading] = useState(true);
   const [error, setError] = useState("");
-  const [offersError, setOffersError] = useState("");
-  const [search, setSearch] = useState("");
+  const [depositNotice, setDepositNotice] = useState(false);
   const [referralMessage, setReferralMessage] = useState("");
-  const [verificationMessage, setVerificationMessage] = useState("");
-  const [verificationBusy, setVerificationBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -218,26 +160,11 @@ export function Dashboard() {
         if (!active) return;
         setData(result);
         setLoading(false);
-        return api<Offer[]>(
-          `/offers?country=${encodeURIComponent(result.user.country)}&limit=3`,
-        )
-          .then((items) => {
-            if (active) setOffers(items);
-          })
-          .catch((reason: unknown) => {
-            if (active) setOffersError(
-              reason instanceof Error ? reason.message : "Offers could not be loaded.",
-            );
-          })
-          .finally(() => {
-            if (active) setOffersLoading(false);
-          });
       })
       .catch((reason: unknown) => {
         if (active) {
           setError(reason instanceof Error ? reason.message : "Your dashboard could not be loaded.");
           setLoading(false);
-          setOffersLoading(false);
         }
       });
     return () => {
@@ -249,12 +176,6 @@ export function Dashboard() {
     () => new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
     [],
   );
-
-  function searchOffers(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const query = search.trim();
-    router.push(query ? `/offers?search=${encodeURIComponent(query)}` : "/offers");
-  }
 
   async function copyReferralLink() {
     if (!data) return;
@@ -282,19 +203,6 @@ export function Dashboard() {
       return;
     }
     await copyReferralLink();
-  }
-
-  async function resendVerification() {
-    setVerificationBusy(true);
-    setVerificationMessage("");
-    try {
-      const result = await api<{ message: string }>("/auth/resend-verification", { method: "POST" });
-      setVerificationMessage(result.message);
-    } catch (reason) {
-      setVerificationMessage(reason instanceof Error ? reason.message : "Verification email could not be requested.");
-    } finally {
-      setVerificationBusy(false);
-    }
   }
 
   if (loading) {
@@ -329,21 +237,32 @@ export function Dashboard() {
           </Badge>
         </div>
         <div className="welcome-actions">
-          <form className="dashboard-search" onSubmit={searchOffers} role="search">
-            <label className="sr-only" htmlFor="dashboard-offer-search">Search offers</label>
-            <span aria-hidden="true">⌕</span>
-            <Input
-              id="dashboard-offer-search"
-              type="search"
-              placeholder="Search offers"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <Button type="submit">Search</Button>
-          </form>
-          <Button className="primary dashboard-cta" asChild><Link href="/offers">Explore offers <span aria-hidden="true">→</span></Link></Button>
+          <Button
+            className="dashboard-cta deposit-cta"
+            variant="outline"
+            type="button"
+            onClick={() => setDepositNotice((visible) => !visible)}
+            aria-expanded={depositNotice}
+          >
+            <ArrowDownToLine size={16} aria-hidden="true" />
+            Deposit
+          </Button>
+          <Button className="dashboard-cta withdraw-cta" asChild>
+            <Link href="/withdraw">
+              <ArrowUpFromLine size={16} aria-hidden="true" />
+              Withdraw
+            </Link>
+          </Button>
         </div>
       </header>
+
+      {depositNotice && (
+        <Alert className="deposit-notice" role="status">
+          <AlertDescription>
+            Deposits are not available yet. WorkBit does not have an approved bKash or Nagad merchant integration, so no amount can be charged or added.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
 
@@ -398,67 +317,11 @@ export function Dashboard() {
         </article></Card>
       </section>
 
-      <section className="dashboard-primary-grid">
+      <section className="dashboard-primary-grid dashboard-one-column">
         <EarningsChart points={data.earnings_chart} currency={data.currency} />
-        <Card className="panel account-panel" asChild><article>
-          <div className="panel-heading">
-            <div><p className="eyebrow">YOUR ACCOUNT</p><h2>Account health</h2></div>
-            <span className="account-panel-avatar" aria-hidden="true">
-              {data.user.full_name.slice(0, 1).toUpperCase()}
-            </span>
-          </div>
-          <dl className="account-details">
-            <div><dt>Email verification</dt><dd className={data.user.email_verified ? "good-status" : "attention-status"}>{data.user.email_verified ? "Verified" : "Needs verification"}</dd></div>
-            <div><dt>Account status</dt><dd>{data.user.status.replaceAll("_", " ")}</dd></div>
-            <div><dt>Member since</dt><dd>{new Date(data.user.created_at).toLocaleDateString()}</dd></div>
-            <div><dt>Offers completed</dt><dd>{data.stats.completed_offers}</dd></div>
-          </dl>
-          {!data.user.email_verified && (
-            <Button className="secondary-button verification-action" variant="outline" onClick={resendVerification} disabled={verificationBusy} type="button">
-              {verificationBusy ? "Requesting…" : "Resend verification email"}
-            </Button>
-          )}
-          {verificationMessage && <Alert className="inline-status" role="status"><AlertDescription>{verificationMessage}</AlertDescription></Alert>}
-          <p className="security-note"><span aria-hidden="true">✓</span> Your balances and reward history are protected by the server-side wallet ledger.</p>
-        </article></Card>
       </section>
 
-      <section className="dashboard-content-grid">
-        <Card className="panel offers-panel" asChild><article>
-          <div className="panel-heading">
-            <div><p className="eyebrow">DISCOVER</p><h2>Offers to explore</h2><p className="panel-subtitle">Rewards are set by the offer provider and validated before credit.</p></div>
-            <Link className="text-link" href="/offers">All offers <span aria-hidden="true">→</span></Link>
-          </div>
-          {offersError && <Alert className="state error-state" variant="destructive"><AlertDescription>{offersError}</AlertDescription></Alert>}
-          {offersLoading ? (
-            <div className="offer-preview-grid" aria-label="Loading available offers" aria-busy="true">
-              {[1, 2, 3].map((item) => <Card className="offer-preview skeleton" key={item}><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></Card>)}
-            </div>
-          ) : offers.length > 0 ? (
-            <div className="offer-preview-grid">
-              {offers.map((offer) => (
-                <Card className="offer-preview" key={offer.id}>
-                  <div className="offer-preview-icon" aria-hidden="true">{offer.category === "GAME" ? "◈" : offer.category === "SURVEY" ? "▤" : "✦"}</div>
-                  <span className="offer-category">{offer.category}</span>
-                  <h3>{offer.title}</h3>
-                  <p>{offer.short_description}</p>
-                  <div className="offer-meta">
-                    <span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span>
-                    <span>{offer.difficulty}</span>
-                  </div>
-                  <div className="offer-preview-footer">
-                    <strong>{money(offer.user_reward, offer.currency)}</strong>
-                    <Link href={`/offers/${encodeURIComponent(offer.id)}`}>Details <span aria-hidden="true">→</span></Link>
-                  </div>
-                  {offer.is_demo && <small className="demo-label">Development offer · redirects disabled</small>}
-                </Card>
-              ))}
-            </div>
-          ) : !offersError ? (
-            <div className="dashboard-empty"><strong>No offers available</strong><span>There are no eligible offers for your country right now.</span></div>
-          ) : null}
-        </article></Card>
-
+      <section className="dashboard-content-grid dashboard-one-column">
         <Card className="panel referral-panel" asChild><article>
           <div className="panel-heading">
             <div><p className="eyebrow">INVITE YOUR NETWORK</p><h2>Your referrals</h2></div>
@@ -477,52 +340,6 @@ export function Dashboard() {
           </div>
           <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
           {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
-        </article></Card>
-      </section>
-
-      <section className="dashboard-content-grid lower-dashboard-grid">
-        <Card className="panel transactions-panel" asChild><article>
-          <div className="panel-heading">
-            <div><p className="eyebrow">WALLET LEDGER</p><h2>Recent transactions</h2></div>
-            <Link className="text-link" href="/transactions">View all <span aria-hidden="true">→</span></Link>
-          </div>
-          {data.recent_transactions.length ? (
-            <div className="dashboard-transactions">
-              {data.recent_transactions.map((transaction) => (
-                <div className="dashboard-transaction" key={transaction.id}>
-                  <span className="transaction-icon" aria-hidden="true">
-                    {transaction.type.includes("PENDING") ? "◷" : Number(transaction.amount) < 0 ? "↙" : "↗"}
-                  </span>
-                  <div className="transaction-copy">
-                    <strong>{transactionLabel(transaction.type, transaction.description)}</strong>
-                    <small><time dateTime={transaction.created_at}>{new Date(transaction.created_at).toLocaleString()}</time> · {transaction.status.replaceAll("_", " ")}</small>
-                  </div>
-                  <strong className="transaction-amount">{money(transaction.amount, transaction.currency)}</strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="dashboard-empty"><strong>No transactions yet</strong><span>Validated wallet activity will appear here.</span><Link href="/offers">Browse offers</Link></div>
-          )}
-        </article></Card>
-        <Card className="panel unavailable-panel" asChild><article>
-          <p className="eyebrow">WITHDRAWAL STATUS</p>
-          <h2>{data.withdrawal_summary.pending_request ? "Request in review" : "Manual payouts"}</h2>
-          <p>
-            {data.withdrawal_summary.pending_request
-              ? `Your ${money(data.withdrawal_summary.pending_request.amount, data.currency)} request is ${data.withdrawal_summary.pending_request.status.toLowerCase()}.`
-              : data.withdrawal_summary.enabled
-                ? `Request a manual payout when your available balance reaches ${money(data.withdrawal_summary.minimum_amount, data.currency)}.`
-                : "Withdrawal requests are disabled until secure payout encryption is configured."}
-          </p>
-          <div className="status-list">
-            <div><span className="status-check" aria-hidden="true">✓</span><span>Wallet ledger and history</span><strong>Active</strong></div>
-            <div><span className="status-off" aria-hidden="true">–</span><span>Development offer catalog</span><strong>Demo</strong></div>
-            <div><span className={data.withdrawal_summary.enabled ? "status-check" : "status-off"} aria-hidden="true">{data.withdrawal_summary.enabled ? "✓" : "–"}</span><span>Manual withdrawals</span><strong>{data.withdrawal_summary.enabled ? "Enabled" : "Disabled"}</strong></div>
-          </div>
-          <Link href={data.withdrawal_summary.pending_request ? "/withdrawals" : "/withdraw"} className="text-link">
-            {data.withdrawal_summary.pending_request ? "View withdrawal history" : "Withdrawal details"} <span aria-hidden="true">→</span>
-          </Link>
         </article></Card>
       </section>
 
