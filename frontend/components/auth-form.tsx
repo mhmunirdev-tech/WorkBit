@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
+import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
@@ -80,7 +81,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
   return (
     <main className="auth-page">
       <Link className="brand auth-brand" href="/"><i>W</i> WorkBit</Link>
-      <section className="auth-card ui-card rounded-xl border bg-card text-card-foreground shadow-sm">
+      <Card className="auth-card" asChild><section>
         <p className="eyebrow">{mode === "register" ? "GET STARTED" : "SECURE ACCESS"}</p>
         <h1>{title}</h1>
         <p>
@@ -126,7 +127,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
         {message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
         {mode === "login" && <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link></p>}
         {mode === "register" && <p>Already have an account? <Link href="/login">Sign in</Link></p>}
-      </section>
+      </section></Card>
     </main>
   );
 }

@@ -11,6 +11,7 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Skeleton } from "./ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 type Amount = string | number;
 
@@ -99,19 +100,19 @@ function WithdrawalHistory({ records, currency }: { records: WithdrawalRecord[];
 
   return (
     <div className="withdrawal-table-wrap">
-      <table className="withdrawal-table">
-        <thead><tr><th scope="col">Request</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Submitted</th></tr></thead>
-        <tbody>
+      <Table className="withdrawal-table">
+        <TableHeader><TableRow><TableHead scope="col">Request</TableHead><TableHead scope="col">Amount</TableHead><TableHead scope="col">Status</TableHead><TableHead scope="col">Submitted</TableHead></TableRow></TableHeader>
+        <TableBody>
           {records.map((record) => (
-            <tr key={record.id}>
-              <td><strong>Manual payout</strong><small>{record.destination_hint}</small></td>
-              <td>{formatMoney(record.amount, currency)}</td>
-              <td><Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{readableStatus(record.status)}</Badge></td>
-              <td><time dateTime={record.created_at}>{new Date(record.created_at).toLocaleString()}</time></td>
-            </tr>
+            <TableRow key={record.id}>
+              <TableCell><strong>Manual payout</strong><small>{record.destination_hint}</small></TableCell>
+              <TableCell>{formatMoney(record.amount, currency)}</TableCell>
+              <TableCell><Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{readableStatus(record.status)}</Badge></TableCell>
+              <TableCell><time dateTime={record.created_at}>{new Date(record.created_at).toLocaleString()}</time></TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -189,9 +190,9 @@ export function WithdrawalPage({ historyOnly = false }: { historyOnly?: boolean 
       {summary && (
         <>
           <section className="withdrawal-summary-grid">
-            <article className="dashboard-metric"><p>Available balance</p><h2>{formatMoney(summary.available_balance, summary.currency)}</h2><small>Authoritative backend wallet value</small></article>
-            <article className="dashboard-metric"><p>Minimum request</p><h2>{formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</h2><small>Configured by WorkBit</small></article>
-            <article className="dashboard-metric"><p>Latest request</p><h2 className="withdrawal-latest-value">{summary.withdrawal_summary.last_request ? readableStatus(summary.withdrawal_summary.last_request.status) : "None"}</h2><small>{summary.withdrawal_summary.last_request ? new Date(summary.withdrawal_summary.last_request.created_at).toLocaleDateString() : "No prior payout request"}</small></article>
+            <Card className="dashboard-metric" asChild><article><p>Available balance</p><h2>{formatMoney(summary.available_balance, summary.currency)}</h2><small>Authoritative backend wallet value</small></article></Card>
+            <Card className="dashboard-metric" asChild><article><p>Minimum request</p><h2>{formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</h2><small>Configured by WorkBit</small></article></Card>
+            <Card className="dashboard-metric" asChild><article><p>Latest request</p><h2 className="withdrawal-latest-value">{summary.withdrawal_summary.last_request ? readableStatus(summary.withdrawal_summary.last_request.status) : "None"}</h2><small>{summary.withdrawal_summary.last_request ? new Date(summary.withdrawal_summary.last_request.created_at).toLocaleDateString() : "No prior payout request"}</small></article></Card>
           </section>
 
           {!historyOnly && (

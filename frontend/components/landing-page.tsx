@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { Skeleton } from "./ui/skeleton";
 
 type Offer = {
@@ -63,8 +64,8 @@ export function LandingPage() {
         </div>
         <div className="hero-visual" aria-label="Illustration of an offer and its verification status">
           <div className="visual-orbit orbit-one" /><div className="visual-orbit orbit-two" />
-          <article className="visual-card offer-preview"><span className="preview-icon">✦</span><div><small>OFFER ACTIVITY</small><strong>Task submitted</strong></div><span className="preview-check">✓</span></article>
-          <article className="visual-card balance-preview"><small>REWARD STATUS</small><strong>Verification in progress</strong><div className="progress-track"><i /></div><span>Provider confirmation required</span></article>
+          <Card className="visual-card offer-preview" asChild><article><span className="preview-icon">✦</span><div><small>OFFER ACTIVITY</small><strong>Task submitted</strong></div><span className="preview-check">✓</span></article></Card>
+          <Card className="visual-card balance-preview" asChild><article><small>REWARD STATUS</small><strong>Verification in progress</strong><div className="progress-track"><i /></div><span>Provider confirmation required</span></article></Card>
           <div className="visual-stamp">TRACKED<br />BY LEDGER</div>
         </div>
       </section>
@@ -95,7 +96,12 @@ export function LandingPage() {
 
       <section className="benefit-band"><div className="section-wrap benefits"><div><span className="eyebrow">BUILT AROUND CLARITY</span><h2>Know what is pending.<br />Know what is available.</h2></div><div className="benefit-list"><p><b>01</b><span><strong>Transparent status</strong>Understand when an offer is awaiting provider confirmation.</span></p><p><b>02</b><span><strong>Wallet records</strong>Balances reflect backend ledger transactions, not browser estimates.</span></p><p><b>03</b><span><strong>Careful verification</strong>Conversions are reviewed before a reward is decided.</span></p></div></div></section>
 
-      <section className="section-wrap faq-section" id="faq"><div className="section-heading"><span className="eyebrow">GOOD TO KNOW</span><h2>Frequently asked questions</h2></div><div className="faq-grid"><details><summary>When does a reward appear?</summary><p>After a provider reports a conversion and it passes server-side validation, WorkBit records the reward decision. Some rewards may remain pending.</p></details><details><summary>Can every offer be completed?</summary><p>Availability and requirements vary by provider, country, and device. Review the offer details before starting.</p></details><details><summary>Does completing a task guarantee payment?</summary><p>No. The provider must confirm the conversion and the reward must satisfy the applicable policy.</p></details><details><summary>Where can I see reward activity?</summary><p>Sign in to view wallet balances, reward decisions, and ledger transactions associated with your account.</p></details></div></section>
+      <section className="section-wrap faq-section" id="faq"><div className="section-heading"><span className="eyebrow">GOOD TO KNOW</span><h2>Frequently asked questions</h2></div><Accordion className="faq-grid" type="single" collapsible>
+        <AccordionItem className="faq-item" value="reward"><AccordionTrigger className="faq-question">When does a reward appear?</AccordionTrigger><AccordionContent className="faq-answer">After a provider reports a conversion and it passes server-side validation, WorkBit records the reward decision. Some rewards may remain pending.</AccordionContent></AccordionItem>
+        <AccordionItem className="faq-item" value="eligibility"><AccordionTrigger className="faq-question">Can every offer be completed?</AccordionTrigger><AccordionContent className="faq-answer">Availability and requirements vary by provider, country, and device. Review the offer details before starting.</AccordionContent></AccordionItem>
+        <AccordionItem className="faq-item" value="payment"><AccordionTrigger className="faq-question">Does completing a task guarantee payment?</AccordionTrigger><AccordionContent className="faq-answer">No. The provider must confirm the conversion and the reward must satisfy the applicable policy.</AccordionContent></AccordionItem>
+        <AccordionItem className="faq-item" value="activity"><AccordionTrigger className="faq-question">Where can I see reward activity?</AccordionTrigger><AccordionContent className="faq-answer">Sign in to view wallet balances, reward decisions, and ledger transactions associated with your account.</AccordionContent></AccordionItem>
+      </Accordion></section>
 
       <section className="final-cta"><span className="eyebrow">YOUR NEXT STEP</span><h2>Explore with clear expectations.</h2><p>Create an account to view your wallet and keep track of verified offer activity.</p><Button className="primary" asChild><Link href="/register">Create your WorkBit account</Link></Button></section>
 

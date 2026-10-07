@@ -128,8 +128,6 @@ export function AdminWithdrawals() {
               {records.map((record) => (
                 <Button
                   variant="ghost"
-                  asChild
-                ><button
                   className={`admin-withdrawal-item${selected?.id === record.id ? " is-selected" : ""}`}
                   type="button"
                   key={record.id}
@@ -139,7 +137,7 @@ export function AdminWithdrawals() {
                   <span><strong>{formatMoney(record.amount, record.currency)}</strong><small>{record.destination_hint}</small></span>
                   <Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{record.status.toLowerCase()}</Badge>
                   <time dateTime={record.created_at}>{new Date(record.created_at).toLocaleDateString()}</time>
-                </button></Button>
+                </Button>
               ))}
             </div>
           )}

@@ -19,6 +19,10 @@ WorkBit is a web reward marketplace foundation: users discover legitimate offers
 4. From `backend/`, run `python -m alembic upgrade head`, `python -m app.services.seed`, then `python -m uvicorn app.main:app --reload`. Seed each new database before accepting registrations, and make sure the seed command and API use the same configured `DATABASE_URL`.
 5. From `frontend/`, run `npm install` and `npm run dev`.
 
+## Deploying frontend and API on Vercel
+
+Deploy `backend/` and `frontend/` as separate Vercel projects. Set the backend project's Root Directory to `backend` and the frontend project's Root Directory to `frontend`. The frontend proxies `/api/v1/*` requests to `https://work-bit.vercel.app` by default; set `BACKEND_URL` in the frontend project's Vercel environment variables if the API uses a different origin. Leave `NEXT_PUBLIC_API_URL` unset or set it to `/api/v1` so browser requests and the session cookie stay on the frontend's origin. Set `FRONTEND_ORIGIN` in the backend project to the frontend's exact production origin, then redeploy both projects after changing environment variables.
+
 WorkBit is a FastAPI service, not a Django project: there is no `manage.py`; start the API with Uvicorn as above. The admin withdrawal review screen is available at `/admin` to authenticated users with the required backend permissions.
 
 Docker Compose remains available for containerized development/deployment, but is not required for local development. The current API does not require Redis.

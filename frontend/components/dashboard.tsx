@@ -348,54 +348,54 @@ export function Dashboard() {
       {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
 
       <section className="dashboard-metrics" aria-label="Account balances and earnings">
-        <article className="dashboard-metric balance-metric">
+        <Card className="dashboard-metric balance-metric" asChild><article>
           <span className="metric-icon icon-blue" aria-hidden="true">◈</span>
           <p>Available balance</p>
           <h2>{money(data.available_balance, data.currency)}</h2>
           <Link href="/wallet">Open wallet <span aria-hidden="true">→</span></Link>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-amber" aria-hidden="true">◷</span>
           <p>Pending balance</p>
           <h2>{money(data.pending_balance, data.currency)}</h2>
           <small>Awaiting provider validation</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-green" aria-hidden="true">✧</span>
           <p>Earned today</p>
           <h2>{money(data.stats.today_earnings, data.currency)}</h2>
           <small>Approved ledger credits</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-green" aria-hidden="true">↗</span>
           <p>Earned this week</p>
           <h2>{money(data.stats.week_earnings, data.currency)}</h2>
           <small>Approved ledger credits</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-blue" aria-hidden="true">◷</span>
           <p>Earned this month</p>
           <h2>{money(data.stats.month_earnings, data.currency)}</h2>
           <small>Approved ledger credits</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
           <p>Lifetime earnings</p>
           <h2>{money(data.lifetime_earned, data.currency)}</h2>
           <small>Recorded by WorkBit</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-green" aria-hidden="true">◎</span>
           <p>Referral earnings</p>
           <h2>{money(data.stats.referral_earnings, data.currency)}</h2>
           <small>{money(data.stats.pending_referral_earnings, data.currency)} pending</small>
-        </article>
-        <article className="dashboard-metric">
+        </article></Card>
+        <Card className="dashboard-metric" asChild><article>
           <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
           <p>Total withdrawn</p>
           <h2>{money(data.lifetime_withdrawn, data.currency)}</h2>
           <small>Completed wallet movements</small>
-        </article>
+        </article></Card>
       </section>
 
       <section className="dashboard-primary-grid">

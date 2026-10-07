@@ -9,6 +9,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 
 type Wallet = {
   available_balance: string;
@@ -71,7 +72,7 @@ export function WalletPage() {
         ["Pending", data.pending_balance, "Awaiting provider confirmation"],
         ["Lifetime earned", data.lifetime_earned, "Ledger-recorded"],
         ["Lifetime withdrawn", data.lifetime_withdrawn, "Completed withdrawals"],
-      ].map(([title, value, note]) => <article className="stat" key={title}><p>{title}</p><h2>{amount(value, data.currency)}</h2><small>{note}</small></article>)}
+      ].map(([title, value, note]) => <Card className="stat" asChild key={title}><article><p>{title}</p><h2>{amount(value, data.currency)}</h2><small>{note}</small></article></Card>)}
     </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p>New eligible rewards can remain pending while provider confirmation is outstanding. Only approved rewards become available. Each balance movement is backed by a wallet ledger transaction.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
   </Shell>;
 }
@@ -79,7 +80,7 @@ export function WalletPage() {
 export function TransactionsPage() {
   const { data, loading, error } = useAccountData<Transaction[]>("/wallet/transactions");
   return <Shell><header className="top"><div><p className="eyebrow">WALLET LEDGER</p><h1>Transactions</h1><p className="muted">Append-only records of movements that affect your wallet.</p></div></header>
-    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel table-panel"><div className="ledger-table" role="table" aria-label="Wallet transactions"><div className="ledger-row ledger-heading" role="row"><span>Transaction</span><span>Amount</span><span>Status</span><span>Created</span></div>{data.map((item) => <div className="ledger-row" role="row" key={item.id}><span><strong>{item.description || item.type.replaceAll("_", " ")}</strong><small>{item.type.replaceAll("_", " ")}</small></span><strong>{amount(item.amount, item.currency)}</strong><Badge className="status-badge" variant="outline">{item.status}</Badge><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></div>)}</div></Card>}</PageState>
+    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel table-panel"><Table className="ledger-table" aria-label="Wallet transactions"><TableHeader><TableRow className="ledger-heading"><TableHead>Transaction</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead></TableRow></TableHeader><TableBody>{data.map((item) => <TableRow className="ledger-row" key={item.id}><TableCell><strong>{item.description || item.type.replaceAll("_", " ")}</strong><small>{item.type.replaceAll("_", " ")}</small></TableCell><TableCell><strong>{amount(item.amount, item.currency)}</strong></TableCell><TableCell><Badge className="status-badge" variant="outline">{item.status}</Badge></TableCell><TableCell><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></TableCell></TableRow>)}</TableBody></Table></Card>}</PageState>
   </Shell>;
 }
 
