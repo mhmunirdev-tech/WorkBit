@@ -11,6 +11,7 @@ class DashboardUser(BaseModel):
     country: str
     status: str
     email_verified: bool
+    avatar_url: str | None = None
     referral_code: str
     referral_url: str
     created_at: datetime

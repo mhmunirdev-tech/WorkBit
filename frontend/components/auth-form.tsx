@@ -10,7 +10,13 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
+export function AuthForm({
+  mode,
+  defaultDestination = "/dashboard",
+}: {
+  mode: "login" | "register" | "forgot";
+  defaultDestination?: string;
+}) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [referralCode, setReferralCode] = useState("");
@@ -34,10 +40,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" | "forgot" }) {
           body: JSON.stringify({ email: data.get("email"), password: data.get("password") }),
         });
         const requestedPath = new URLSearchParams(window.location.search).get("returnTo");
+        const requestedPathname = requestedPath?.split("?")[0].replace(/\/+$/, "") || "";
+        const isAdminLogin = defaultDestination === "/admin";
+        const safeRequestedPath = isAdminLogin
+          ? requestedPathname === "/admin" || requestedPathname.startsWith("/admin/")
+            ? requestedPathname === "/admin/login" ? null : requestedPath
+            : null
+          : requestedPathname === "/login" || requestedPathname === "/admin/login"
+            ? null
+            : requestedPath;
         const destination =
-          requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
-            ? requestedPath
-            : "/dashboard";
+          safeRequestedPath?.startsWith("/") && !safeRequestedPath.startsWith("//")
+            ? safeRequestedPath
+            : defaultDestination;
         window.location.assign(destination);
         return;
       }

@@ -25,11 +25,18 @@ function statusMessage(status: number): string {
 }
 
 function redirectToLogin(): void {
-  if (typeof window === "undefined" || window.location.pathname === "/login") return;
-  const returnTo = `${window.location.pathname}${window.location.search}`;
-  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) return;
-  const query = new URLSearchParams({ returnTo });
-  window.location.replace(`/login?${query.toString()}`);
+  if (typeof window === "undefined") return;
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const loginPath = isAdminRoute ? "/admin/login" : "/login";
+  if (pathname === loginPath) return;
+
+  const returnTo = `${pathname}${window.location.search}`;
+  const safeReturnTo = returnTo.startsWith("/") && !returnTo.startsWith("//")
+    ? returnTo
+    : loginPath === "/admin/login" ? "/admin" : "/dashboard";
+  const query = new URLSearchParams({ returnTo: safeReturnTo });
+  window.location.replace(`${loginPath}?${query.toString()}`);
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -37,14 +44,15 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const timeout = window.setTimeout(() => controller.abort(), 15_000);
 
   try {
+    const headers = new Headers(init.headers);
+    if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json");
+    }
     const response = await fetch(`${apiUrl}${path}`, {
       ...init,
       signal: init.signal ?? controller.signal,
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...init.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {

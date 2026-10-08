@@ -142,6 +142,58 @@ def test_user_dashboard_is_authenticated_and_returns_own_summary(client):
     assert dashboard["withdrawal_summary"]["pending_request"] is None
     assert "password_hash" not in dashboard["user"]
 
+def test_reset_password_requires_strong_password_and_updates_login(client, monkeypatch):
+    issued_tokens = []
+    monkeypatch.setattr(
+        auth_service.email_service,
+        "send_password_reset",
+        lambda _recipient, token: issued_tokens.append(token),
+    )
+
+    created = client.post("/api/v1/auth/register", json=registration())
+    assert created.status_code == 201
+
+    weak = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": "1234567890abcdef1234567890abcdef",
+            "password": "weakpass",
+            "confirm_password": "weakpass",
+        },
+    )
+    assert weak.status_code == 422
+
+    reset = client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "taylor@example.com"},
+    )
+    assert reset.status_code == 202
+    assert len(issued_tokens) == 1
+
+    response = client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": issued_tokens[0],
+            "password": "NewStrongPassword456",
+            "confirm_password": "NewStrongPassword456",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["message"] == "Password updated."
+
+    old_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "taylor@example.com", "password": "StrongPassword123"},
+    )
+    assert old_login.status_code == 401
+
+    new_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "taylor@example.com", "password": "NewStrongPassword456"},
+    )
+    assert new_login.status_code == 200
+
+
 def test_forgot_password_is_non_enumerating(client):
     response = client.post("/api/v1/auth/forgot-password", json={"email":"nobody@example.com"})
     assert response.status_code == 202

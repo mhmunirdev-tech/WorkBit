@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     email_provider: str = "resend"
     email_api_key: str | None = None
     email_from_address: str | None = None
+    cloudinary_cloud_name: str | None = None
+    cloudinary_api_key: str | None = None
+    cloudinary_api_secret: str | None = None
     enable_mock_rewards: bool = False
     withdrawal_minimum_amount: Decimal = Field(default=Decimal("5.00"), gt=0, max_digits=18, decimal_places=8)
     withdrawal_encryption_key: str | None = None

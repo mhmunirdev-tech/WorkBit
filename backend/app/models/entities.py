@@ -48,10 +48,25 @@ class Profile(Base):
     __tablename__ = "profiles"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     timezone: Mapped[str | None] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     user: Mapped[User] = relationship(back_populates="profile")
+
+
+class DashboardBanner(Base):
+    __tablename__ = "dashboard_banners"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    title: Mapped[str] = mapped_column(String(120))
+    content: Mapped[str] = mapped_column(String(500), default="")
+    image_url: Mapped[str] = mapped_column(String(1024))
+    link_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    sort_order: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
 
 class Role(Base):
     __tablename__ = "roles"

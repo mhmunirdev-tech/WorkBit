@@ -34,6 +34,14 @@ class EmailRequest(BaseModel): email: EmailStr
 class ResetPasswordRequest(TokenRequest):
     password: str = Field(min_length=12, max_length=128)
     confirm_password: str
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not any(c.islower() for c in value) or not any(c.isupper() for c in value) or not any(c.isdigit() for c in value):
+            raise ValueError("password must contain upper, lower, and numeric characters")
+        return value
+
     @model_validator(mode="after")
     def passwords_match(self):
         if self.password != self.confirm_password: raise ValueError("passwords do not match")

@@ -136,6 +136,7 @@ def dashboard(
             country=user.country,
             status=user.status,
             email_verified=user.email_verified,
+            avatar_url=user.profile.avatar_url if user.profile else None,
             referral_code=user.referral_code,
             referral_url=(
                 f"{settings.frontend_origin.rstrip('/')}/register"

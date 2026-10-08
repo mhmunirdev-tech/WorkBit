@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } from "lucide-react";
 import { api } from "../lib/api";
 import { Shell, ShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -13,6 +13,14 @@ import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
 
 type Amount = string | number;
+
+type DashboardBanner = {
+  id: string;
+  title: string;
+  content: string;
+  image_url: string;
+  link_url: string | null;
+};
 
 type DashboardData = {
   available_balance: Amount;
@@ -75,6 +83,81 @@ function DashboardSkeleton() {
         <div className="panel skeleton"><div className="skeleton-bar" /><div className="skeleton-bar chart-skeleton" /></div>
       </div>
     </div>
+  );
+}
+
+function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const banner = banners[activeIndex];
+
+  useEffect(() => {
+    if (banners.length < 2 || paused) return;
+    const timer = window.setInterval(() => {
+      setActiveIndex((index) => (index + 1) % banners.length);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [banners.length, paused]);
+
+  if (!banner) return null;
+
+  function showPrevious() {
+    setActiveIndex((index) => (index - 1 + banners.length) % banners.length);
+  }
+
+  function showNext() {
+    setActiveIndex((index) => (index + 1) % banners.length);
+  }
+
+  const slideContent = (
+    <div className="dashboard-banner-copy">
+      <p className="eyebrow">WORKBIT UPDATE</p>
+      <h2>{banner.title}</h2>
+      {banner.content && <p>{banner.content}</p>}
+    </div>
+  );
+
+  return (
+    <section className="dashboard-banner" aria-label="WorkBit announcements">
+      <img className="dashboard-banner-image" src={banner.image_url} alt={banner.title} />
+      <div className="dashboard-banner-shade" />
+      {banner.link_url ? (
+        <a className="dashboard-banner-link" href={banner.link_url} aria-label={`Read more: ${banner.title}`}>
+          {slideContent}
+        </a>
+      ) : slideContent}
+      {banners.length > 1 && (
+        <div className="dashboard-banner-controls" aria-label="Banner controls">
+          <Button variant="ghost" size="icon" type="button" aria-label="Previous banner" onClick={showPrevious}>
+            <ArrowLeft size={17} />
+          </Button>
+          <div className="dashboard-banner-dots" role="group" aria-label="Choose a banner">
+            {banners.map((item, index) => (
+              <button
+                key={item.id}
+                className={`dashboard-banner-dot${index === activeIndex ? " is-active" : ""}`}
+                type="button"
+                aria-label={`Show banner ${index + 1}: ${item.title}`}
+                aria-pressed={index === activeIndex}
+                onClick={() => setActiveIndex(index)}
+              />
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            aria-label={paused ? "Resume automatic banner rotation" : "Pause automatic banner rotation"}
+            onClick={() => setPaused((value) => !value)}
+          >
+            {paused ? <Play size={15} /> : <Pause size={15} />}
+          </Button>
+          <Button variant="ghost" size="icon" type="button" aria-label="Next banner" onClick={showNext}>
+            <ArrowRight size={17} />
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -152,6 +235,8 @@ export function Dashboard() {
   const [error, setError] = useState("");
   const [depositNotice, setDepositNotice] = useState(false);
   const [referralMessage, setReferralMessage] = useState("");
+  const [banners, setBanners] = useState<DashboardBanner[]>([]);
+  const [bannerError, setBannerError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -165,6 +250,22 @@ export function Dashboard() {
         if (active) {
           setError(reason instanceof Error ? reason.message : "Your dashboard could not be loaded.");
           setLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api<DashboardBanner[]>("/dashboard/banners")
+      .then((result) => {
+        if (active) setBanners(result);
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setBannerError(reason instanceof Error ? reason.message : "Announcements could not be loaded.");
         }
       });
     return () => {
@@ -223,9 +324,15 @@ export function Dashboard() {
   }
 
   const firstName = data.user.full_name.trim().split(/\s+/)[0] || "there";
-
   return (
     <Shell user={data.user}>
+      {banners.length > 0 && <BannerCarousel banners={banners} />}
+      {bannerError && (
+        <Alert className="state error-state" variant="destructive" role="alert">
+          <AlertDescription>{bannerError}</AlertDescription>
+        </Alert>
+      )}
+
       <header className="dashboard-welcome">
         <div className="welcome-copy">
           <p className="eyebrow">{displayDate}</p>

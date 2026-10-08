@@ -111,7 +111,7 @@ export function AdminWithdrawals() {
         </div>
         <div className="admin-withdrawals-links">
           <Button className="secondary-button" variant="outline" type="button" onClick={() => void refresh()} disabled={loading || busy}>Refresh</Button>
-          <Button variant="link" asChild><Link href="/dashboard">User dashboard</Link></Button>
+          <Button variant="link" asChild><Link href="/admin">Admin overview</Link></Button>
         </div>
       </header>
 
