@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Table, Column, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Table, Column, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import event
 from app.database.base import Base
@@ -174,6 +174,7 @@ class AuthToken(Base):
     purpose: Mapped[str] = mapped_column(String(32), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 

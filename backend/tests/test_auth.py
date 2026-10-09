@@ -19,26 +19,28 @@ def test_registration_creates_wallet(client):
     assert response.status_code == 201
     assert response.json()["email"] == "taylor@example.com"
 
-def test_registration_verification_link_token_activates_account(client, monkeypatch):
-    issued_tokens = []
+def test_registration_verification_otp_activates_account(client, monkeypatch):
+    issued_codes = []
     monkeypatch.setattr(
         auth_service.email_service,
         "send_verification",
-        lambda _recipient, token: issued_tokens.append(token),
+        lambda _recipient, code: issued_codes.append(code),
     )
     created = client.post("/api/v1/auth/register", json=registration())
     assert created.status_code == 201
-    assert len(issued_tokens) == 1
+    assert len(issued_codes) == 1
+    assert len(issued_codes[0]) == 6
+    assert issued_codes[0].isdigit()
 
     verified = client.post(
         "/api/v1/auth/verify-email",
-        json={"token": issued_tokens[0]},
+        json={"email": "taylor@example.com", "code": issued_codes[0]},
     )
     assert verified.status_code == 200
     assert verified.json()["message"] == "Email verified."
     reused = client.post(
         "/api/v1/auth/verify-email",
-        json={"token": issued_tokens[0]},
+        json={"email": "taylor@example.com", "code": issued_codes[0]},
     )
     assert reused.status_code == 400
     login = client.post(
@@ -47,6 +49,89 @@ def test_registration_verification_link_token_activates_account(client, monkeypa
     )
     assert login.status_code == 200
     assert login.json()["email_verified"] is True
+
+def test_verification_otp_rejects_wrong_code_and_locks_after_five_attempts(client, monkeypatch):
+    codes = []
+    monkeypatch.setattr(
+        auth_service.email_service,
+        "send_verification",
+        lambda _recipient, code: codes.append(code),
+    )
+    assert client.post("/api/v1/auth/register", json=registration()).status_code == 201
+    for _ in range(5):
+        response = client.post(
+            "/api/v1/auth/verify-email",
+            json={"email": "taylor@example.com", "code": "000000" if codes[0] != "000000" else "000001"},
+        )
+        assert response.status_code == 400
+    locked = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": "taylor@example.com", "code": codes[0]},
+    )
+    assert locked.status_code == 400
+
+def test_resend_verification_replaces_old_otp_and_is_rate_limited(client, monkeypatch):
+    from app.services.rate_limit import _hits
+
+    codes = []
+    monkeypatch.setattr(
+        auth_service.email_service,
+        "send_verification",
+        lambda _recipient, code: codes.append(code),
+    )
+    assert client.post("/api/v1/auth/register", json=registration()).status_code == 201
+    _hits.clear()
+    first = client.post(
+        "/api/v1/auth/request-verification",
+        json={"email": "taylor@example.com"},
+    )
+    assert first.status_code == 202
+    assert len(codes) == 2
+    cooldown = client.post(
+        "/api/v1/auth/request-verification",
+        json={"email": "taylor@example.com"},
+    )
+    assert cooldown.status_code == 429
+
+    old_code = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": "taylor@example.com", "code": codes[0]},
+    )
+    assert old_code.status_code == 400
+    new_code = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": "taylor@example.com", "code": codes[1]},
+    )
+    assert new_code.status_code == 200
+
+def test_verification_otp_expires(client, monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.database.session import get_db
+    from app.models import AuthToken
+
+    code = []
+    monkeypatch.setattr(
+        auth_service.email_service,
+        "send_verification",
+        lambda _recipient, value: code.append(value),
+    )
+    assert client.post("/api/v1/auth/register", json=registration()).status_code == 201
+
+    session_generator = app.dependency_overrides[get_db]()
+    db = next(session_generator)
+    try:
+        token = db.query(AuthToken).filter(AuthToken.purpose == "VERIFY_EMAIL").one()
+        token.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        db.commit()
+    finally:
+        session_generator.close()
+
+    response = client.post(
+        "/api/v1/auth/verify-email",
+        json={"email": "taylor@example.com", "code": code[0]},
+    )
+    assert response.status_code == 400
 
 def test_duplicate_email(client):
     client.post("/api/v1/auth/register", json=registration())

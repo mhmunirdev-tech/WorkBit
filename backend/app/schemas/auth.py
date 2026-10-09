@@ -31,6 +31,9 @@ class LoginRequest(BaseModel):
 
 class TokenRequest(BaseModel): token: str = Field(min_length=20, max_length=512)
 class EmailRequest(BaseModel): email: EmailStr
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
 class ResetPasswordRequest(TokenRequest):
     password: str = Field(min_length=12, max_length=128)
     confirm_password: str

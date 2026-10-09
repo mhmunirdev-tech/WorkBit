@@ -225,7 +225,6 @@ export function ProfilePage() {
             <Card className="panel profile-detail-card">
               <div className="profile-section-heading">
                 <div><p className="eyebrow">INVITE & EARN</p><h2>Your referral program</h2></div>
-                <Link href="/referrals">View referrals <ArrowUpRight size={14} /></Link>
               </div>
               <p className="profile-section-copy">Share your personal invite link and follow the referral activity linked to your account.</p>
               <label className="profile-field-label" htmlFor="profile-referral-link">Your referral link</label>

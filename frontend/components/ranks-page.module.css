@@ -1,0 +1,464 @@
+.page {
+  display: grid;
+  gap: 22px;
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading h1 {
+  margin: 0 0 7px;
+  font-size: 30px;
+  letter-spacing: -0.7px;
+}
+
+.heading p:last-child {
+  margin-bottom: 0;
+}
+
+.refresh {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.loading {
+  display: grid;
+  gap: 15px;
+  padding: 24px;
+}
+
+.yourRank {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.8fr) minmax(280px, 1.2fr);
+  align-items: center;
+  gap: 28px;
+  padding: 24px;
+}
+
+.yourRankIdentity,
+.member {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.avatar {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border: 1px solid #c7f5e4;
+  background: #edfff8;
+  color: #008b64;
+  font-weight: 800;
+}
+
+.overline {
+  margin: 0 0 5px;
+  color: #74849a;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+}
+
+.yourRank h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+}
+
+.yourRankIdentity span {
+  color: #718096;
+  font-size: 12px;
+}
+
+.rankProgress {
+  min-width: 0;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  color: #66768d;
+  font-size: 12px;
+}
+
+.progressTrack {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #edf1f6;
+}
+
+.progressTrack span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #00a876, #4bd7aa);
+  transition: width 250ms ease;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #e8edf4;
+  border-radius: 13px;
+  background: white;
+}
+
+.tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #56667c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tabs button.selectedTab {
+  background: #00a876;
+  color: white;
+  box-shadow: 0 3px 8px #00a8762b;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.sortLabel select {
+  height: 40px;
+  max-width: 180px;
+  padding: 0 28px 0 11px;
+  border: 1px solid #e0e7ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #34445b;
+  font: inherit;
+  font-size: 12px;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  width: min(250px, 30vw);
+  padding: 0 10px;
+  border: 1px solid #e0e7ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #8b9ab0;
+}
+
+.search input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #34445b;
+  font: inherit;
+  font-size: 12px;
+}
+
+.tableCard {
+  overflow: hidden;
+  padding: 0;
+}
+
+.tableScroll {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 700px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  padding: 17px 20px;
+  background: #f3f7fb;
+  color: #53647d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 24px;
+}
+
+.table td {
+  height: 76px;
+  padding: 12px 20px;
+  border-top: 1px solid #f0f3f7;
+  color: #24354d;
+  font-size: 13px;
+}
+
+.table tbody tr:nth-child(even) {
+  background: #fafbfd;
+}
+
+.position {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  background: #f1f4f8;
+  color: #65758a;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.position1 {
+  background: #fff1cc;
+  color: #aa7100;
+}
+
+.position2 {
+  background: #e8edf3;
+  color: #5d6c7e;
+}
+
+.position3 {
+  background: #fff0e2;
+  color: #b96a20;
+}
+
+.memberAvatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid #d5f6e8;
+  background: #edfff8;
+  color: #008b64;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.member strong {
+  overflow: hidden;
+  max-width: 240px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rankStarter {
+  color: #718096;
+  background: #f4f6f8;
+}
+
+.rankBronze {
+  color: #a35c2c;
+  background: #fff4eb;
+}
+
+.rankSilver {
+  color: #62738b;
+  background: #f2f5fa;
+}
+
+.rankGold {
+  color: #a77b00;
+  background: #fff8dd;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.empty {
+  height: 100px !important;
+  color: #74849a !important;
+  text-align: center;
+}
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.tierCard {
+  display: flex;
+  min-height: 205px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px;
+}
+
+.currentTier {
+  border-color: #5bd2a9;
+  box-shadow: 0 0 0 2px #00a87612;
+}
+
+.tierIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  margin-bottom: 18px;
+  border-radius: 12px;
+}
+
+.tierCard h2 {
+  margin: 2px 0 5px;
+  font-size: 19px;
+}
+
+.threshold {
+  margin: 0 0 17px;
+  color: #697991;
+  font-size: 12px;
+}
+
+.tierStatus {
+  margin-top: auto;
+  color: #8491a3;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+}
+
+.achieved {
+  color: #00a876;
+}
+
+.note {
+  margin: -7px 0 0;
+  color: #78879b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 850px) {
+  .yourRank {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    gap: 16px;
+  }
+
+  .heading h1 {
+    font-size: 26px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tabs button {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .filters {
+    align-items: stretch;
+  }
+
+  .sortLabel {
+    flex: 0 0 auto;
+  }
+
+  .sortLabel select {
+    max-width: 160px;
+    height: 42px;
+  }
+
+  .search {
+    flex: 1;
+    width: auto;
+  }
+
+  .progressLabels {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
+
+@media (max-width: 400px) {
+  .tiers {
+    grid-template-columns: 1fr;
+  }
+}

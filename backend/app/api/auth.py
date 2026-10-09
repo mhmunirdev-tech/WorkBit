@@ -6,12 +6,34 @@ from app.api.deps import current_user
 from app.core.config import settings
 from app.database.session import get_db
 from app.models import User
-from app.schemas.auth import EmailRequest, LoginRequest, RegisterRequest, ResetPasswordRequest, TokenRequest, UserResponse
+from app.schemas.auth import EmailRequest, LoginRequest, RegisterRequest, ResetPasswordRequest, TokenRequest, UserResponse, VerifyEmailRequest
 from app.security.tokens import create_session
-from app.services.auth import authenticate, consume_token, issue_token, register, user_response
+from app.services.auth import authenticate, consume_token, issue_token, issue_verification_code, register, user_response, verify_email_code
 from app.services.email import EmailDeliveryError, email_service
+from app.services.rate_limit import enforce_cooldown
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
+OTP_RESEND_COOLDOWN_SECONDS = 60
+
+def send_verification_code(db: Session, user: User) -> None:
+    try:
+        email_service.send_verification(user.email, issue_verification_code(db, user))
+    except EmailDeliveryError as error:
+        db.rollback()
+        raise HTTPException(
+            503,
+            "Verification email could not be delivered. Check the email provider configuration and try again.",
+        ) from error
+    db.commit()
+
+def check_resend_cooldown(request: Request, email: str) -> None:
+    client_host = request.client.host if request.client else "unknown"
+    enforce_cooldown(
+        f"verify-email:{client_host}:{email.lower()}",
+        seconds=OTP_RESEND_COOLDOWN_SECONDS,
+        message="Please wait before requesting another verification code.",
+    )
+
 def set_session(response: Response, user_id: str) -> None:
     response.set_cookie(settings.session_cookie_name, create_session(user_id), max_age=settings.session_max_age_seconds, httponly=True, secure=settings.environment == "production", samesite="lax", path="/")
 
@@ -26,25 +48,28 @@ def logout(response: Response): response.delete_cookie(settings.session_cookie_n
 @router.get("/me", response_model=UserResponse)
 def me(user: User = Depends(current_user)): return user_response(user)
 @router.post("/verify-email")
-def verify_email(data: TokenRequest, db: Session = Depends(get_db)):
-    user = consume_token(db, data.token, "VERIFY_EMAIL")
-    user.email_verified = True
-    if user.status == "PENDING_VERIFICATION":
-        user.status = "ACTIVE"
-    db.commit()
+def verify_email(data: VerifyEmailRequest, db: Session = Depends(get_db)):
+    verify_email_code(db, str(data.email), data.code)
     return {"success": True, "message": "Email verified."}
+
+@router.post("/request-verification", status_code=202)
+def request_verification(data: EmailRequest, request: Request, db: Session = Depends(get_db)):
+    email = str(data.email).lower()
+    check_resend_cooldown(request, email)
+    user = db.scalar(select(User).where(User.email == email))
+    if user and not user.email_verified:
+        send_verification_code(db, user)
+    return {"success": True, "message": "If the account needs verification, a code has been sent."}
+
 @router.post("/resend-verification", status_code=202)
-def resend_verification(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def resend_verification(
+    request: Request,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
     if not user.email_verified:
-        try:
-            email_service.send_verification(user.email, issue_token(db, user, "VERIFY_EMAIL"))
-        except EmailDeliveryError as error:
-            db.rollback()
-            raise HTTPException(
-                503,
-                "Verification email could not be delivered. Check the email provider configuration and try again.",
-            ) from error
-        db.commit()
+        check_resend_cooldown(request, user.email)
+        send_verification_code(db, user)
     return {"success": True, "message": "If needed, a verification email has been sent."}
 @router.post("/forgot-password", status_code=202)
 def forgot_password(data: EmailRequest, db: Session = Depends(get_db)):

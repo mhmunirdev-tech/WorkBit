@@ -8,6 +8,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.offers import router as offers_router
 from app.api.postbacks import router as postbacks_router
 from app.api.profile import router as profile_router
+from app.api.ranks import router as ranks_router
 from app.api.wallet import router as wallet_router
 from app.api.withdrawals import router as withdrawals_router
 from app.core.config import settings
@@ -36,6 +37,7 @@ app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(offers_router, prefix="/api/v1")
 app.include_router(postbacks_router, prefix="/api/v1")
 app.include_router(profile_router, prefix="/api/v1")
+app.include_router(ranks_router, prefix="/api/v1")
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(withdrawals_router, prefix="/api/v1")
 @app.get("/health", tags=["system"])

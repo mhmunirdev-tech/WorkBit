@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     session_cookie_name: str = "workbit_session"
     session_max_age_seconds: int = 60 * 60 * 24 * 7
     token_ttl_minutes: int = 30
+    email_verification_otp_ttl_minutes: int = Field(default=10, gt=0, le=60)
     email_provider: str = "resend"
     email_api_key: str | None = None
     email_from_address: str | None = None

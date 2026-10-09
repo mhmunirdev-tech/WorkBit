@@ -66,11 +66,12 @@ export function AuthForm({
         return;
       }
 
+      const email = String(data.get("email") ?? "").trim();
       await api("/auth/register", {
         method: "POST",
         body: JSON.stringify({
           full_name: data.get("fullName"),
-          email: data.get("email"),
+          email,
           password: data.get("password"),
           confirm_password: data.get("confirmPassword"),
           country: data.get("country"),
@@ -78,7 +79,7 @@ export function AuthForm({
           terms_accepted: data.get("terms") === "on",
         }),
       });
-      setMessage("Your account was created. Check your email to verify it.");
+      window.location.assign(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The request could not be completed.");
     } finally {

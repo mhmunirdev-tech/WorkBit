@@ -424,6 +424,9 @@
 .text-popover-foreground {
   color: hsl(var(--popover-foreground));
 }
+.overline {
+  text-decoration-line: overline;
+}
 .opacity-50 {
   opacity: 0.5;
 }

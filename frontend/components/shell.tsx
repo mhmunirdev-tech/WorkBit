@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   ArrowDownUp,
+  Award,
   Banknote,
   Gift,
   History,
   Home,
-  Link2,
   LogOut,
   Menu,
   Settings,
@@ -33,7 +33,7 @@ export type ShellUser = {
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/offers": "Explore offers",
-  "/referrals": "Referrals",
+  "/ranks": "Ranks",
   "/wallet": "Wallet",
   "/transactions": "Transactions",
   "/withdraw": "Withdraw",
@@ -46,7 +46,7 @@ const pageTitles: Record<string, string> = {
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/offers", label: "Explore offers", icon: Sparkles },
-  { href: "/referrals", label: "Referrals", icon: Link2 },
+  { href: "/ranks", label: "Ranks", icon: Award },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/transactions", label: "Transactions", icon: ArrowDownUp },
   { href: "/withdraw", label: "Withdraw", icon: Banknote },
@@ -143,6 +143,7 @@ export function Shell({
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
+            const icon = <span className="nav-icon" aria-hidden="true"><item.icon size={17} /></span>;
             return (
               <Link
                 className={`app-nav-link${active ? " is-active" : ""}`}
@@ -151,7 +152,7 @@ export function Shell({
                 key={item.href}
                 onClick={() => setMenuOpen(false)}
               >
-                <span className="nav-icon" aria-hidden="true"><item.icon size={17} /></span>
+                {icon}
                 {item.label}
               </Link>
             );
