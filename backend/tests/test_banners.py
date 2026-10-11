@@ -3,8 +3,9 @@ from app.services.rate_limit import _hits
 
 def login(client, email):
     _hits.clear()
+    route = "/api/v1/auth/admin/login" if email == "workbit-admin@example.com" else "/api/v1/auth/login"
     return client.post(
-        "/api/v1/auth/login",
+        route,
         json={"email": email, "password": "WorkBitDev123!"},
     )
 
@@ -89,4 +90,3 @@ def test_dashboard_banner_admin_routes_require_admin_and_validate_image(client, 
         },
     )
     assert invalid.status_code == 422
-

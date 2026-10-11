@@ -1,6 +1,7 @@
 from sqlalchemy import select
-from app.models import AdNetwork, OfferNetwork
+from app.models import AdNetwork, Offer, OfferNetwork
 from app.services.rate_limit import _hits
+from conftest import activate_package
 
 def login(client):
     response = client.post("/api/v1/auth/login", json={"email":"workbit-user@example.com", "password":"WorkBitDev123!"})
@@ -8,15 +9,48 @@ def login(client):
 
 def test_offer_listing_and_filters(client):
     offers = client.get("/api/v1/offers?country=US").json()
-    assert len(offers) == 3 and all(item["is_demo"] for item in offers)
+    assert len(offers) == 6 and all(item["is_demo"] for item in offers)
+    assert {item["source_name"] for item in offers} == {
+        "Demo Games API",
+        "Demo Surveys API",
+        "Demo Apps API",
+    }
     surveys = client.get("/api/v1/offers?country=US&category=SURVEY").json()
-    assert len(surveys) == 1 and surveys[0]["category"] == "SURVEY"
+    assert len(surveys) == 2 and all(item["category"] == "SURVEY" for item in surveys)
     mobile = client.get("/api/v1/offers?country=US&device=MOBILE").json()
-    assert len(mobile) == 1 and mobile[0]["device_type"] == "MOBILE"
+    assert len(mobile) == 2 and all(item["device_type"] == "MOBILE" for item in mobile)
 
 def test_offer_detail_and_invalid_offer(client):
     assert client.get("/api/v1/offers/mock-game?country=US").status_code == 200
     assert client.get("/api/v1/offers/not-real?country=US").status_code == 404
+
+
+def test_development_offer_content_is_loaded_from_database(client):
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        offer = db.get(Offer, "mock-game")
+        assert offer is not None
+        offer.title = "Database-managed offer"
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/api/v1/offers/mock-game?country=US")
+    assert response.status_code == 200
+    assert response.json()["title"] == "Database-managed offer"
+
+
+def test_demo_offers_are_available_for_the_account_country(client):
+    offers = client.get("/api/v1/offers?country=BD").json()
+
+    assert len(offers) == 6
+    assert all(item["country"] == "BD" for item in offers)
+    detail = client.get("/api/v1/offers/mock-game?country=BD")
+    assert detail.status_code == 200
+    assert detail.json()["country"] == "BD"
+
 
 def test_click_requires_authentication(client):
     assert client.post("/api/v1/offers/mock-game/click").status_code == 401
@@ -24,19 +58,27 @@ def test_click_requires_authentication(client):
 
 def test_unconfigured_provider_never_redirects(client):
     login(client)
+    activate_package(client, "TESTOFFERPAY01")
     assert client.post("/api/v1/offers/mock-game/redirect").status_code == 503
 
 def test_mock_click_is_recorded_without_reward(client):
-    login(client); _hits.clear()
+    activate_package(client, "TESTOFFERPAY02"); _hits.clear()
     response = client.post("/api/v1/offers/mock-game/click", headers={"user-agent":"pytest"})
     assert response.status_code == 202
     assert response.json()["status"] == "recorded"
     assert "No reward" in response.json()["message"]
 
 def test_duplicate_click_is_rate_limited(client):
-    login(client); _hits.clear()
+    activate_package(client, "TESTOFFERPAY03"); _hits.clear()
     assert client.post("/api/v1/offers/mock-game/click").status_code == 202
     assert client.post("/api/v1/offers/mock-game/click").status_code == 429
+
+
+def test_click_requires_an_approved_package(client):
+    login(client)
+    response = client.post("/api/v1/offers/mock-game/click")
+    assert response.status_code == 402
+    assert response.json()["error"]["code"] == "PAYMENT_REQUIRED"
 
 
 def test_seeded_offer_networks_are_disabled_and_secrets_are_env_references(database):
@@ -45,13 +87,21 @@ def test_seeded_offer_networks_are_disabled_and_secrets_are_env_references(datab
     db = SessionLocal()
     try:
         networks = db.scalars(select(OfferNetwork)).all()
-        assert len(networks) == 10
-        assert {network.slug for network in networks} == {
+        provider_networks = [network for network in networks if network.provider != "MOCK"]
+        assert len(provider_networks) == 10
+        assert {network.slug for network in provider_networks} == {
             "lootably", "adgem", "cpalead", "offerwall-gg", "monlix",
             "bitlabs", "adgate", "torox", "adswedmedia", "revu",
         }
-        assert all(not network.enabled and network.status == "NOT_CONFIGURED" for network in networks)
-        assert all(network.api_key_env and network.secret_key_env for network in networks)
+        assert all(not network.enabled and network.status == "NOT_CONFIGURED" for network in provider_networks)
+        assert all(network.api_key_env and network.secret_key_env for network in provider_networks)
+        mock_networks = [network for network in networks if network.provider == "MOCK"]
+        assert {network.name for network in mock_networks} == {
+            "Demo Games API",
+            "Demo Surveys API",
+            "Demo Apps API",
+        }
+        assert all(not network.enabled and network.status == "DEVELOPMENT_ONLY" for network in mock_networks)
         assert not hasattr(OfferNetwork, "api_key")
         assert not hasattr(OfferNetwork, "secret_key")
     finally:

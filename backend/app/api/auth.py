@@ -42,7 +42,16 @@ def create_account(data: RegisterRequest, db: Session = Depends(get_db)):
     user = register(db, data); logging.info("registration user_id=%s", user.id); return user_response(user)
 @router.post("/login", response_model=UserResponse)
 def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
-    user = authenticate(db, str(data.email), data.password); set_session(response, user.id); logging.info("login user_id=%s", user.id); return user_response(user)
+    user = authenticate(db, str(data.email), data.password)
+    if "USER" not in {role.name for role in user.roles}:
+        raise HTTPException(403, "This sign-in page is for user accounts.")
+    set_session(response, user.id); logging.info("login user_id=%s", user.id); return user_response(user)
+@router.post("/admin/login", response_model=UserResponse)
+def admin_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
+    user = authenticate(db, str(data.email), data.password)
+    if "ADMIN" not in {role.name for role in user.roles}:
+        raise HTTPException(403, "This sign-in page is for administrator accounts.")
+    set_session(response, user.id); logging.info("admin login user_id=%s", user.id); return user_response(user)
 @router.post("/logout", status_code=204)
 def logout(response: Response): response.delete_cookie(settings.session_cookie_name, path="/")
 @router.get("/me", response_model=UserResponse)

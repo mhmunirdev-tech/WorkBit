@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import AdminLog, User, Wallet, WalletTransaction, WithdrawalRequest
+from app.models import AdminLog, PayoutSettings, User, Wallet, WalletTransaction, WithdrawalRequest
 
 OUTSTANDING_STATUSES = {"PENDING", "PROCESSING"}
 AAD_PREFIX = b"workbit-withdrawal-destination:v1:"
@@ -62,6 +62,9 @@ def _request_read(withdrawal: WithdrawalRequest) -> dict:
         "id": withdrawal.id,
         "amount": withdrawal.amount,
         "currency": withdrawal.currency,
+        "payout_amount": withdrawal.payout_amount,
+        "payout_currency": withdrawal.payout_currency,
+        "exchange_rate": withdrawal.exchange_rate,
         "method": withdrawal.method,
         "destination_hint": withdrawal.destination_hint,
         "status": withdrawal.status,
@@ -99,18 +102,23 @@ class WithdrawalService:
         user: User,
         amount: Decimal,
         destination: str,
+        payment_method: str = "MANUAL",
     ) -> WithdrawalRequest:
         if user.status != "ACTIVE" or not user.email_verified:
             raise HTTPException(403, "Verify your email and activate your account before requesting a withdrawal.")
-        if amount < settings.withdrawal_minimum_amount:
-            raise HTTPException(400, f"The minimum withdrawal is {settings.withdrawal_minimum_amount} {user.wallet.currency}.")
-
-        encrypted_destination = _encrypt_destination(user.id, destination)
         wallet = db.scalar(
             select(Wallet).where(Wallet.user_id == user.id).with_for_update()
         )
         if wallet is None:
             raise HTTPException(409, "Your wallet is unavailable.")
+        payout_settings = db.get(PayoutSettings, "default")
+        exchange_rate = payout_settings.usd_bdt_rate if payout_settings else None
+        if exchange_rate is None or exchange_rate <= 0:
+            raise HTTPException(503, "Withdrawals are unavailable until WorkBit configures the USD to BDT exchange rate.")
+        if wallet.currency.upper() != "USD":
+            raise HTTPException(409, "Mobile banking payouts are currently available for USD wallets only.")
+        if amount < settings.withdrawal_minimum_amount:
+            raise HTTPException(400, f"The minimum request is {settings.withdrawal_minimum_amount} USD.")
 
         outstanding = db.scalar(
             select(WithdrawalRequest.id)
@@ -122,16 +130,21 @@ class WithdrawalService:
         )
         if outstanding:
             raise HTTPException(409, "You already have a withdrawal being reviewed.")
-        if amount > wallet.available_balance:
-            raise HTTPException(400, "The requested amount exceeds your available balance.")
+        withdrawable_balance = wallet.available_balance - wallet.deposit_balance
+        if amount > withdrawable_balance:
+            raise HTTPException(400, "The requested amount exceeds your withdrawable earnings balance.")
 
+        encrypted_destination = _encrypt_destination(user.id, destination)
         before = wallet.available_balance
         wallet.available_balance -= amount
         withdrawal = WithdrawalRequest(
             user_id=user.id,
             amount=amount,
             currency=wallet.currency,
-            method="MANUAL",
+            payout_amount=(amount * exchange_rate).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+            payout_currency="BDT",
+            exchange_rate=exchange_rate,
+            method=payment_method,
             destination_ciphertext=encrypted_destination,
             destination_hint=f"••••{destination[-4:]}",
             status="PENDING",

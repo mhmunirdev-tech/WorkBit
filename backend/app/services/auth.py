@@ -12,8 +12,10 @@ from app.security.passwords import hash_password, verify_password
 from app.security.tokens import generate_token, token_hash
 from app.services.email import EmailDeliveryError, email_service
 
+TERMS_VERSION = "1"
+
 def user_response(user: User) -> dict:
-    return {"id": user.id, "email": user.email, "full_name": user.full_name, "country": user.country, "status": user.status, "email_verified": user.email_verified, "roles": [role.name for role in user.roles]}
+    return {"id": user.id, "email": user.email, "full_name": user.full_name, "country": user.country, "status": user.status, "email_verified": user.email_verified, "roles": [role.name for role in user.roles], "avatar_url": user.profile.avatar_url if user.profile else None}
 def referral_code() -> str: return "WB" + uuid4().hex[:8].upper()
 def issue_token(db: Session, user: User, purpose: str) -> str:
     raw = generate_token()
@@ -94,7 +96,7 @@ def register(db: Session, data) -> User:
             "Registration is unavailable because required roles are missing. "
             "Run the seed command against the configured database.",
         )
-    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, referral_code=referral_code(), referred_by=referrer.id if referrer else None)
+    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, referral_code=referral_code(), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
     user.roles.append(role); user.profile = Profile(); user.wallet = Wallet(); db.add(user); db.flush()
     try:
         email_service.send_verification(user.email, issue_verification_code(db, user))

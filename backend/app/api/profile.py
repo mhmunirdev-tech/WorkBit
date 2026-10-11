@@ -7,6 +7,9 @@ from app.api.deps import current_user
 from app.database.session import get_db
 from app.integrations.cloudinary import upload_image
 from app.models import Profile, User
+from app.schemas.auth import AccountUpdateRequest, UserResponse
+from app.security.passwords import hash_password, verify_password
+from app.services.auth import user_response
 
 router = APIRouter(tags=["profile"])
 MAX_AVATAR_SIZE = 5 * 1024 * 1024
@@ -15,6 +18,22 @@ AVATAR_SIGNATURES = {
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
     "image/webp": lambda data: data.startswith(b"RIFF") and data[8:12] == b"WEBP",
 }
+
+@router.patch("/profile/account", response_model=UserResponse)
+def update_account(
+    data: AccountUpdateRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> UserResponse:
+    if data.new_password is not None:
+        if data.current_password is None or not verify_password(data.current_password, user.password_hash):
+            raise HTTPException(400, "Current password is incorrect.")
+        user.password_hash = hash_password(data.new_password)
+    if data.full_name is not None:
+        user.full_name = data.full_name
+    db.commit()
+    db.refresh(user)
+    return user_response(user)
 
 
 @router.post("/profile/avatar")

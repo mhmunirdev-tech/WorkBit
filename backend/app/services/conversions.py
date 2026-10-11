@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.models import OfferClick, OfferConversion, RewardDecision, User
 from app.schemas.conversions import MockPostbackRequest
 from app.services.fraud import fraud_service
+from app.services.packages import has_active_package
 from app.services.rewards import reward_decision_service
 
 TERMINAL = {"REJECTED", "REVERSED", "CHARGEBACK", "FRAUD"}
@@ -17,15 +18,23 @@ class ConversionService:
         if click.offer_id != data.offer_id: raise HTTPException(400, "Offer does not match click identifier.")
         user = db.get(User, click.user_id)
         if not user: raise HTTPException(400, "Click user is unavailable.")
+        if not has_active_package(db, user.id):
+            raise HTTPException(402, "An approved package is required before ad rewards can be recorded.")
+        if user.wallet is None:
+            raise HTTPException(409, "Wallet is unavailable for this conversion.")
+        if data.currency.upper() != user.wallet.currency.upper():
+            raise HTTPException(422, "Conversion currency does not match the user's wallet currency.")
         existing = db.scalar(select(OfferConversion).where(OfferConversion.network_id == "mock", OfferConversion.external_transaction_id == data.transaction_id))
         if existing:
             if existing.click_id != data.click_id: raise HTTPException(409, "Transaction identifier conflict.")
-            if data.status in {"REVERSED", "CHARGEBACK", "REJECTED", "FRAUD"} and existing.status not in TERMINAL:
+            if data.status in {"MANUAL_REVIEW", "REVERSED", "CHARGEBACK", "REJECTED", "FRAUD"} and existing.status not in TERMINAL:
                 existing.status = data.status
-                db.commit(); db.refresh(existing)
                 decision = db.scalar(select(RewardDecision).where(RewardDecision.conversion_id == existing.id))
                 if decision:
                     reward_decision_service.transition_decision(db, decision, data.status, f"Provider reported {data.status.lower()}.")
+                else:
+                    db.commit()
+                db.refresh(existing)
                 logging.info("conversion transitioned transaction=%s status=%s", data.transaction_id, data.status)
                 return existing
             if settings.environment == "development" and settings.enable_mock_rewards:

@@ -1,8 +1,9 @@
 from app.services.rate_limit import _hits
+from conftest import activate_package
 
 def create_click(client):
     _hits.clear()
-    assert client.post("/api/v1/auth/login", json={"email":"workbit-user@example.com", "password":"WorkBitDev123!"}).status_code == 200
+    activate_package(client, "TESTCONVERSIONPAY01")
     click = client.post("/api/v1/offers/mock-game/click").json()
     return click["click_id"]
 

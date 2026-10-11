@@ -34,3 +34,55 @@ def database(monkeypatch):
 def client():
     with TestClient(app) as client:
         yield client
+
+
+def activate_package(client, payment_reference="PYTESTPAY001"):
+    user_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert user_login.status_code == 200
+    purchase = client.post(
+        "/api/v1/package-purchases",
+        json={
+            "package_code": "BASIC",
+            "payment_method": "BKASH",
+            "payment_reference": payment_reference,
+        },
+    )
+    assert purchase.status_code == 201
+    admin_login = client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    )
+    assert admin_login.status_code == 200
+    approved = client.post(
+        f"/api/v1/admin/package-purchases/{purchase.json()['id']}/approve",
+        json={"note": "Test payment confirmed."},
+    )
+    assert approved.status_code == 200
+    user_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert user_login.status_code == 200
+    return purchase.json()
+
+
+def configure_payout_rate(client, rate="120.00"):
+    admin_login = client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    )
+    assert admin_login.status_code == 200
+    response = client.put(
+        "/api/v1/admin/payout-settings",
+        json={"usd_bdt_rate": rate},
+    )
+    assert response.status_code == 200
+    user_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert user_login.status_code == 200
+    return response.json()

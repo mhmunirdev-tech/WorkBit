@@ -38,6 +38,8 @@ class User(Base):
     referred_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default=UserStatus.PENDING_VERIFICATION.value)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     profile: Mapped[Profile] = relationship(back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -82,11 +84,23 @@ class Permission(Base):
     name: Mapped[str] = mapped_column(String(64), unique=True)
     roles: Mapped[list[Role]] = relationship(secondary=role_permissions, back_populates="permissions")
 
+
+class RankTier(Base):
+    __tablename__ = "rank_tiers"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    name: Mapped[str] = mapped_column(String(32), unique=True)
+    threshold: Mapped[Decimal] = mapped_column(Numeric(18, 8))
+    sort_order: Mapped[int] = mapped_column(Integer, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
 class Wallet(Base):
     __tablename__ = "wallets"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
     available_balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
+    deposit_balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     pending_balance: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     lifetime_earned: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     lifetime_withdrawn: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
@@ -145,6 +159,9 @@ class WithdrawalRequest(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
     currency: Mapped[str] = mapped_column(String(3), default="USD")
+    payout_amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    payout_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    exchange_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
     method: Mapped[str] = mapped_column(String(32), default="MANUAL")
     destination_ciphertext: Mapped[str] = mapped_column(Text)
     destination_hint: Mapped[str] = mapped_column(String(32))
@@ -156,6 +173,92 @@ class WithdrawalRequest(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     user: Mapped[User] = relationship(foreign_keys=[user_id])
     reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
+
+
+class PayoutSettings(Base):
+    __tablename__ = "payout_settings"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default="default")
+    usd_bdt_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    updated_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class EarningPackage(Base):
+    __tablename__ = "earning_packages"
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80))
+    description: Mapped[str] = mapped_column(Text, default="")
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    duration_days: Mapped[int] = mapped_column(Integer)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+
+
+class PackagePurchase(Base):
+    __tablename__ = "package_purchases"
+    __table_args__ = (
+        UniqueConstraint("payment_method", "payment_reference", name="uq_package_payment_reference"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    package_code: Mapped[str] = mapped_column(String(32))
+    package_name: Mapped[str] = mapped_column(String(80))
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
+    duration_days: Mapped[int] = mapped_column(Integer, default=30)
+    deposit_amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
+    earning_amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
+    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    payment_method: Mapped[str] = mapped_column(String(16))
+    payment_reference: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    admin_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
+
+
+class DepositRequest(Base):
+    __tablename__ = "deposit_requests"
+    __table_args__ = (
+        UniqueConstraint("payment_method", "payment_reference", name="uq_deposit_payment_reference"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    amount_bdt: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
+    currency: Mapped[str] = mapped_column(String(3), default="USD")
+    exchange_rate: Mapped[Decimal] = mapped_column(Numeric(18, 8))
+    payment_method: Mapped[str] = mapped_column(String(16))
+    payment_reference: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    admin_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
+
+
+class PaymentReference(Base):
+    __tablename__ = "payment_references"
+    __table_args__ = (
+        UniqueConstraint("payment_method", "payment_reference", name="uq_payment_reference_method"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    payment_method: Mapped[str] = mapped_column(String(16))
+    payment_reference: Mapped[str] = mapped_column(String(120))
+    request_type: Mapped[str] = mapped_column(String(32))
+    request_id: Mapped[str] = mapped_column(String(36))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 @event.listens_for(WalletTransaction, "before_update")

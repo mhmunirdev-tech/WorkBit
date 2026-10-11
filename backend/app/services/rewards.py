@@ -8,8 +8,9 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import OfferConversion, RewardDecision, RewardPolicy, User, Wallet, WalletTransaction
+from app.models import OfferConversion, PackagePurchase, RewardDecision, RewardPolicy, User, Wallet, WalletTransaction
 from app.services.fraud import fraud_service
+from app.services.packages import has_active_package
 
 ZERO = Decimal("0")
 
@@ -23,6 +24,11 @@ class RewardDecisionService:
         user = db.get(User, conversion.user_id)
         if not user:
             raise HTTPException(404, "Conversion user not found.")
+        wallet = user.wallet
+        if wallet is None:
+            raise HTTPException(409, "Wallet is unavailable for this reward.")
+        if conversion.currency.upper() != wallet.currency.upper():
+            raise HTTPException(409, "Conversion currency does not match the user's wallet currency.")
 
         fraud = fraud_service.assess_conversion(False)
         policy = self._select_policy(db, user, conversion)
@@ -65,6 +71,11 @@ class RewardDecisionService:
             user = db.get(User, conversion.user_id)
         if not user:
             raise HTTPException(404, "Conversion user not found.")
+        wallet = user.wallet
+        if wallet is None:
+            raise HTTPException(409, "Wallet is unavailable for this reward.")
+        if conversion.currency.upper() != wallet.currency.upper():
+            raise HTTPException(409, "Conversion currency does not match the user's wallet currency.")
         existing = db.scalar(select(RewardDecision).where(RewardDecision.conversion_id == conversion.id))
         if existing:
             return self.transition_decision(db, existing, status, reason)
@@ -84,17 +95,31 @@ class RewardDecisionService:
         if decision.status == status:
             return decision
         previous_status = decision.status
+        allowed_transitions = {
+            "PENDING": {"APPROVED", "REJECTED", "MANUAL_REVIEW", "REVERSED", "CHARGEBACK", "FRAUD"},
+            "MANUAL_REVIEW": {"APPROVED", "REJECTED", "REVERSED", "CHARGEBACK", "FRAUD"},
+            "APPROVED": {"REVERSED", "CHARGEBACK", "FRAUD"},
+        }
+        if status not in allowed_transitions.get(previous_status, set()):
+            raise HTTPException(
+                409,
+                f"Reward cannot transition from {previous_status} to {status}.",
+            )
         user = db.get(User, decision.user_id)
         wallet = user.wallet if user else None
         if wallet is None:
             raise HTTPException(409, "Wallet is unavailable for this reward.")
+        if decision.currency.upper() != wallet.currency.upper():
+            raise HTTPException(409, "Reward currency does not match the user's wallet currency.")
         if previous_status == "PENDING" and status == "APPROVED":
             self._settle_pending(db, wallet, decision)
-        elif previous_status == "PENDING" and status in {"REJECTED", "REVERSED", "CHARGEBACK", "FRAUD"}:
+        elif previous_status == "PENDING" and status in {"REJECTED", "MANUAL_REVIEW", "REVERSED", "CHARGEBACK", "FRAUD"}:
             self._cancel_pending(db, wallet, decision, status)
         elif previous_status == "APPROVED" and status in {"REVERSED", "CHARGEBACK", "FRAUD"}:
             self._reverse_available(db, wallet, decision, status)
         decision.status, decision.reason = status, reason
+        if previous_status == "MANUAL_REVIEW" and status == "APPROVED":
+            self._apply_wallet_projection(db, user, decision)
         decision.updated_at = datetime.now(timezone.utc)
         db.commit(); db.refresh(decision)
         return decision
@@ -124,7 +149,7 @@ class RewardDecisionService:
 
     def _reverse_available(self, db: Session, wallet: Wallet, decision: RewardDecision, status: str) -> None:
         amount = decision.user_reward
-        if wallet.available_balance < amount:
+        if wallet.available_balance - wallet.deposit_balance < amount:
             raise HTTPException(409, "Available balance does not cover this reversal.")
         before = wallet.available_balance
         wallet.available_balance -= amount; wallet.lifetime_earned -= amount
@@ -164,43 +189,40 @@ class RewardDecisionService:
 
     def _select_policy(self, db: Session, user: User, conversion: OfferConversion) -> RewardPolicy | None:
         candidates = db.scalars(select(RewardPolicy).where(RewardPolicy.enabled.is_(True))).all()
-        if not candidates:
-            default_policy = RewardPolicy(
-                name="default_offer_reward",
-                description="Default offer reward policy",
-                enabled=True,
-                user_reward_percentage=Decimal("70.00"),
-                platform_share_percentage=Decimal("30.00"),
-                minimum_reward=Decimal("0.10"),
-                maximum_reward=Decimal("25.00"),
-                pending_period_days=0,
-                rounding_precision=2,
-            )
-            db.add(default_policy)
-            db.flush()
-            candidates = [default_policy]
         candidates = [p for p in candidates if self._policy_active(p)]
-        if not candidates:
-            return None
-        rank = []
+        ranked: list[tuple[int, str, str, RewardPolicy]] = []
         for policy in candidates:
+            if policy.country_code and policy.country_code.upper() != user.country.upper():
+                continue
+            if policy.network_id and policy.network_id != conversion.network_id:
+                continue
+            if policy.offer_id and policy.offer_id != conversion.offer_id:
+                continue
             score = 0
-            if policy.country_code and policy.country_code == user.country:
+            if policy.country_code:
                 score += 4
-            if policy.network_id and policy.network_id == conversion.network_id:
+            if policy.network_id:
                 score += 3
-            if policy.offer_id and policy.offer_id == conversion.offer_id:
+            if policy.offer_id:
                 score += 5
-            rank.append((score, policy))
-        return max(rank, key=lambda item: item[0])[1]
+            ranked.append((score, policy.name, policy.id, policy))
+        if not ranked:
+            return None
+        return min(ranked, key=lambda item: (-item[0], item[1], item[2]))[3]
 
     def _policy_active(self, policy: RewardPolicy) -> bool:
         now = datetime.now(timezone.utc)
         if not policy.enabled:
             return False
-        if policy.effective_from and policy.effective_from > now:
+        effective_from = policy.effective_from
+        effective_to = policy.effective_to
+        if effective_from and effective_from.tzinfo is None:
+            effective_from = effective_from.replace(tzinfo=timezone.utc)
+        if effective_to and effective_to.tzinfo is None:
+            effective_to = effective_to.replace(tzinfo=timezone.utc)
+        if effective_from and effective_from > now:
             return False
-        if policy.effective_to and policy.effective_to < now:
+        if effective_to and effective_to < now:
             return False
         return True
 
@@ -302,10 +324,26 @@ class WalletService:
             wallet = Wallet(user_id=user.id, currency="USD")
             db.add(wallet); db.flush()
             user.wallet = wallet
+        latest_purchase = db.scalar(
+            select(PackagePurchase)
+            .where(PackagePurchase.user_id == user.id)
+            .order_by(PackagePurchase.created_at.desc())
+            .limit(1)
+        )
+        package_active = has_active_package(db, user.id)
         return {
             "id": wallet.id,
             "user_id": wallet.user_id,
             "available_balance": str(wallet.available_balance),
+            "deposit_balance": str(wallet.deposit_balance),
+            "earning_balance": str(wallet.available_balance - wallet.deposit_balance),
+            "package_active": package_active,
+            "can_deposit": bool(
+                user.status == "ACTIVE"
+                and user.email_verified
+                and not package_active
+                and (latest_purchase is None or latest_purchase.status != "PENDING")
+            ),
             "pending_balance": str(wallet.pending_balance),
             "lifetime_earned": str(wallet.lifetime_earned),
             "lifetime_withdrawn": str(wallet.lifetime_withdrawn),

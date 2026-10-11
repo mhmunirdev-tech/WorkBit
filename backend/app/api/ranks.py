@@ -1,12 +1,12 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user
 from app.database.session import get_db
-from app.models import Profile, User, WalletTransaction
+from app.models import PackagePurchase, Profile, RankTier, User, WalletTransaction
 from app.schemas.ranks import (
     CurrentRankRead,
     RankMemberRead,
@@ -16,25 +16,20 @@ from app.schemas.ranks import (
 
 router = APIRouter(tags=["ranks"])
 
-RANK_TIERS = (
-    ("Starter", Decimal("0")),
-    ("Bronze", Decimal("50")),
-    ("Silver", Decimal("200")),
-    ("Gold", Decimal("500")),
-)
-
-
-def rank_for_value(value: Decimal) -> tuple[str, str | None, Decimal | None]:
+def rank_for_value(
+    value: Decimal,
+    tiers: list[RankTier],
+) -> tuple[str, str | None, Decimal | None]:
     current_index = max(
         index
-        for index, (_name, threshold) in enumerate(RANK_TIERS)
-        if value >= threshold
+        for index, tier in enumerate(tiers)
+        if value >= tier.threshold
     )
-    name, _threshold = RANK_TIERS[current_index]
-    if current_index == len(RANK_TIERS) - 1:
+    name = tiers[current_index].name
+    if current_index == len(tiers) - 1:
         return name, None, None
-    next_name, next_threshold = RANK_TIERS[current_index + 1]
-    return name, next_name, next_threshold
+    next_tier = tiers[current_index + 1]
+    return name, next_tier.name, next_tier.threshold
 
 
 @router.get("/ranks", response_model=RanksRead)
@@ -42,13 +37,23 @@ def ranks(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> RanksRead:
+    tiers = db.scalars(select(RankTier).order_by(RankTier.sort_order, RankTier.id)).all()
+    if (
+        not tiers
+        or tiers[0].threshold > 0
+        or any(
+            current.threshold >= following.threshold
+            for current, following in zip(tiers, tiers[1:])
+        )
+    ):
+        raise HTTPException(503, "Rank tiers are not configured correctly.")
     approved_ad_rewards = (
         select(
             WalletTransaction.user_id.label("user_id"),
             func.sum(WalletTransaction.amount).label("value"),
         )
         .where(
-            WalletTransaction.type == "OFFER_REWARD_APPROVAL",
+            WalletTransaction.type.in_(("OFFER_REWARD_APPROVAL", "OFFER_REWARD_RELEASE")),
             WalletTransaction.status == "APPROVED",
             WalletTransaction.currency == "USD",
             WalletTransaction.amount > 0,
@@ -58,16 +63,15 @@ def ranks(
     )
     completed_package_purchases = (
         select(
-            WalletTransaction.user_id.label("user_id"),
-            func.sum(func.abs(WalletTransaction.amount)).label("value"),
+            PackagePurchase.user_id.label("user_id"),
+            func.sum(PackagePurchase.amount).label("value"),
         )
         .where(
-            WalletTransaction.type == "PACKAGE_PURCHASE",
-            WalletTransaction.status == "COMPLETED",
-            WalletTransaction.currency == "USD",
-            WalletTransaction.amount != 0,
+            PackagePurchase.status == "APPROVED",
+            PackagePurchase.currency == "USD",
+            PackagePurchase.amount > 0,
         )
-        .group_by(WalletTransaction.user_id)
+        .group_by(PackagePurchase.user_id)
         .subquery()
     )
     referral_counts = (
@@ -123,7 +127,7 @@ def ranks(
     current_position: int | None = None
     for position, row in enumerate(leaderboard_rows, start=1):
         value = Decimal(str(row.qualifying_value or 0))
-        rank, _next_rank, _next_threshold = rank_for_value(value)
+        rank, _, _ = rank_for_value(value, tiers)
         if row.id == user.id:
             current_position = position
         leaderboard.append(
@@ -137,12 +141,12 @@ def ranks(
             )
         )
 
-    current_rank, next_rank, next_threshold = rank_for_value(current_value)
+    current_rank, next_rank, next_threshold = rank_for_value(current_value, tiers)
     return RanksRead(
         currency="USD",
         tiers=[
             RankTierRead(name=name, threshold=threshold)
-            for name, threshold in RANK_TIERS
+            for name, threshold in ((tier.name, tier.threshold) for tier in tiers)
         ],
         current_user=CurrentRankRead(
             full_name=user.full_name,

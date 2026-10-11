@@ -18,6 +18,47 @@ def test_registration_creates_wallet(client):
     response = client.post("/api/v1/auth/register", json=registration())
     assert response.status_code == 201
     assert response.json()["email"] == "taylor@example.com"
+    assert response.json()["roles"] == ["USER"]
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.email == "taylor@example.com"))
+        assert user is not None
+        assert user.terms_accepted_at is not None
+        assert user.terms_version == auth_service.TERMS_VERSION
+    finally:
+        db.close()
+
+
+def test_registration_cannot_assign_admin_role(client):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={**registration(), "roles": ["ADMIN"], "role": "ADMIN"},
+    )
+    assert response.status_code == 201
+    assert response.json()["roles"] == ["USER"]
+
+
+def test_admin_and_user_login_are_separate(client):
+    user_login_as_admin = client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert user_login_as_admin.status_code == 403
+
+    admin_login_as_user = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    )
+    assert admin_login_as_user.status_code == 403
+
+    admin_login = client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    )
+    assert admin_login.status_code == 200
+    assert admin_login.json()["roles"] == ["ADMIN"]
 
 def test_registration_verification_otp_activates_account(client, monkeypatch):
     issued_codes = []
@@ -199,7 +240,7 @@ def test_login_me_and_logout(client):
 def test_admin_permission(client):
     client.post("/api/v1/auth/login", json={"email":"workbit-user@example.com","password":"WorkBitDev123!"})
     assert client.get("/api/v1/admin/dashboard").status_code == 403
-    client.post("/api/v1/auth/login", json={"email":"workbit-admin@example.com","password":"WorkBitDev123!"})
+    client.post("/api/v1/auth/admin/login", json={"email":"workbit-admin@example.com","password":"WorkBitDev123!"})
     assert client.get("/api/v1/admin/dashboard").status_code == 200
 
 def test_user_dashboard_is_authenticated_and_returns_own_summary(client):
@@ -226,6 +267,80 @@ def test_user_dashboard_is_authenticated_and_returns_own_summary(client):
     assert dashboard["withdrawal_summary"]["enabled"] is False
     assert dashboard["withdrawal_summary"]["pending_request"] is None
     assert "password_hash" not in dashboard["user"]
+
+
+def test_dashboard_counts_only_active_referred_users_with_completed_package(client):
+    from datetime import datetime, timedelta, timezone
+    from decimal import Decimal
+
+    from sqlalchemy import select
+
+    from app.database.session import SessionLocal
+    from app.models import PackagePurchase, User
+
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    ).status_code == 200
+    invited_user = registration()
+    invited_user["email"] = "package-referral@example.com"
+    invited_user["referral_code"] = "WBUSER001"
+    assert client.post("/api/v1/auth/register", json=invited_user).status_code == 201
+
+    db = SessionLocal()
+    try:
+        referrer = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        referred = db.scalar(select(User).where(User.email == "package-referral@example.com"))
+        assert referrer is not None and referred is not None
+        referred.status = "ACTIVE"
+        referred.email_verified = True
+        purchase = PackagePurchase(
+            user_id=referred.id,
+            package_code="STARTER",
+            package_name="Starter",
+            amount=Decimal("10"),
+            currency="USD",
+            payment_method="BKASH",
+            payment_reference="REFERRAL-PENDING-001",
+            status="PENDING",
+        )
+        db.add(purchase)
+        db.commit()
+    finally:
+        db.close()
+
+    pending_purchase = client.get("/api/v1/dashboard")
+    assert pending_purchase.status_code == 200
+    assert pending_purchase.json()["stats"]["active_referrals"] == 0
+
+    db = SessionLocal()
+    try:
+        referred = db.scalar(
+            select(User).where(User.email == "package-referral@example.com")
+        )
+        assert referred is not None
+        db.add(
+            PackagePurchase(
+                user_id=referred.id,
+                package_code="STARTER",
+                package_name="Starter",
+                amount=Decimal("10"),
+                currency="USD",
+                payment_method="BKASH",
+                payment_reference="REFERRAL-APPROVED-001",
+                status="APPROVED",
+                starts_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    completed_purchase = client.get("/api/v1/dashboard")
+    assert completed_purchase.status_code == 200
+    assert completed_purchase.json()["stats"]["active_referrals"] == 1
+
 
 def test_reset_password_requires_strong_password_and_updates_login(client, monkeypatch):
     issued_tokens = []

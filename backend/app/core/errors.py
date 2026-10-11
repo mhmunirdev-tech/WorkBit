@@ -12,11 +12,12 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
     messages = {
         401: ("UNAUTHENTICATED", "Authentication is required."),
         403: ("FORBIDDEN", "You do not have permission to perform this action."),
+        402: ("PAYMENT_REQUIRED", "An approved package is required for this action."),
         404: ("NOT_FOUND", "The requested resource was not found."),
         503: ("SERVICE_UNAVAILABLE", "The service is temporarily unavailable."),
     }
     code, default = messages.get(exc.status_code, ("REQUEST_ERROR", "The request could not be completed."))
-    message = str(exc.detail) if exc.status_code in {400, 503} else default
+    message = str(exc.detail) if exc.status_code in {400, 402, 503} else default
     return error(code, message, exc.status_code)
 
 

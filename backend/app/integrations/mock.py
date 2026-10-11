@@ -1,9 +1,38 @@
-from decimal import Decimal
-from app.integrations.base import OfferProvider
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+from app.models import Offer, OfferNetwork
 from app.schemas.offers import OfferRead
-class MockOfferProvider(OfferProvider):
+
+
+class MockOfferProvider:
     name = "mock"
-    async def get_offers(self, country: str) -> list[OfferRead]:
-        return [OfferRead(id="mock-game", title="Install Demo Game", short_description="A development-only example offer.", category="GAME", country=country, device_type="MOBILE", user_reward=Decimal("0.50"), currency="USD", estimated_time_minutes=20, difficulty="Medium", featured=True), OfferRead(id="mock-survey", title="Complete Demo Survey", short_description="A development-only feedback survey.", category="SURVEY", country=country, device_type="WEB", user_reward=Decimal("0.25"), currency="USD", estimated_time_minutes=8, difficulty="Easy", featured=False), OfferRead(id="mock-signup", title="Create Demo Account", short_description="A development-only registration example.", category="SIGNUP", country=country, device_type="WEB", user_reward=Decimal("0.75"), currency="USD", estimated_time_minutes=5, difficulty="Easy", featured=True)]
-    async def redirect_url(self, offer_id: str, click_id: str, sub_id: str) -> str:
-        raise NotImplementedError("Mock offers do not redirect to external providers.")
+    async def get_offers(self, db: Session, country: str) -> list[OfferRead]:
+        rows = db.execute(
+            select(Offer, OfferNetwork.name)
+            .join(OfferNetwork, OfferNetwork.id == Offer.network_id)
+            .where(
+                OfferNetwork.provider == "MOCK",
+                OfferNetwork.integration_type == "MOCK",
+                OfferNetwork.status == "DEVELOPMENT_ONLY",
+                Offer.status == "PUBLISHED",
+            )
+            .order_by(Offer.priority.desc(), Offer.created_at.desc(), Offer.id)
+        ).all()
+        return [
+            OfferRead(
+                id=offer.id,
+                title=offer.title,
+                short_description=offer.short_description,
+                category=offer.category,
+                country=country.upper(),
+                device_type=offer.device_type,
+                user_reward=offer.user_reward,
+                currency=offer.currency,
+                estimated_time_minutes=offer.estimated_time_minutes,
+                difficulty=offer.difficulty,
+                featured=offer.featured,
+                source_name=source_name,
+                is_demo=True,
+            )
+            for offer, source_name in rows
+        ]

@@ -28,6 +28,13 @@ class DashboardStats(BaseModel):
     pending_referral_earnings: Decimal
 
 
+class PublicStatsRead(BaseModel):
+    registered_users: int
+    total_payouts_bdt: Decimal
+    active_packages: int
+    offer_approval_rate: Decimal | None
+
+
 class DashboardEarningDay(BaseModel):
     date: str
     amount: Decimal
@@ -47,6 +54,8 @@ class DashboardWithdrawalRequest(BaseModel):
     id: str
     amount: Decimal
     currency: str
+    payout_amount: Decimal | None = None
+    payout_currency: str | None = None
     status: str
     created_at: datetime
 
@@ -54,16 +63,23 @@ class DashboardWithdrawalRequest(BaseModel):
 class DashboardWithdrawalSummary(BaseModel):
     enabled: bool
     minimum_amount: Decimal
+    usd_bdt_rate: Decimal | None = None
     pending_request: DashboardWithdrawalRequest | None = None
     last_request: DashboardWithdrawalRequest | None = None
 
 
 class DashboardRead(BaseModel):
     available_balance: Decimal
+    withdrawable_balance: Decimal
+    deposit_balance: Decimal
+    earning_balance: Decimal
     pending_balance: Decimal
     lifetime_earned: Decimal
     lifetime_withdrawn: Decimal
     currency: str
+    package_active: bool
+    package_purchase_status: str | None
+    package_expires_at: datetime | None
     user: DashboardUser
     stats: DashboardStats
     earnings_chart: list[DashboardEarningDay]

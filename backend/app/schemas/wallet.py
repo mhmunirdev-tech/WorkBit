@@ -6,6 +6,10 @@ class WalletRead(BaseModel):
     id: str
     user_id: str
     available_balance: Decimal
+    deposit_balance: Decimal
+    earning_balance: Decimal
+    package_active: bool
+    can_deposit: bool
     pending_balance: Decimal
     lifetime_earned: Decimal
     lifetime_withdrawn: Decimal
