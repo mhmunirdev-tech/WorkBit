@@ -34,6 +34,14 @@ def fund_wallet(client, transaction_id="withdrawal-test"):
         },
     )
     assert response.status_code == 202
+    reward = client.get("/api/v1/rewards").json()[0]
+    with TestClient(client.app) as admin:
+        assert admin.post(
+            "/api/v1/auth/admin/login",
+            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+        ).status_code == 200
+        approved = admin.post(f"/api/v1/admin/rewards/{reward['id']}/approve")
+        assert approved.status_code == 200
 
 
 def test_withdrawals_require_configuration_and_are_private(client, monkeypatch):
@@ -102,10 +110,12 @@ def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
         ).status_code == 200
         completed = admin.post(
             f"/api/v1/admin/withdrawals/{request_data['id']}/complete",
-            json={"note": "Paid manually."},
+            json={"transaction_id": "BKASH-TRANSFER-12345", "note": "Paid manually."},
         )
         assert completed.status_code == 200
-        assert completed.json()["status"] == "COMPLETED"
+        assert completed.json()["status"] == "PAID"
+        assert completed.json()["payment_transaction_id"] == "BKASH-TRANSFER-12345"
+        assert completed.json()["paid_at"] is not None
 
     wallet = client.get("/api/v1/wallet").json()
     assert wallet["available_balance"] == "3.00000000"
@@ -113,6 +123,41 @@ def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
     transactions = client.get("/api/v1/wallet/transactions").json()
     reserved = next(item for item in transactions if item["reference_id"] == request_data["id"])
     assert reserved["status"] == "APPROVED"
+
+
+def test_withdrawal_cannot_be_marked_paid_without_transaction_id(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"p" * 32).decode("ascii"),
+    )
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    fund_wallet(client, "withdrawal-missing-payment-reference")
+    created = client.post(
+        "/api/v1/withdrawals",
+        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
+    )
+    assert created.status_code == 201
+
+    with TestClient(client.app) as admin:
+        assert login(admin, "workbit-admin@example.com").status_code == 200
+        withdrawal_id = created.json()["id"]
+        assert admin.post(
+            f"/api/v1/admin/withdrawals/{withdrawal_id}/approve",
+            json={"note": "Verified."},
+        ).status_code == 200
+        response = admin.post(
+            f"/api/v1/admin/withdrawals/{withdrawal_id}/complete",
+            json={"note": "Paid manually."},
+        )
+        assert response.status_code == 422
+
+        still_processing = admin.get(
+            f"/api/v1/admin/withdrawals/{withdrawal_id}"
+        )
+        assert still_processing.status_code == 200
+        assert still_processing.json()["status"] == "PROCESSING"
+        assert still_processing.json()["payment_transaction_id"] is None
 
 
 def test_rejected_withdrawal_releases_balance_and_enforces_minimum(client, monkeypatch):
@@ -212,6 +257,7 @@ def test_withdrawal_minimum_is_enforced_by_backend(client, monkeypatch):
         "withdrawal_encryption_key",
         base64.urlsafe_b64encode(b"m" * 32).decode("ascii"),
     )
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
     fund_wallet(client, "withdrawal-minimum-check")
     response = client.post(
         "/api/v1/withdrawals",

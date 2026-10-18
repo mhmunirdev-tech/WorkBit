@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { PasswordInput } from "./ui/password-input";
 
 export function AuthForm({
   mode,
@@ -29,13 +31,32 @@ export function AuthForm({
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
+      const invalidField = form.querySelector(":invalid");
+      const message = invalidField instanceof HTMLInputElement && invalidField.type === "email"
+        ? "Enter a valid email address."
+        : invalidField instanceof HTMLInputElement && invalidField.type === "password"
+          ? "Check the password and make sure it meets the minimum length."
+          : "Please complete all required fields with valid information.";
+      setMessage(message);
+      showToast({
+        title: invalidField instanceof HTMLInputElement && invalidField.type === "email"
+          ? "Invalid email address"
+          : "Check the form",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
     setBusy(true);
     setMessage("");
     const data = new FormData(event.currentTarget);
 
     try {
       if (mode === "login") {
-        await api("/auth/login", {
+        const loginPath = defaultDestination === "/admin" ? "/auth/admin/login" : "/auth/login";
+        await api(loginPath, {
           method: "POST",
           body: JSON.stringify({ email: data.get("email"), password: data.get("password") }),
         });
@@ -53,6 +74,11 @@ export function AuthForm({
           safeRequestedPath?.startsWith("/") && !safeRequestedPath.startsWith("//")
             ? safeRequestedPath
             : defaultDestination;
+        showToast({
+          title: "Signed in",
+          description: "Welcome back to WorkBit.",
+          variant: "success",
+        });
         window.location.assign(destination);
         return;
       }
@@ -63,6 +89,11 @@ export function AuthForm({
           body: JSON.stringify({ email: data.get("email") }),
         });
         setMessage(result.message);
+        showToast({
+          title: "Reset link sent",
+          description: result.message,
+          variant: "success",
+        });
         return;
       }
 
@@ -79,9 +110,20 @@ export function AuthForm({
           terms_accepted: data.get("terms") === "on",
         }),
       });
+      showToast({
+        title: "Account created",
+        description: "We sent a verification code to your email address.",
+        variant: "success",
+      });
       window.location.assign(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The request could not be completed.");
+      const message = error instanceof Error ? error.message : "The request could not be completed.";
+      setMessage(message);
+      showToast({
+        title: "Request failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -105,7 +147,7 @@ export function AuthForm({
             ? "Enter your email and we’ll send a reset link if the account exists."
             : "Work. Complete. Earn — with transparent, verified rewards."}
         </p>
-        <form onSubmit={submit}>
+        <form onSubmit={submit} noValidate>
           {mode === "register" && (
             <>
               <Label>Full name<Input name="fullName" required minLength={2} /></Label>
@@ -114,11 +156,11 @@ export function AuthForm({
           )}
           <Label>Email<Input name="email" type="email" required /></Label>
           {mode !== "forgot" && (
-            <Label>Password<Input name="password" type="password" required minLength={12} /></Label>
+            <Label>Password<PasswordInput name="password" required minLength={12} /></Label>
           )}
           {mode === "register" && (
             <>
-              <Label>Confirm password<Input name="confirmPassword" type="password" required minLength={12} /></Label>
+              <Label>Confirm password<PasswordInput name="confirmPassword" required minLength={12} /></Label>
               <Label>
                 Referral code (optional)
                 <Input
@@ -127,7 +169,13 @@ export function AuthForm({
                   onChange={(event) => setReferralCode(event.target.value)}
                 />
               </Label>
-              <Label className="check"><Checkbox name="terms" required /> I accept the Terms and Privacy Policy.</Label>
+              <Label className="check policy-acceptance">
+                <Checkbox name="terms" required />
+                <span>
+                  I accept the <Link href="/terms">Terms of Service</Link> and{" "}
+                  <Link href="/privacy">Privacy Policy</Link>.
+                </span>
+              </Label>
             </>
           )}
           <Button className="primary" disabled={busy}>
@@ -141,7 +189,11 @@ export function AuthForm({
           </Button>
         </form>
         {message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
-        {mode === "login" && <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link></p>}
+        {mode === "login" && (
+          defaultDestination === "/admin"
+            ? <p><Link href="/forgot-password">Forgot password?</Link> · Admin accounts are provisioned by an authorized administrator. <Link href="/login">User sign in</Link></p>
+            : <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link></p>
+        )}
         {mode === "register" && <p>Already have an account? <Link href="/login">Sign in</Link></p>}
       </section></Card>
     </main>

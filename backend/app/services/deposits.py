@@ -1,17 +1,10 @@
-from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
-
 from fastapi import HTTPException
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import DepositRequest, PackagePurchase, PaymentReference, PayoutSettings, User, Wallet, WalletTransaction
+from app.models import DepositRequest, User, Wallet, WalletTransaction
 from app.schemas.deposits import DepositCreate
 from app.services.packages import has_active_package
-
-MINIMUM_DEPOSIT_BDT = Decimal("100.00")
-WALLET_PRECISION = Decimal("0.00000001")
 
 
 def deposit_read(deposit: DepositRequest) -> dict:
@@ -32,67 +25,10 @@ def deposit_read(deposit: DepositRequest) -> dict:
 
 class DepositService:
     def create(self, db: Session, user: User, data: DepositCreate) -> DepositRequest:
-        if user.status != "ACTIVE" or not user.email_verified:
-            raise HTTPException(403, "Verify your email before depositing funds.")
-        if has_active_package(db, user.id):
-            raise HTTPException(409, "Deposits are available only when you do not have an active earning package.")
-        pending_package = db.scalar(
-            select(PackagePurchase.id).where(
-                PackagePurchase.user_id == user.id,
-                PackagePurchase.status == "PENDING",
-            ).limit(1)
+        raise HTTPException(
+            410,
+            "Standalone deposits are no longer available. Choose a package and submit its manual payment.",
         )
-        if pending_package:
-            raise HTTPException(409, "Wait for your pending package payment to be reviewed before depositing.")
-        pending_deposit = db.scalar(
-            select(DepositRequest.id).where(
-                DepositRequest.user_id == user.id,
-                DepositRequest.status == "PENDING",
-            ).limit(1)
-        )
-        if pending_deposit:
-            raise HTTPException(409, "You already have a deposit waiting for review.")
-        if data.amount_bdt < MINIMUM_DEPOSIT_BDT:
-            raise HTTPException(400, "The minimum deposit is BDT 100.")
-        payout_settings = db.get(PayoutSettings, "default")
-        exchange_rate = payout_settings.usd_bdt_rate if payout_settings else None
-        if exchange_rate is None or exchange_rate <= 0:
-            raise HTTPException(503, "Deposits are unavailable until WorkBit configures the USD to BDT exchange rate.")
-        duplicate_package_reference = db.scalar(
-            select(PackagePurchase.id).where(
-                PackagePurchase.payment_method == data.payment_method,
-                PackagePurchase.payment_reference == data.payment_reference,
-            ).limit(1)
-        )
-        if duplicate_package_reference:
-            raise HTTPException(409, "This payment reference has already been submitted.")
-        deposit = DepositRequest(
-            user_id=user.id,
-            amount_bdt=data.amount_bdt,
-            amount=(data.amount_bdt / exchange_rate).quantize(WALLET_PRECISION, rounding=ROUND_HALF_UP),
-            currency="USD",
-            exchange_rate=exchange_rate,
-            payment_method=data.payment_method,
-            payment_reference=data.payment_reference,
-            status="PENDING",
-        )
-        db.add(deposit)
-        try:
-            db.flush()
-            db.add(
-                PaymentReference(
-                    payment_method=data.payment_method,
-                    payment_reference=data.payment_reference,
-                    request_type="DEPOSIT",
-                    request_id=deposit.id,
-                )
-            )
-            db.commit()
-        except IntegrityError as error:
-            db.rollback()
-            raise HTTPException(409, "This payment reference has already been submitted.") from error
-        db.refresh(deposit)
-        return deposit
 
     def list_for_user(self, db: Session, user: User) -> list[DepositRequest]:
         return db.scalars(

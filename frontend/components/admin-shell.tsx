@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, ShieldCheck, X } from "lucide-react";
+import { Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldCheck, X, ArrowDownToLine, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
+import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
 
@@ -16,6 +17,9 @@ type AdminIdentity = {
 const navigation = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/withdrawals", label: "Manual withdrawals", icon: Banknote },
+  { href: "/admin/deposits", label: "Deposit requests", icon: ArrowDownToLine },
+  { href: "/admin/package-purchases", label: "Package payments", icon: PackageCheck },
+  { href: "/admin/packages", label: "Package settings", icon: Settings2 },
   { href: "/admin/banners", label: "Dashboard banners", icon: ImagePlus },
 ];
 
@@ -40,6 +44,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setLogoutError("");
     try {
       await api<void>("/auth/logout", { method: "POST" });
+      showToast({ title: "Signed out", description: "You have been signed out.", variant: "success" });
       window.location.assign("/admin/login");
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "Unable to sign out.");

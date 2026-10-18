@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { WithdrawalPage } from "../../components/withdrawals";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Withdrawal history | WorkBit",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function WithdrawalsRoute() {
-  return <WithdrawalPage historyOnly />;
+  redirect("/wallet#withdrawal-history");
 }

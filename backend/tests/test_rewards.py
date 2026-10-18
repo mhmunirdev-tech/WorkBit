@@ -1,5 +1,7 @@
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.models import OfferConversion, RewardDecision, RewardPolicy, User, WalletTransaction
@@ -112,6 +114,92 @@ def test_admin_approval_releases_pending_reward_to_available_balance(client, mon
     assert dashboard.status_code == 200
     assert Decimal(dashboard.json()["platform_ad_revenue"]) == Decimal("0.40")
     assert Decimal(dashboard.json()["registered_user_amount"]) == Decimal("10")
+
+
+def test_provider_approval_keeps_reward_pending_until_admin_approval(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    click_id = create_click(client)
+    pending_payload = payload(
+        click_id,
+        transaction="mock-tx-provider-approval",
+        payout="2.00",
+        status="PENDING",
+    )
+    created = client.post("/api/v1/postbacks/mock", json=pending_payload)
+    assert created.status_code == 202
+    provider_approval = client.post(
+        "/api/v1/postbacks/mock",
+        json={**pending_payload, "status": "APPROVED"},
+    )
+    assert provider_approval.status_code == 202
+    assert provider_approval.json()["status"] == "APPROVED"
+
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["pending_balance"]) == Decimal("1.60")
+    assert Decimal(wallet["available_balance"]) == Decimal("0")
+
+    decision = client.get("/api/v1/rewards").json()[0]
+    assert decision["status"] == "PENDING"
+    with TestClient(client.app) as admin:
+        assert admin.post(
+            "/api/v1/auth/admin/login",
+            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+        ).status_code == 200
+        assert admin.post(
+            f"/api/v1/admin/rewards/{decision['id']}/approve"
+        ).status_code == 200
+
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["pending_balance"]) == Decimal("0")
+    assert Decimal(wallet["available_balance"]) == Decimal("1.60")
+
+
+def test_reward_withholding_period_must_expire_before_approval(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    click_id = create_click(client)
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        policy = db.scalar(
+            select(RewardPolicy).where(RewardPolicy.name == "default_offer_reward")
+        )
+        assert policy is not None
+        policy.pending_period_days = 1
+        db.commit()
+    finally:
+        db.close()
+
+    conversion = client.post(
+        "/api/v1/postbacks/mock",
+        json=payload(click_id, transaction="mock-tx-reward-withholding"),
+    )
+    assert conversion.status_code == 202
+    decision = client.get("/api/v1/rewards").json()[0]
+
+    with TestClient(client.app) as admin:
+        assert admin.post(
+            "/api/v1/auth/admin/login",
+            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+        ).status_code == 200
+        approval = admin.post(f"/api/v1/admin/rewards/{decision['id']}/approve")
+        assert approval.status_code == 409
+
+        db = SessionLocal()
+        try:
+            reward = db.get(RewardDecision, decision["id"])
+            assert reward is not None
+            reward.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+            db.commit()
+        finally:
+            db.close()
+
+        approval = admin.post(f"/api/v1/admin/rewards/{decision['id']}/approve")
+        assert approval.status_code == 200
 
 
 def test_provider_reversal_cancels_pending_reward(client, monkeypatch):

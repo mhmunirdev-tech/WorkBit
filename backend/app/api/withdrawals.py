@@ -15,6 +15,7 @@ from app.schemas.withdrawals import (
     PayoutSettingsUpdate,
     WithdrawalCreate,
     WithdrawalDecision,
+    WithdrawalPayment,
     WithdrawalRead,
 )
 from app.services.withdrawals import _request_read, withdrawal_service
@@ -109,7 +110,7 @@ def get_admin_withdrawal(
 def _review(
     withdrawal_id: str,
     action: str,
-    data: WithdrawalDecision,
+    data: WithdrawalDecision | WithdrawalPayment,
     request: Request,
     admin: User,
     db: Session,
@@ -121,6 +122,7 @@ def _review(
         request,
         action,
         data.note,
+        data.transaction_id if isinstance(data, WithdrawalPayment) else None,
     )
     return _request_read(withdrawal)
 
@@ -150,7 +152,7 @@ def reject_withdrawal(
 @router.post("/admin/withdrawals/{withdrawal_id}/complete", response_model=WithdrawalRead)
 def complete_withdrawal(
     withdrawal_id: str,
-    data: WithdrawalDecision,
+    data: WithdrawalPayment,
     request: Request,
     admin: User = Depends(require_permission("withdrawals.review")),
     db: Session = Depends(get_db),

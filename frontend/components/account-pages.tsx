@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, BadgeCheck, Camera, Copy, WalletCards } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowUpRight, BadgeCheck, Camera, Copy, KeyRound, Save, UserRound, WalletCards } from "lucide-react";
 import { api } from "../lib/api";
+import { formatUsd } from "../lib/utils";
 import { Shell, ShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { PasswordInput } from "./ui/password-input";
 import { Skeleton } from "./ui/skeleton";
+import { showInvalidFieldToast, showToast } from "../lib/toast";
 
 type AccountData = {
   currency: string;
+  package_active: boolean;
+  package_purchase_status: string | null;
+  package_expires_at: string | null;
   user: ShellUser & {
     country: string;
     created_at: string;
@@ -22,6 +29,8 @@ type AccountData = {
     avatar_url: string | null;
   };
   available_balance: string | number;
+  deposit_balance: string | number;
+  earning_balance: string | number;
   pending_balance: string | number;
   lifetime_earned: string | number;
   lifetime_withdrawn: string | number;
@@ -76,11 +85,7 @@ function AccountState({ loading, error }: { loading: boolean; error: string }) {
 }
 
 function formatMoney(value: string | number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value));
+  return formatUsd(value);
 }
 
 export function ProfilePage() {
@@ -89,15 +94,31 @@ export function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [photoMessage, setPhotoMessage] = useState("");
   const [referralMessage, setReferralMessage] = useState("");
+  const accountIsActive = Boolean(
+    account?.package_active &&
+    account.user.email_verified &&
+    account.user.status === "ACTIVE",
+  );
+  const accountStatusLabel = account?.user.status === "SUSPENDED" || account?.user.status === "BANNED"
+    ? account.user.status.replaceAll("_", " ")
+    : !account?.user.email_verified
+      ? "Pending verification"
+      : accountIsActive
+        ? "Active"
+        : "Inactive";
 
   async function uploadPhoto(file: File | undefined) {
     if (!file) return;
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-      setPhotoMessage("JPEG, PNG, or WebP images are supported.");
+      const message = "JPEG, PNG, or WebP images are supported.";
+      setPhotoMessage(message);
+      showToast({ title: "Unsupported image", description: message, variant: "destructive" });
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoMessage("Choose an image that is 5 MB or smaller.");
+      const message = "Choose an image that is 5 MB or smaller.";
+      setPhotoMessage(message);
+      showToast({ title: "Image is too large", description: message, variant: "destructive" });
       return;
     }
 
@@ -114,8 +135,11 @@ export function ProfilePage() {
         ? { ...current, user: { ...current.user, avatar_url: result.avatar_url } }
         : current);
       setPhotoMessage("Profile photo updated.");
+      showToast({ title: "Profile photo updated", description: "Your new profile photo is ready.", variant: "success" });
     } catch (reason) {
-      setPhotoMessage(reason instanceof Error ? reason.message : "Profile photo could not be uploaded.");
+      const message = reason instanceof Error ? reason.message : "Profile photo could not be uploaded.";
+      setPhotoMessage(message);
+      showToast({ title: "Profile photo upload failed", description: message, variant: "destructive" });
     } finally {
       setUploading(false);
       if (photoInput.current) photoInput.current.value = "";
@@ -126,9 +150,13 @@ export function ProfilePage() {
     if (!account) return;
     try {
       await navigator.clipboard.writeText(account.user.referral_url);
-      setReferralMessage("Referral link copied.");
+      const message = "Referral link copied.";
+      setReferralMessage(message);
+      showToast({ title: "Referral link copied", description: message, variant: "success" });
     } catch {
-      setReferralMessage("Could not copy the referral link. Select and copy it manually.");
+      const message = "Could not copy the referral link. Select and copy it manually.";
+      setReferralMessage(message);
+      showToast({ title: "Could not copy link", description: message, variant: "destructive" });
     }
   }
 
@@ -176,11 +204,21 @@ export function ProfilePage() {
                 <h2>{account.user.full_name}</h2>
                 <p>{account.user.email}</p>
                 <div className="profile-hero-badges">
-                  <Badge className="profile-status-badge" variant="outline">{account.user.status.replaceAll("_", " ")}</Badge>
+                  <Badge className={`profile-status-badge ${accountIsActive ? "is-active" : "is-inactive"}`} variant="outline">{accountStatusLabel}</Badge>
                   <Badge className={`profile-status-badge ${account.user.email_verified ? "is-verified" : "is-unverified"}`} variant="outline">
                     {account.user.email_verified ? "Email verified" : "Email not verified"}
                   </Badge>
                 </div>
+                {account.user.email_verified && account.user.status === "ACTIVE" && !accountIsActive && (
+                  <p className="profile-activation-note">
+                    {account.package_purchase_status === "PENDING"
+                      ? "Your account is inactive while your package payment is under review. Earning access activates after approval."
+                      : "Your email is verified, but your account is inactive. Buy an earning package to activate your account and start earning."}
+                    {account.package_purchase_status !== "PENDING" && (
+                      <>{" "}<Link href="/packages">View packages <ArrowUpRight size={13} aria-hidden="true" /></Link></>
+                    )}
+                  </p>
+                )}
               </div>
               <Button className="profile-settings-link" variant="outline" asChild>
                 <Link href="/settings">Account settings <ArrowUpRight size={15} /></Link>
@@ -197,9 +235,21 @@ export function ProfilePage() {
           <section className="profile-balance-grid" aria-label="Wallet summary">
             <Card className="profile-balance-card is-primary">
               <span className="profile-balance-icon"><WalletCards size={17} /></span>
-              <p>Available balance</p>
+              <p>Total wallet balance</p>
               <strong>{formatMoney(account.available_balance, account.currency)}</strong>
-              <small>Ready to withdraw</small>
+              <small>Deposit and earnings combined</small>
+            </Card>
+            <Card className="profile-balance-card">
+              <span className="profile-balance-icon is-violet"><WalletCards size={17} /></span>
+              <p>Deposit balance</p>
+              <strong>{formatMoney(account.deposit_balance, account.currency)}</strong>
+              <small>For package purchases only</small>
+            </Card>
+            <Card className="profile-balance-card">
+              <span className="profile-balance-icon is-green"><ArrowUpRight size={17} /></span>
+              <p>Earning balance</p>
+              <strong>{formatMoney(account.earning_balance, account.currency)}</strong>
+              <small>Can be withdrawn or used for packages</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-green"><ArrowUpRight size={17} /></span>
@@ -237,7 +287,7 @@ export function ProfilePage() {
               {referralMessage && <p className="profile-feedback" role="status">{referralMessage}</p>}
               <div className="profile-referral-stats">
                 <div><strong>{account.stats.referrals}</strong><span>Total referrals</span></div>
-                <div><strong>{account.stats.active_referrals}</strong><span>Active users</span></div>
+                <div><strong>{account.stats.active_referrals}</strong><span>Package members</span></div>
                 <div><strong>{formatMoney(account.stats.referral_earnings, account.currency)}</strong><span>Referral earnings</span></div>
               </div>
               <p className="profile-pending-referral">Pending referral earnings <strong>{formatMoney(account.stats.pending_referral_earnings, account.currency)}</strong></p>
@@ -245,10 +295,28 @@ export function ProfilePage() {
 
             <Card className="panel profile-package-card">
               <span className="profile-package-icon"><WalletCards size={19} /></span>
-              <p className="eyebrow">DEPOSIT PACKAGES</p>
-              <h2>Packages are not available yet</h2>
-              <p>WorkBit has not enabled a payment provider or deposit packages. No package purchase or deposit can be made right now.</p>
-              <span className="profile-coming-soon">NOT AVAILABLE</span>
+              <p className="eyebrow">EARNING ACCESS</p>
+              <h2>
+                {account.user.status !== "ACTIVE"
+                  ? "Account access unavailable"
+                  : accountIsActive
+                  ? "Your earning package is active"
+                  : account.package_purchase_status === "PENDING"
+                    ? "Package payment under review"
+                    : "Activate your earning package"}
+              </h2>
+              <p>
+                {account.user.status !== "ACTIVE"
+                  ? "Please contact WorkBit support to resolve your account status before using earning features."
+                  : accountIsActive
+                  ? `Your package payment has been approved. Your account is active and earning offers are unlocked${account.package_expires_at ? ` until ${new Date(account.package_expires_at).toLocaleDateString()}` : ""}.`
+                  : account.package_purchase_status === "PENDING"
+                    ? "Your account will become active and earning offers will unlock after an admin verifies your payment."
+                    : "Submit your bKash or Nagad payment reference. Your account becomes active and earning offers unlock after an admin verifies your payment."}
+              </p>
+              {!accountIsActive && account.package_purchase_status !== "PENDING" && (
+                <Button className="profile-settings-link" variant="outline" asChild><Link href="/packages">View packages <ArrowUpRight size={15} /></Link></Button>
+              )}
             </Card>
           </section>
 
@@ -257,7 +325,7 @@ export function ProfilePage() {
               <div><p className="eyebrow">ACCOUNT DETAILS</p><h2>Your information</h2></div>
             </div>
             <dl className="account-details">
-              <div><dt>Account status</dt><dd>{account.user.status.replaceAll("_", " ")}</dd></div>
+              <div><dt>Account status</dt><dd>{accountStatusLabel}</dd></div>
               <div><dt>Email address</dt><dd className="profile-email-value">{account.user.email}</dd></div>
               <div><dt>Country</dt><dd>{account.user.country}</dd></div>
               <div><dt>Referral code</dt><dd>{account.user.referral_code}</dd></div>
@@ -271,20 +339,105 @@ export function ProfilePage() {
 }
 
 export function SettingsPage() {
-  const { account, loading, error } = useAccount();
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
+  const { account, setAccount, loading, error } = useAccount();
+  const [verificationBusy, setVerificationBusy] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [name, setName] = useState("");
+  const [nameBusy, setNameBusy] = useState(false);
+  const [nameMessage, setNameMessage] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+
+  useEffect(() => {
+    if (account) setName(account.user.full_name);
+  }, [account]);
+
+  async function updateName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setNameBusy(true);
+    setNameMessage("");
+    try {
+      const updated = await api<ShellUser>("/profile/account", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: name }),
+      });
+      setAccount((current) =>
+        current
+          ? {
+              ...current,
+              user: {
+                ...current.user,
+                full_name: updated.full_name,
+                status: updated.status,
+                email_verified: updated.email_verified,
+                avatar_url: updated.avatar_url ?? null,
+              },
+            }
+          : current,
+      );
+      const nameUpdated = "Your name has been updated.";
+      setNameMessage(nameUpdated);
+      showToast({ title: "Profile updated", description: nameUpdated, variant: "success" });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Your name could not be updated.";
+      setNameMessage(message);
+      showToast({ title: "Profile update failed", description: message, variant: "destructive" });
+    } finally {
+      setNameBusy(false);
+    }
+  }
+
+  async function updatePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (newPassword !== confirmPassword) {
+      const message = "New passwords do not match.";
+      setPasswordMessage(message);
+      showToast({ title: "Password mismatch", description: message, variant: "destructive" });
+      return;
+    }
+
+    setPasswordBusy(true);
+    setPasswordMessage("");
+    try {
+      await api<ShellUser>("/profile/account", {
+        method: "PATCH",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+          confirm_password: confirmPassword,
+        }),
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      const successMessage = "Your password has been changed.";
+      setPasswordMessage(successMessage);
+      showToast({ title: "Password updated", description: successMessage, variant: "success" });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Your password could not be changed.";
+      setPasswordMessage(message);
+      showToast({ title: "Password update failed", description: message, variant: "destructive" });
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
 
   async function resendVerification() {
-    setBusy(true);
-    setMessage("");
+    setVerificationBusy(true);
+    setVerificationMessage("");
     try {
       const result = await api<{ message: string }>("/auth/resend-verification", { method: "POST" });
-      setMessage(result.message);
+      setVerificationMessage(result.message);
+      showToast({ title: "Verification email sent", description: result.message, variant: "success" });
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "The verification request could not be sent.");
+      const message = reason instanceof Error ? reason.message : "The verification request could not be sent.";
+      setVerificationMessage(message);
+      showToast({ title: "Verification request failed", description: message, variant: "destructive" });
     } finally {
-      setBusy(false);
+      setVerificationBusy(false);
     }
   }
 
@@ -294,12 +447,89 @@ export function SettingsPage() {
         <div>
           <p className="eyebrow">PREFERENCES & SECURITY</p>
           <h1>Account settings</h1>
-          <p className="muted">Manage the security actions currently supported for your account.</p>
+          <p className="muted">Update your profile details and keep your account secure.</p>
         </div>
       </header>
       <AccountState loading={loading} error={error} />
       {account && (
         <Card className="panel settings-card">
+          <section className="settings-section" aria-labelledby="settings-name-heading">
+            <div className="settings-section-heading">
+              <span className="settings-section-icon"><UserRound size={19} aria-hidden="true" /></span>
+              <div>
+                <h2 id="settings-name-heading">Personal information</h2>
+                <p className="panel-subtitle">Update the name shown on your WorkBit account.</p>
+              </div>
+            </div>
+            <form className="settings-form" onSubmit={updateName} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+              <label htmlFor="settings-full-name">Full name</label>
+              <Input
+                id="settings-full-name"
+                name="full_name"
+                autoComplete="name"
+                minLength={2}
+                maxLength={120}
+                required
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+              <Button className="primary settings-submit" type="submit" disabled={nameBusy || name.trim() === account.user.full_name}>
+                <Save size={16} aria-hidden="true" />
+                {nameBusy ? "Saving…" : "Save name"}
+              </Button>
+              {nameMessage && <p className="settings-feedback" role="status">{nameMessage}</p>}
+            </form>
+          </section>
+          <div className="settings-divider" />
+          <section className="settings-section" aria-labelledby="settings-password-heading">
+            <div className="settings-section-heading">
+              <span className="settings-section-icon"><KeyRound size={19} aria-hidden="true" /></span>
+              <div>
+                <h2 id="settings-password-heading">Change password</h2>
+                <p className="panel-subtitle">Use your current password to set a new one. New passwords need at least 12 characters with uppercase, lowercase, and a number.</p>
+              </div>
+            </div>
+            <form className="settings-form settings-password-form" onSubmit={updatePassword} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+              <label htmlFor="settings-current-password">Current password</label>
+              <PasswordInput
+                id="settings-current-password"
+                name="current_password"
+                autoComplete="current-password"
+                maxLength={128}
+                required
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+              <label htmlFor="settings-new-password">New password</label>
+              <PasswordInput
+                id="settings-new-password"
+                name="new_password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+              <label htmlFor="settings-confirm-password">Confirm new password</label>
+              <PasswordInput
+                id="settings-confirm-password"
+                name="confirm_password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+              <Button className="primary settings-submit" type="submit" disabled={passwordBusy}>
+                <KeyRound size={16} aria-hidden="true" />
+                {passwordBusy ? "Updating…" : "Update password"}
+              </Button>
+              {passwordMessage && <p className="settings-feedback" role="status">{passwordMessage}</p>}
+            </form>
+          </section>
+          <div className="settings-divider" />
           <div className="panel-heading">
             <div>
               <h2>Email verification</h2>
@@ -311,16 +541,12 @@ export function SettingsPage() {
           </div>
           <p className="settings-email">{account.user.email}</p>
           {!account.user.email_verified && (
-            <Button className="primary" type="button" onClick={resendVerification} disabled={busy}>
-              {busy ? "Requesting…" : "Resend verification email"}
+            <Button className="primary" type="button" onClick={resendVerification} disabled={verificationBusy}>
+              {verificationBusy ? "Requesting…" : "Resend verification email"}
             </Button>
           )}
-          {message && <Alert className="inline-status" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
-          <div className="settings-divider" />
-          <h2>Password</h2>
-          <p className="panel-subtitle">Password recovery is available through the secure reset flow.</p>
-          <Button className="text-link" variant="link" asChild><Link href="/forgot-password">Reset your password →</Link></Button>
-          <p className="muted settings-limitation">Other preferences and session management are not exposed by the current account API.</p>
+          {verificationMessage && <Alert className="inline-status" role="status"><AlertDescription>{verificationMessage}</AlertDescription></Alert>}
+          <Button className="text-link" variant="link" asChild><Link href="/forgot-password">Forgot your password? Reset by email →</Link></Button>
         </Card>
       )}
     </Shell>

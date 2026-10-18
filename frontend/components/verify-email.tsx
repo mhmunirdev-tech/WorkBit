@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { api } from "../lib/api";
+import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -18,6 +19,22 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
 
   async function verify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
+      const invalidField = form.querySelector(":invalid");
+      const message = invalidField instanceof HTMLInputElement && invalidField.type === "email"
+        ? "Enter a valid email address."
+        : "Enter the six-digit verification code.";
+      setMessage(message);
+      showToast({
+        title: invalidField instanceof HTMLInputElement && invalidField.type === "email"
+          ? "Invalid email address"
+          : "Invalid verification code",
+        description: message,
+        variant: "destructive",
+      });
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
@@ -27,8 +44,19 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
       });
       setState("success");
       setMessage(result.message);
+      showToast({
+        title: "Email verified",
+        description: result.message,
+        variant: "success",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Your email could not be verified.");
+      const message = error instanceof Error ? error.message : "Your email could not be verified.";
+      setMessage(message);
+      showToast({
+        title: "Verification failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -36,7 +64,13 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
 
   async function resendCode() {
     if (!email.trim()) {
-      setMessage("Enter the email address you used to create your account.");
+      const message = "Enter the email address you used to create your account.";
+      setMessage(message);
+      showToast({
+        title: "Email required",
+        description: message,
+        variant: "destructive",
+      });
       return;
     }
     setBusy(true);
@@ -47,8 +81,19 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
         body: JSON.stringify({ email }),
       });
       setMessage(result.message);
+      showToast({
+        title: "Verification code sent",
+        description: result.message,
+        variant: "success",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "A new verification code could not be requested.");
+      const message = error instanceof Error ? error.message : "A new verification code could not be requested.";
+      setMessage(message);
+      showToast({
+        title: "Verification request failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -66,7 +111,7 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
             : "Enter the six-digit code we sent to your email address. The code expires after 10 minutes."}
         </p>
         {state === "pending" && (
-          <form onSubmit={(event) => void verify(event)}>
+          <form onSubmit={(event) => void verify(event)} noValidate>
             <Label>
               Email address
               <Input

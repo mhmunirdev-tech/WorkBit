@@ -43,6 +43,8 @@ class WithdrawalRead(BaseModel):
     method: str
     destination_hint: str
     status: str
+    payment_transaction_id: str | None = None
+    paid_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -59,6 +61,19 @@ class AdminWithdrawalRead(WithdrawalRead):
 
 class WithdrawalDecision(BaseModel):
     note: str | None = Field(default=None, max_length=500)
+
+
+class WithdrawalPayment(BaseModel):
+    transaction_id: str = Field(min_length=1, max_length=128)
+    note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("transaction_id")
+    @classmethod
+    def clean_transaction_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized or any(ord(character) < 32 for character in normalized):
+            raise ValueError("Enter a valid payment transaction ID.")
+        return normalized
 
 
 class PayoutSettingsRead(BaseModel):

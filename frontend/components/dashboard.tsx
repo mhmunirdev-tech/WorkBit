@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } from "lucide-react";
 import { api } from "../lib/api";
+import { showToast } from "../lib/toast";
+import { formatUsd } from "../lib/utils";
 import { Shell, ShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
@@ -24,6 +25,10 @@ type DashboardBanner = {
 
 type DashboardData = {
   available_balance: Amount;
+  deposit_balance: Amount;
+  earning_balance: Amount;
+  package_active: boolean;
+  package_purchase_status: string | null;
   pending_balance: Amount;
   lifetime_earned: Amount;
   lifetime_withdrawn: Amount;
@@ -51,11 +56,7 @@ const ranges = [
 ];
 
 function money(value: Amount, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value));
+  return formatUsd(value);
 }
 
 function dateLabel(value: string) {
@@ -87,83 +88,124 @@ function DashboardSkeleton() {
 }
 
 function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const [activePage, setActivePage] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
   const [paused, setPaused] = useState(false);
-  const banner = banners[activeIndex];
 
   useEffect(() => {
-    if (banners.length < 2 || paused) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    function updatePageCount() {
+      const element = viewportRef.current;
+      if (!element) return;
+      const maxScroll = element.scrollWidth - element.clientWidth;
+      setPageCount(maxScroll > 1 ? Math.ceil(maxScroll / element.clientWidth) + 1 : 1);
+    }
+
+    updatePageCount();
+    const observer = new ResizeObserver(updatePageCount);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, [banners.length]);
+
+  useEffect(() => {
+    if (pageCount < 2 || paused) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((index) => (index + 1) % banners.length);
+      showPage((activePage + 1) % pageCount);
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [banners.length, paused]);
+  }, [activePage, pageCount, paused]);
 
-  if (!banner) return null;
+  if (banners.length === 0) return null;
 
-  function showPrevious() {
-    setActiveIndex((index) => (index - 1 + banners.length) % banners.length);
+  function showPage(page: number) {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+    viewport.scrollTo({
+      left: pageCount > 1 ? (maxScroll * page) / (pageCount - 1) : 0,
+      behavior: "smooth",
+    });
+    setActivePage(page);
   }
 
-  function showNext() {
-    setActiveIndex((index) => (index + 1) % banners.length);
+  function syncActivePage() {
+    const viewport = viewportRef.current;
+    if (!viewport || pageCount < 2) return;
+    const maxScroll = viewport.scrollWidth - viewport.clientWidth;
+    if (maxScroll <= 0) {
+      setActivePage(0);
+      return;
+    }
+    setActivePage(Math.round((viewport.scrollLeft / maxScroll) * (pageCount - 1)));
   }
-
-  const slideContent = (
-    <div className="dashboard-banner-copy">
-      <p className="eyebrow">WORKBIT UPDATE</p>
-      <h2>{banner.title}</h2>
-      {banner.content && <p>{banner.content}</p>}
-    </div>
-  );
 
   return (
-    <section className="dashboard-banner" aria-label="WorkBit announcements">
-      <img className="dashboard-banner-image" src={banner.image_url} alt={banner.title} />
-      <div className="dashboard-banner-shade" />
-      {banner.link_url ? (
-        <a className="dashboard-banner-link" href={banner.link_url} aria-label={`Read more: ${banner.title}`}>
-          {slideContent}
-        </a>
-      ) : slideContent}
-      {banners.length > 1 && (
-        <div className="dashboard-banner-controls" aria-label="Banner controls">
-          <Button variant="ghost" size="icon" type="button" aria-label="Previous banner" onClick={showPrevious}>
-            <ArrowLeft size={17} />
-          </Button>
-          <div className="dashboard-banner-dots" role="group" aria-label="Choose a banner">
-            {banners.map((item, index) => (
-              <button
-                key={item.id}
-                className={`dashboard-banner-dot${index === activeIndex ? " is-active" : ""}`}
-                type="button"
-                aria-label={`Show banner ${index + 1}: ${item.title}`}
-                aria-pressed={index === activeIndex}
-                onClick={() => setActiveIndex(index)}
-              />
-            ))}
+    <section className="dashboard-banner-section" aria-label="WorkBit announcements">
+      <div className="dashboard-banner-heading">
+        <div><p className="eyebrow">WORKBIT UPDATES</p><h2>Announcements</h2></div>
+        {pageCount > 1 && (
+          <div className="dashboard-banner-controls" aria-label="Banner controls">
+            <Button variant="ghost" size="icon" type="button" aria-label="Previous banners" onClick={() => showPage((activePage - 1 + pageCount) % pageCount)}>
+              <ArrowLeft size={17} />
+            </Button>
+            <div className="dashboard-banner-dots" role="group" aria-label="Choose a banner group">
+              {Array.from({ length: pageCount }, (_, index) => (
+                <button
+                  key={index}
+                  className={`dashboard-banner-dot${index === activePage ? " is-active" : ""}`}
+                  type="button"
+                  aria-label={`Show banner group ${index + 1}`}
+                  aria-pressed={index === activePage}
+                  onClick={() => showPage(index)}
+                />
+              ))}
+            </div>
+            <Button variant="ghost" size="icon" type="button" aria-label="Next banners" onClick={() => showPage((activePage + 1) % pageCount)}>
+              <ArrowRight size={17} />
+            </Button>
+            <Button variant="ghost" size="icon" type="button" aria-label={paused ? "Resume automatic banner rotation" : "Pause automatic banner rotation"} onClick={() => setPaused((value) => !value)}>
+              {paused ? <Play size={15} /> : <Pause size={15} />}
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            aria-label={paused ? "Resume automatic banner rotation" : "Pause automatic banner rotation"}
-            onClick={() => setPaused((value) => !value)}
-          >
-            {paused ? <Play size={15} /> : <Pause size={15} />}
-          </Button>
-          <Button variant="ghost" size="icon" type="button" aria-label="Next banner" onClick={showNext}>
-            <ArrowRight size={17} />
-          </Button>
+        )}
+      </div>
+      <div className="dashboard-banner-viewport" ref={viewportRef} onScroll={syncActivePage}>
+        <div className="dashboard-banner-track">
+          {banners.map((banner) => {
+            const cardContent = (
+              <>
+                <img className="dashboard-banner-image" src={banner.image_url} alt="" />
+                <div className="dashboard-banner-copy">
+                  <h3>{banner.title}</h3>
+                  {banner.content && <p>{banner.content}</p>}
+                  {banner.link_url && <span className="dashboard-banner-card-link">Learn more <ArrowRight size={14} /></span>}
+                </div>
+              </>
+            );
+            return banner.link_url ? (
+              <a className="dashboard-banner-card" href={banner.link_url} key={banner.id}>
+                {cardContent}
+              </a>
+            ) : (
+              <article className="dashboard-banner-card" key={banner.id}>{cardContent}</article>
+            );
+          })}
         </div>
-      )}
+      </div>
     </section>
   );
 }
 
 function EarningsChart({ points, currency }: { points: DashboardData["earnings_chart"]; currency: string }) {
   const [range, setRange] = useState(30);
-  const visible = points.slice(-range);
+  const today = new Date().toISOString().slice(0, 10);
+  const rangeStart = new Date(`${today}T00:00:00.000Z`);
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - range + 1);
+  const firstDate = rangeStart.toISOString().slice(0, 10);
+  const visible = points.filter((point) => point.date >= firstDate && point.date <= today);
   const values = visible.map((point) => Number(point.amount));
   const maximum = Math.max(...values, 0);
   const coordinates = values.map((value, index) => ({
@@ -233,7 +275,6 @@ export function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [depositNotice, setDepositNotice] = useState(false);
   const [referralMessage, setReferralMessage] = useState("");
   const [banners, setBanners] = useState<DashboardBanner[]>([]);
   const [bannerError, setBannerError] = useState("");
@@ -282,9 +323,13 @@ export function Dashboard() {
     if (!data) return;
     try {
       await navigator.clipboard.writeText(data.user.referral_url);
-      setReferralMessage("Referral link copied.");
+      const message = "Referral link copied.";
+      setReferralMessage(message);
+      showToast({ title: "Referral link copied", description: message, variant: "success" });
     } catch {
-      setReferralMessage("Clipboard access is unavailable. Select and copy the referral link.");
+      const message = "Clipboard access is unavailable. Select and copy the referral link.";
+      setReferralMessage(message);
+      showToast({ title: "Could not copy link", description: message, variant: "destructive" });
     }
   }
 
@@ -297,9 +342,12 @@ export function Dashboard() {
           text: "Explore verified earning offers on WorkBit.",
           url: data.user.referral_url,
         });
+        showToast({ title: "Referral link shared", description: "Your WorkBit referral link was shared.", variant: "success" });
       } catch (reason) {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
-        setReferralMessage("The referral link could not be shared from this device.");
+        const message = "The referral link could not be shared from this device.";
+        setReferralMessage(message);
+        showToast({ title: "Could not share link", description: message, variant: "destructive" });
       }
       return;
     }
@@ -326,133 +374,97 @@ export function Dashboard() {
   const firstName = data.user.full_name.trim().split(/\s+/)[0] || "there";
   return (
     <Shell user={data.user}>
-      {banners.length > 0 && <BannerCarousel banners={banners} />}
-      {bannerError && (
-        <Alert className="state error-state" variant="destructive" role="alert">
-          <AlertDescription>{bannerError}</AlertDescription>
-        </Alert>
-      )}
+      <div className="dashboard-page">
+        {banners.length > 0 && <BannerCarousel banners={banners} />}
+        {bannerError && (
+          <Alert className="state error-state" variant="destructive" role="alert">
+            <AlertDescription>{bannerError}</AlertDescription>
+          </Alert>
+        )}
 
-      <header className="dashboard-welcome">
-        <div className="welcome-copy">
-          <p className="eyebrow">{displayDate}</p>
-          <h1>Welcome back, {firstName} <span aria-hidden="true">✦</span></h1>
-          <p>Here’s your verified WorkBit activity at a glance.</p>
-          <Badge className={`account-status status-${data.user.status.toLowerCase()}`} variant="outline">
-            <span className="status-dot" aria-hidden="true" />
-            {data.user.status.replaceAll("_", " ")}
-          </Badge>
-        </div>
-        <div className="welcome-actions">
-          <Button
-            className="dashboard-cta deposit-cta"
-            variant="outline"
-            type="button"
-            onClick={() => setDepositNotice((visible) => !visible)}
-            aria-expanded={depositNotice}
-          >
-            <ArrowDownToLine size={16} aria-hidden="true" />
-            Deposit
-          </Button>
-          <Button className="dashboard-cta withdraw-cta" asChild>
-            <Link href="/withdraw">
-              <ArrowUpFromLine size={16} aria-hidden="true" />
-              Withdraw
-            </Link>
-          </Button>
-        </div>
-      </header>
-
-      {depositNotice && (
-        <Alert className="deposit-notice" role="status">
-          <AlertDescription>
-            Deposits are not available yet. WorkBit does not have an approved bKash or Nagad merchant integration, so no amount can be charged or added.
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
-
-      <section className="dashboard-metrics" aria-label="Account balances and earnings">
-        <Card className="dashboard-metric balance-metric" asChild><article>
-          <span className="metric-icon icon-blue" aria-hidden="true">◈</span>
-          <p>Available balance</p>
-          <h2>{money(data.available_balance, data.currency)}</h2>
-          <Link href="/wallet">Open wallet <span aria-hidden="true">→</span></Link>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-amber" aria-hidden="true">◷</span>
-          <p>Pending balance</p>
-          <h2>{money(data.pending_balance, data.currency)}</h2>
-          <small>Awaiting provider validation</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-green" aria-hidden="true">✧</span>
-          <p>Earned today</p>
-          <h2>{money(data.stats.today_earnings, data.currency)}</h2>
-          <small>Approved ledger credits</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-green" aria-hidden="true">↗</span>
-          <p>Earned this week</p>
-          <h2>{money(data.stats.week_earnings, data.currency)}</h2>
-          <small>Approved ledger credits</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-blue" aria-hidden="true">◷</span>
-          <p>Earned this month</p>
-          <h2>{money(data.stats.month_earnings, data.currency)}</h2>
-          <small>Approved ledger credits</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
-          <p>Lifetime earnings</p>
-          <h2>{money(data.lifetime_earned, data.currency)}</h2>
-          <small>Recorded by WorkBit</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-green" aria-hidden="true">◎</span>
-          <p>Referral earnings</p>
-          <h2>{money(data.stats.referral_earnings, data.currency)}</h2>
-          <small>{money(data.stats.pending_referral_earnings, data.currency)} pending</small>
-        </article></Card>
-        <Card className="dashboard-metric" asChild><article>
-          <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
-          <p>Total withdrawn</p>
-          <h2>{money(data.lifetime_withdrawn, data.currency)}</h2>
-          <small>Completed wallet movements</small>
-        </article></Card>
-      </section>
-
-      <section className="dashboard-primary-grid dashboard-one-column">
-        <EarningsChart points={data.earnings_chart} currency={data.currency} />
-      </section>
-
-      <section className="dashboard-content-grid dashboard-one-column">
-        <Card className="panel referral-panel" asChild><article>
-          <div className="panel-heading">
-            <div><p className="eyebrow">INVITE YOUR NETWORK</p><h2>Your referrals</h2></div>
-            <span className="referral-emblem" aria-hidden="true">↗</span>
+        <header className="dashboard-welcome">
+          <div className="welcome-copy">
+            <p className="eyebrow">{displayDate}</p>
+            <h1>Welcome back, {firstName} <span aria-hidden="true">✦</span></h1>
+            <p>Here’s your verified WorkBit activity at a glance.</p>
           </div>
-          <p className="referral-description">Share your WorkBit invite link. Referral rewards are only shown after they are recorded in the wallet ledger.</p>
-          <label className="referral-link-label" htmlFor="referral-link">Your referral link</label>
-          <div className="referral-link-row">
-            <Input id="referral-link" readOnly value={data.user.referral_url} onFocus={(event) => event.currentTarget.select()} />
-            <Button className="secondary-button" variant="outline" type="button" onClick={copyReferralLink}>Copy</Button>
+          <div className="welcome-actions">
+            {!data.package_active &&
+              data.user.email_verified &&
+              data.user.status === "ACTIVE" &&
+              data.package_purchase_status !== "PENDING" && (
+              <Button className="dashboard-cta deposit-cta" variant="outline" asChild>
+                <Link href="/packages">
+                  <ArrowDownToLine size={16} aria-hidden="true" />
+                  Deposit
+                </Link>
+              </Button>
+            )}
+            <Button className="dashboard-cta withdraw-cta" asChild>
+              <Link href="/withdraw">
+                <ArrowUpFromLine size={16} aria-hidden="true" />
+                Withdraw
+              </Link>
+            </Button>
           </div>
-          <div className="referral-stats">
-            <div><strong>{data.stats.referrals}</strong><span>Total referrals</span></div>
-            <div><strong>{data.stats.active_referrals}</strong><span>Active accounts</span></div>
-            <div><strong>{money(data.stats.referral_earnings, data.currency)}</strong><span>Earned</span></div>
-          </div>
-          <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
-          {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
-        </article></Card>
-      </section>
+        </header>
 
-      <footer className="dashboard-footer">
-        Offer completion and rewards depend on eligibility, provider confirmation, and WorkBit validation. Displayed rewards are not guaranteed payments.
-      </footer>
+        {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
+
+        <section className="dashboard-metrics" aria-label="Earnings and withdrawals">
+          <Card className="dashboard-metric" asChild><article>
+            <span className="metric-icon icon-green" aria-hidden="true">✧</span>
+            <p>Earning balance</p>
+            <h2>{money(data.earning_balance, data.currency)}</h2>
+            <small>Available to withdraw or buy packages</small>
+          </article></Card>
+          <Card className="dashboard-metric" asChild><article>
+            <span className="metric-icon icon-green" aria-hidden="true">✧</span>
+            <p>Earned today</p>
+            <h2>{money(data.stats.today_earnings, data.currency)}</h2>
+            <small>Approved ledger credits</small>
+          </article></Card>
+          <Card className="dashboard-metric" asChild><article>
+            <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
+            <p>Total earnings</p>
+            <h2>{money(data.lifetime_earned, data.currency)}</h2>
+            <small>Recorded by WorkBit</small>
+          </article></Card>
+          <Card className="dashboard-metric" asChild><article>
+            <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
+            <p>Total withdrawn</p>
+            <h2>{money(data.lifetime_withdrawn, data.currency)}</h2>
+            <small>Completed wallet movements</small>
+          </article></Card>
+        </section>
+
+        <section className="dashboard-community-grid" aria-label="Referral and verified earnings">
+          <Card className="panel referral-panel" asChild><article>
+            <div className="panel-heading">
+              <div><p className="eyebrow">INVITE YOUR NETWORK</p><h2>Your referrals</h2></div>
+              <span className="referral-emblem" aria-hidden="true">↗</span>
+            </div>
+            <p className="referral-description">Share your WorkBit invite link. Referral rewards are only shown after they are recorded in the wallet ledger.</p>
+            <label className="referral-link-label" htmlFor="referral-link">Your referral link</label>
+            <div className="referral-link-row">
+              <Input id="referral-link" readOnly value={data.user.referral_url} onFocus={(event) => event.currentTarget.select()} />
+              <Button className="secondary-button" variant="outline" type="button" onClick={copyReferralLink}>Copy</Button>
+            </div>
+            <div className="referral-stats">
+              <div><strong>{data.stats.referrals}</strong><span>Total referrals</span></div>
+              <div><strong>{data.stats.active_referrals}</strong><span>Package members</span></div>
+              <div><strong>{money(data.stats.referral_earnings, data.currency)}</strong><span>Earned</span></div>
+            </div>
+            <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
+            {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
+          </article></Card>
+          <EarningsChart points={data.earnings_chart} currency={data.currency} />
+        </section>
+
+        <footer className="dashboard-footer">
+          Offer completion and rewards depend on eligibility, provider confirmation, and WorkBit validation. Displayed rewards are not guaranteed payments.
+        </footer>
+      </div>
     </Shell>
   );
 }

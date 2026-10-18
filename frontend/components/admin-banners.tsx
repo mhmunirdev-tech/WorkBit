@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { api } from "../lib/api";
+import { showInvalidFieldToast, showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -96,6 +97,7 @@ export function AdminBanners() {
         body: payload,
       });
       setForm((previous) => ({ ...previous, image_url: result.image_url }));
+      showToast({ title: "Banner image uploaded", description: "The selected image is ready to publish.", variant: "success" });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Banner image upload failed.");
     } finally {
@@ -122,7 +124,9 @@ export function AdminBanners() {
         body: JSON.stringify(payload),
       });
       await loadBanners();
-      setNotice(editingId ? "Banner updated." : "Banner created.");
+      const saveMessage = editingId ? "Banner updated." : "Banner created.";
+      setNotice(saveMessage);
+      showToast({ title: "Banner saved", description: saveMessage, variant: "success" });
       resetForm();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Banner could not be saved.");
@@ -139,7 +143,9 @@ export function AdminBanners() {
       await api<void>(`/admin/dashboard-banners/${banner.id}/delete`, { method: "POST" });
       setBanners((current) => current.filter((item) => item.id !== banner.id));
       if (editingId === banner.id) resetForm();
-      setNotice("Banner deleted.");
+      const deleteMessage = "Banner deleted.";
+      setNotice(deleteMessage);
+      showToast({ title: "Banner deleted", description: deleteMessage, variant: "success" });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Banner could not be deleted.");
     }
@@ -163,7 +169,7 @@ export function AdminBanners() {
 
       <div className="admin-banners-layout">
         <Card className="admin-banner-form-card" asChild>
-          <form onSubmit={(event) => void saveBanner(event)}>
+          <form onSubmit={(event) => void saveBanner(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
             <div className="admin-section-heading">
               <div>
                 <p className="eyebrow">{editingId ? "EDIT CONTENT" : "NEW CONTENT"}</p>

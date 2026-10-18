@@ -37,6 +37,7 @@ def client():
 
 
 def activate_package(client, payment_reference="PYTESTPAY001"):
+    configure_payout_rate(client)
     user_login = client.post(
         "/api/v1/auth/login",
         json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},

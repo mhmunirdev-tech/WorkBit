@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { formatUsd } from "../lib/utils";
 import { Shell } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
@@ -10,9 +11,14 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Skeleton } from "./ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { WithdrawalPage } from "./withdrawals";
 
 type Wallet = {
   available_balance: string;
+  deposit_balance: string;
+  earning_balance: string;
+  package_active: boolean;
+  can_deposit: boolean;
   pending_balance: string;
   lifetime_earned: string;
   lifetime_withdrawn: string;
@@ -38,7 +44,7 @@ type Reward = {
 };
 
 function amount(value: string, currency: string) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(value));
+  return formatUsd(value);
 }
 
 function useAccountData<T>(path: string) {
@@ -65,15 +71,18 @@ function PageState({ loading, error, empty, children }: { loading: boolean; erro
 
 export function WalletPage() {
   const { data, loading, error } = useAccountData<Wallet>("/wallet");
-  return <Shell><header className="top"><div><p className="eyebrow">YOUR WALLET</p><h1>Balances and ledger</h1><p className="muted">Wallet values are read from the backend projection.</p></div><Button className="primary dashboard-cta" asChild><Link href="/transactions">View transactions</Link></Button></header>
+  return <Shell><header className="top"><div><p className="eyebrow">YOUR WALLET</p><h1>Balances and ledger</h1><p className="muted">Earning balance can be withdrawn. To buy a package, choose it first and pay its listed price by bKash or Nagad.</p></div><div className="welcome-actions">{data?.can_deposit && <Button className="dashboard-cta deposit-cta" variant="outline" asChild><Link href="/packages">Choose a package</Link></Button>}<Button className="primary dashboard-cta" asChild><Link href="/transactions">View transactions</Link></Button></div></header>
     <PageState loading={loading} error={error} empty={!data}>{data && <><section className="stats">
       {[
         ["Available", data.available_balance, "Available balance"],
+        ["Deposit balance", data.deposit_balance, "Package purchases only"],
+        ["Earning balance", data.earning_balance, "Withdrawable or usable for packages"],
         ["Pending", data.pending_balance, "Awaiting provider confirmation"],
-        ["Lifetime earned", data.lifetime_earned, "Ledger-recorded"],
-        ["Lifetime withdrawn", data.lifetime_withdrawn, "Completed withdrawals"],
+        ["Total earned", data.lifetime_earned, "Ledger-recorded"],
+        ["Total withdrawn", data.lifetime_withdrawn, "Completed withdrawals"],
       ].map(([title, value, note]) => <Card className="stat" asChild key={title}><article><p>{title}</p><h2>{amount(value, data.currency)}</h2><small>{note}</small></article></Card>)}
-    </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p>New eligible rewards can remain pending while provider confirmation is outstanding. Only approved rewards become available. Each balance movement is backed by a wallet ledger transaction.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
+    </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p>Approved deposits can only be used for earning packages and are not withdrawable. Approved earnings can be withdrawn or used for a package. Each package stays active for the duration shown in the package catalog when you purchase it.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
+    <WithdrawalPage embedded />
   </Shell>;
 }
 

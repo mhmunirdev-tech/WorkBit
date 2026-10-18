@@ -27,10 +27,10 @@ class ConversionService:
         existing = db.scalar(select(OfferConversion).where(OfferConversion.network_id == "mock", OfferConversion.external_transaction_id == data.transaction_id))
         if existing:
             if existing.click_id != data.click_id: raise HTTPException(409, "Transaction identifier conflict.")
-            if data.status in {"MANUAL_REVIEW", "REVERSED", "CHARGEBACK", "REJECTED", "FRAUD"} and existing.status not in TERMINAL:
+            if data.status in {"APPROVED", "MANUAL_REVIEW", "REVERSED", "CHARGEBACK", "REJECTED", "FRAUD"} and existing.status != data.status and existing.status not in TERMINAL:
                 existing.status = data.status
                 decision = db.scalar(select(RewardDecision).where(RewardDecision.conversion_id == existing.id))
-                if decision:
+                if decision and data.status != "APPROVED":
                     reward_decision_service.transition_decision(db, decision, data.status, f"Provider reported {data.status.lower()}.")
                 else:
                     db.commit()

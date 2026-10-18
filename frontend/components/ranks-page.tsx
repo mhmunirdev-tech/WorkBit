@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Award, Crown, Layers, Medal, RefreshCw, Search, Trophy } from "lucide-react";
 import { api } from "../lib/api";
+import { formatUsd } from "../lib/utils";
 import { Shell } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -46,11 +47,7 @@ type Tab = "leaderboard" | "category";
 type SortBy = "rank" | "name";
 
 function formatMoney(value: string | number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(value));
+  return formatUsd(value);
 }
 
 function rankStyle(rank: string) {

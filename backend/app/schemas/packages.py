@@ -76,6 +76,8 @@ class PackagePurchaseRead(BaseModel):
     deposit_amount: Decimal = Decimal("0")
     earning_amount: Decimal = Decimal("0")
     currency: str
+    payment_amount_bdt: Decimal | None = None
+    usd_bdt_rate: Decimal | None = None
     payment_method: str
     payment_reference: str
     status: str

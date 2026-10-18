@@ -42,6 +42,10 @@
   align-items: center;
   gap: 28px;
   padding: 24px;
+  border-top: 3px solid #55ad88;
+  background:
+    radial-gradient(circle at 100% 0, #dcf5eabd, transparent 43%),
+    linear-gradient(145deg, #f1faf5 0%, #fff 78%);
 }
 
 .yourRankIdentity,
@@ -64,7 +68,7 @@
 .overline {
   margin: 0 0 5px;
   color: #74849a;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.1px;
 }
@@ -76,7 +80,7 @@
 
 .yourRankIdentity span {
   color: #718096;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .rankProgress {
@@ -89,7 +93,8 @@
   gap: 14px;
   margin-bottom: 10px;
   color: #66768d;
-  font-size: 12px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .progressTrack {
@@ -120,7 +125,8 @@
   padding: 4px;
   border: 1px solid #e8edf4;
   border-radius: 13px;
-  background: white;
+  background: linear-gradient(145deg, #fff, #f8faff);
+  box-shadow: 0 5px 16px #1e35520a;
 }
 
 .tabs button {
@@ -135,7 +141,7 @@
   background: transparent;
   color: #56667c;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -161,7 +167,7 @@
   background: #fff;
   color: #34445b;
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .search {
@@ -187,7 +193,7 @@
   background: transparent;
   color: #34445b;
   font: inherit;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .tableCard {
@@ -208,9 +214,9 @@
 
 .table th {
   padding: 17px 20px;
-  background: #f3f7fb;
+  background: #f1f5fc;
   color: #53647d;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -231,6 +237,14 @@
 
 .table tbody tr:nth-child(even) {
   background: #fafbfd;
+}
+
+.table tbody tr {
+  transition: background .16s ease;
+}
+
+.table tbody tr:hover {
+  background: #f1f5ff;
 }
 
 .position {
@@ -276,7 +290,7 @@
   max-width: 240px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .badge {
@@ -286,7 +300,7 @@
   padding: 6px 9px;
   border: 1px solid currentColor;
   border-radius: 7px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
   white-space: nowrap;
@@ -335,11 +349,36 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 20px;
+  border-top: 3px solid #7a9ce8;
+  background:
+    radial-gradient(circle at 100% 0, #e5edff9e, transparent 43%),
+    linear-gradient(145deg, #f5f8ff 0%, #fff 78%);
+}
+
+.tierCard:nth-child(2) {
+  border-top-color: #b8784e;
+  background:
+    radial-gradient(circle at 100% 0, #ffeadb9e, transparent 43%),
+    linear-gradient(145deg, #fff8f2 0%, #fff 78%);
+}
+
+.tierCard:nth-child(3) {
+  border-top-color: #8495aa;
+  background:
+    radial-gradient(circle at 100% 0, #e7edf59e, transparent 43%),
+    linear-gradient(145deg, #f6f8fb 0%, #fff 78%);
+}
+
+.tierCard:nth-child(4) {
+  border-top-color: #d6ad42;
+  background:
+    radial-gradient(circle at 100% 0, #fff1c99e, transparent 43%),
+    linear-gradient(145deg, #fffbef 0%, #fff 78%);
 }
 
 .currentTier {
   border-color: #5bd2a9;
-  box-shadow: 0 0 0 2px #00a87612;
+  box-shadow: 0 0 0 2px #00a87612, 0 12px 26px #00a87612;
 }
 
 .tierIcon {
@@ -359,13 +398,13 @@
 .threshold {
   margin: 0 0 17px;
   color: #697991;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .tierStatus {
   margin-top: auto;
   color: #8491a3;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.7px;
 }
@@ -377,7 +416,7 @@
 .note {
   margin: -7px 0 0;
   color: #78879b;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -430,7 +469,7 @@
 
   .tabs button {
     padding: 0 8px;
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .filters {

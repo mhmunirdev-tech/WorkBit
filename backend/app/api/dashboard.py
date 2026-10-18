@@ -45,7 +45,7 @@ def public_stats(db: Session = Depends(get_db)) -> PublicStatsRead:
     ) or 0
     total_payouts_bdt = db.scalar(
         select(func.coalesce(func.sum(WithdrawalRequest.payout_amount), Decimal("0"))).where(
-            WithdrawalRequest.status == "COMPLETED",
+            WithdrawalRequest.status.in_(("PAID", "COMPLETED")),
             WithdrawalRequest.payout_currency == "BDT",
         )
     ) or Decimal("0")

@@ -155,6 +155,13 @@ class WalletTransaction(Base):
 
 class WithdrawalRequest(Base):
     __tablename__ = "withdrawal_requests"
+    __table_args__ = (
+        UniqueConstraint(
+            "method",
+            "payment_transaction_id",
+            name="uq_withdrawal_method_payment_transaction",
+        ),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
@@ -166,6 +173,8 @@ class WithdrawalRequest(Base):
     destination_ciphertext: Mapped[str] = mapped_column(Text)
     destination_hint: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    payment_transaction_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     admin_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -211,6 +220,8 @@ class PackagePurchase(Base):
     deposit_amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     earning_amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     currency: Mapped[str] = mapped_column(String(3), default="USD")
+    payment_amount_bdt: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    usd_bdt_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
     payment_method: Mapped[str] = mapped_column(String(16))
     payment_reference: Mapped[str] = mapped_column(String(120))
     status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)

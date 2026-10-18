@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
-from uuid import uuid4
+from decimal import Decimal, ROUND_HALF_UP
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -10,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import DepositRequest, EarningPackage, PackagePurchase, PaymentReference, PayoutSettings, User, Wallet, WalletTransaction
+from app.models import DepositRequest, EarningPackage, PackagePurchase, PaymentReference, PayoutSettings, User, Wallet
 from app.schemas.packages import PackagePurchaseCreate, WalletPackagePurchaseCreate
 
 INITIAL_PACKAGES = (
@@ -96,6 +95,8 @@ def package_purchase_read(purchase: PackagePurchase) -> dict:
         "deposit_amount": purchase.deposit_amount,
         "earning_amount": purchase.earning_amount,
         "currency": purchase.currency,
+        "payment_amount_bdt": purchase.payment_amount_bdt,
+        "usd_bdt_rate": purchase.usd_bdt_rate,
         "payment_method": purchase.payment_method,
         "payment_reference": purchase.payment_reference,
         "status": purchase.status,
@@ -118,20 +119,31 @@ class PackageService:
         wallet = user.wallet or db.scalar(select(Wallet).where(Wallet.user_id == user.id))
         expiry = current_package_expiry(db, user.id)
         payout_settings = db.get(PayoutSettings, "default")
+        exchange_rate = payout_settings.usd_bdt_rate if payout_settings else None
+        packages = [
+            package_read(package)
+            for package in db.scalars(
+                select(EarningPackage)
+                .where(EarningPackage.is_active.is_(True))
+                .order_by(EarningPackage.sort_order, EarningPackage.code)
+            ).all()
+        ]
+        for package in packages:
+            package["payment_amount_bdt"] = (
+                (package["amount"] * exchange_rate).quantize(
+                    Decimal("0.01"),
+                    rounding=ROUND_HALF_UP,
+                )
+                if exchange_rate is not None and exchange_rate > 0
+                else None
+            )
         return {
-            "packages": [
-                package_read(package)
-                for package in db.scalars(
-                    select(EarningPackage)
-                    .where(EarningPackage.is_active.is_(True))
-                    .order_by(EarningPackage.sort_order, EarningPackage.code)
-                ).all()
-            ],
+            "packages": packages,
             "payment_instructions": {
                 "BKASH": settings.package_bkash_number,
                 "NAGAD": settings.package_nagad_number,
             },
-            "usd_bdt_rate": payout_settings.usd_bdt_rate if payout_settings else None,
+            "usd_bdt_rate": exchange_rate,
             "package_active": has_active_package(db, user.id),
             "package_expires_at": expiry,
             "wallet_balance": wallet.available_balance if wallet else Decimal("0"),
@@ -155,15 +167,24 @@ class PackageService:
         )
         if pending:
             raise HTTPException(409, "You already have a package payment waiting for review.")
-        pending_deposit = db.scalar(
-            select(DepositRequest.id).where(
-                DepositRequest.user_id == user.id,
-                DepositRequest.status == "PENDING",
-            ).limit(1)
-        )
-        if pending_deposit:
-            raise HTTPException(409, "Wait for your pending deposit to be reviewed before buying a package.")
         package = get_active_package(db, data.package_code)
+        payout_settings = db.get(PayoutSettings, "default")
+        exchange_rate = payout_settings.usd_bdt_rate if payout_settings else None
+        if exchange_rate is None or exchange_rate <= 0:
+            raise HTTPException(
+                503,
+                "Package payments are unavailable until WorkBit configures the USD to BDT exchange rate.",
+            )
+        payment_account = (
+            settings.package_bkash_number
+            if data.payment_method == "BKASH"
+            else settings.package_nagad_number
+        ).strip()
+        if not payment_account:
+            raise HTTPException(
+                503,
+                f"{data.payment_method.title()} package payments are temporarily unavailable.",
+            )
         reused_deposit = db.scalar(
             select(DepositRequest.id).where(
                 DepositRequest.payment_method == data.payment_method,
@@ -179,6 +200,11 @@ class PackageService:
             amount=package.amount,
             duration_days=package.duration_days,
             currency=package.currency,
+            payment_amount_bdt=(package.amount * exchange_rate).quantize(
+                Decimal("0.01"),
+                rounding=ROUND_HALF_UP,
+            ),
+            usd_bdt_rate=exchange_rate,
             payment_method=data.payment_method,
             payment_reference=data.payment_reference,
             status="PENDING",
@@ -217,61 +243,10 @@ class PackageService:
         user: User,
         data: WalletPackagePurchaseCreate,
     ) -> PackagePurchase:
-        if user.status != "ACTIVE" or not user.email_verified:
-            raise HTTPException(403, "Verify your email before buying a package.")
-        pending_deposit = db.scalar(
-            select(DepositRequest.id).where(
-                DepositRequest.user_id == user.id,
-                DepositRequest.status == "PENDING",
-            ).limit(1)
+        raise HTTPException(
+            410,
+            "Wallet purchases are no longer available. Choose a package and submit its manual payment.",
         )
-        if pending_deposit:
-            raise HTTPException(409, "Wait for your pending deposit to be reviewed before buying a package.")
-        package = get_active_package(db, data.package_code)
-        wallet = db.scalar(select(Wallet).where(Wallet.user_id == user.id).with_for_update())
-        if wallet is None:
-            raise HTTPException(409, "Your wallet is unavailable.")
-        cost = package.amount
-        if wallet.available_balance < cost:
-            raise HTTPException(400, "Your combined deposit and earnings balance is not enough for this package.")
-        deposit_used = min(wallet.deposit_balance, cost)
-        earning_used = cost - deposit_used
-        wallet.deposit_balance -= deposit_used
-        wallet.available_balance -= cost
-        purchase = PackagePurchase(
-            user_id=user.id,
-            package_code=data.package_code,
-            package_name=package.name,
-            amount=cost,
-            duration_days=package.duration_days,
-            deposit_amount=deposit_used,
-            earning_amount=earning_used,
-            currency=wallet.currency,
-            payment_method="WALLET",
-            payment_reference=f"WALLET-{uuid4().hex.upper()}",
-            status="APPROVED",
-            reviewed_at=datetime.now(timezone.utc),
-        )
-        db.add(purchase)
-        db.flush()
-        db.add(WalletTransaction(
-            wallet_id=wallet.id,
-            user_id=user.id,
-            type="PACKAGE_PURCHASE",
-            amount=-cost,
-            currency=wallet.currency,
-            status="APPROVED",
-            reference_type="package_purchase",
-            reference_id=purchase.id,
-            description=f"{package.name} package purchased from wallet",
-            metadata_json=f'{{"deposit_amount":"{deposit_used}","earning_amount":"{earning_used}"}}',
-            balance_before=wallet.available_balance + cost,
-            balance_after=wallet.available_balance,
-        ))
-        self._set_package_term(db, purchase)
-        db.commit()
-        db.refresh(purchase)
-        return purchase
 
     def review(
         self,

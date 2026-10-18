@@ -1,3 +1,5 @@
+import { showToast } from "./toast";
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? (
   process.env.NODE_ENV === "production" ? "/api/v1" : "http://localhost:8000/api/v1"
 );
@@ -81,13 +83,37 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       throw new ApiError("The service returned an invalid response.", response.status);
     }
   } catch (error) {
-    if (error instanceof ApiError) throw error;
+    if (error instanceof ApiError) {
+      showToast({
+        title: "Request failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      throw error;
+    }
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError("The request timed out. Please try again.", 408);
+      const timeoutError = new ApiError("The request timed out. Please try again.", 408);
+      showToast({
+        title: "Request timed out",
+        description: timeoutError.message,
+        variant: "destructive",
+      });
+      throw timeoutError;
     }
     if (error instanceof TypeError) {
-      throw new ApiError("Unable to reach WorkBit. Check your connection and try again.", 0);
+      const connectionError = new ApiError("Unable to reach WorkBit. Check your connection and try again.", 0);
+      showToast({
+        title: "Connection error",
+        description: connectionError.message,
+        variant: "destructive",
+      });
+      throw connectionError;
     }
+    showToast({
+      title: "Request failed",
+      description: error instanceof Error ? error.message : "The request could not be completed.",
+      variant: "destructive",
+    });
     throw error;
   } finally {
     window.clearTimeout(timeout);

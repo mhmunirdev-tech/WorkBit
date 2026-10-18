@@ -12,6 +12,7 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import HTTPException, Request
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -68,6 +69,8 @@ def _request_read(withdrawal: WithdrawalRequest) -> dict:
         "method": withdrawal.method,
         "destination_hint": withdrawal.destination_hint,
         "status": withdrawal.status,
+        "payment_transaction_id": withdrawal.payment_transaction_id,
+        "paid_at": withdrawal.paid_at,
         "admin_note": withdrawal.admin_note,
         "created_at": withdrawal.created_at,
         "updated_at": withdrawal.updated_at,
@@ -214,6 +217,7 @@ class WithdrawalService:
         request: Request,
         action: str,
         note: str | None,
+        transaction_id: str | None = None,
     ) -> WithdrawalRequest:
         withdrawal = db.scalar(
             select(WithdrawalRequest)
@@ -256,13 +260,17 @@ class WithdrawalService:
         elif action == "complete":
             if withdrawal.status != "PROCESSING":
                 raise HTTPException(409, "Only processing withdrawals can be completed.")
+            if not transaction_id:
+                raise HTTPException(422, "A payment transaction ID is required to mark a withdrawal as paid.")
             wallet = db.scalar(
                 select(Wallet).where(Wallet.user_id == withdrawal.user_id).with_for_update()
             )
             if wallet is None:
                 raise HTTPException(409, "The user's wallet is unavailable.")
             wallet.lifetime_withdrawn += withdrawal.amount
-            withdrawal.status = "COMPLETED"
+            withdrawal.status = "PAID"
+            withdrawal.payment_transaction_id = transaction_id
+            withdrawal.paid_at = datetime.now(timezone.utc)
         else:
             raise HTTPException(400, "Unsupported withdrawal action.")
 
@@ -276,9 +284,19 @@ class WithdrawalService:
             f"WITHDRAWAL_{action.upper()}",
             withdrawal,
             request,
-            {"status": withdrawal.status, "amount": str(withdrawal.amount)},
+            {
+                "status": withdrawal.status,
+                "amount": str(withdrawal.amount),
+                "payment_transaction_id": withdrawal.payment_transaction_id,
+            },
         )
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError as error:
+            db.rollback()
+            if action == "complete" and transaction_id:
+                raise HTTPException(409, "This payment transaction ID has already been used for this payment method.") from error
+            raise
         db.refresh(withdrawal)
         return withdrawal
 

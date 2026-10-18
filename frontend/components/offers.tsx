@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
-import { Shell } from "./shell";
+import { showToast } from "../lib/toast";
+import { formatUsd } from "../lib/utils";
+import { Shell, useShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -26,16 +28,18 @@ type Offer = {
   estimated_time_minutes: number;
   difficulty: string;
   featured: boolean;
+  source_name: string;
   is_demo: boolean;
 };
 
 const categories = ["All", "GAME", "SURVEY", "APP", "SIGNUP", "OTHER"];
 
 function reward(value: string, currency: string) {
-  return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(value));
+  return formatUsd(value);
 }
 
-export function OffersPage() {
+function OffersCatalog() {
+  const account = useShellUser();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [category, setCategory] = useState("All");
   const [device, setDevice] = useState("");
@@ -57,7 +61,8 @@ export function OffersPage() {
     let active = true;
     setLoading(true);
     setError("");
-    const params = new URLSearchParams({ country: "US", limit: "100" });
+    const params = new URLSearchParams({ limit: "100" });
+    if (account?.country) params.set("country", account.country);
     if (category !== "All") params.set("category", category);
     if (device) params.set("device", device);
     api<Offer[]>(`/offers?${params.toString()}`)
@@ -65,7 +70,7 @@ export function OffersPage() {
       .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Offers could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [category, device]);
+  }, [account?.country, category, device]);
 
   const visibleOffers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -73,7 +78,7 @@ export function OffersPage() {
   }, [offers, search]);
 
   return (
-    <Shell>
+    <>
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
       <section className="offer-controls" aria-label="Offer filters">
         <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
@@ -84,19 +89,31 @@ export function OffersPage() {
       {loading ? <section className="offer-grid" aria-label="Loading offer catalog">{[1, 2, 3].map((item) => <Card className="offer skeleton" key={item}><CardContent className="offer-body"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></CardContent></Card>)}</section>
         : !error && visibleOffers.length ? <section className="offer-grid" aria-label="Available offers">
           {visibleOffers.map((offer) => <Card className="offer" key={offer.id}>
-            <div className="offer-art"><Badge variant="secondary">{offer.device_type}</Badge>{offer.category === "GAME" ? <Gamepad2 /> : offer.category === "SURVEY" ? <Clock3 /> : <Sparkles />}</div>
-            <CardContent className="offer-body"><Badge className="offer-type" variant="outline">{offer.category}</Badge><CardTitle>{offer.title}</CardTitle><p>{offer.short_description}</p><div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
-              <div className="offer-foot"><strong>{reward(offer.user_reward, offer.currency)}</strong><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
+            <div className={`offer-art offer-art-${offer.category.toLowerCase()}`}>
+              <div className="offer-art-topline"><span className="offer-art-label">{offer.featured ? "FEATURED OFFER" : "DISCOVER & EARN"}</span><Badge variant="secondary">{offer.device_type}</Badge></div>
+              <span className="offer-art-icon">{offer.category === "GAME" ? <Gamepad2 /> : offer.category === "SURVEY" ? <Clock3 /> : <Sparkles />}</span>
+            </div>
+            <CardContent className="offer-body">
+              <div className="offer-badges"><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category}</Badge></div>
+              <CardTitle>{offer.title}</CardTitle>
+              <p>{offer.short_description}</p>
+              <div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
+              <div className="offer-foot"><div className="offer-reward"><small>YOUR REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
               {offer.is_demo && <small className="demo-label">Development demo — no provider redirect</small>}
             </CardContent>
           </Card>)}
         </section> : !error && <div className="empty"><strong>No matching offers</strong><span>Try another search or filter. Catalog availability can change.</span></div>}
       <p className="disclaimer">Offer completion and rewards are subject to provider requirements, eligibility, and server-side validation. A displayed reward is not a payment guarantee.</p>
-    </Shell>
+    </>
   );
 }
 
-export function OfferDetailPage({ id }: { id: string }) {
+export function OffersPage() {
+  return <Shell><OffersCatalog /></Shell>;
+}
+
+function OfferDetailContent({ id }: { id: string }) {
+  const account = useShellUser();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -105,12 +122,14 @@ export function OfferDetailPage({ id }: { id: string }) {
 
   useEffect(() => {
     let active = true;
-    api<Offer>(`/offers/${encodeURIComponent(id)}?country=US`)
+    const country = account?.country;
+    const query = country ? `?country=${encodeURIComponent(country)}` : "";
+    api<Offer>(`/offers/${encodeURIComponent(id)}${query}`)
       .then((data) => { if (active) setOffer(data); })
       .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Offer details could not be loaded."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [id]);
+  }, [account?.country, id]);
 
   async function trackClick() {
     setBusy(true);
@@ -118,17 +137,24 @@ export function OfferDetailPage({ id }: { id: string }) {
     try {
       const result = await api<{ message: string }>(`/offers/${encodeURIComponent(id)}/click`, { method: "POST" });
       setMessage(result.message);
+      showToast({ title: "Offer click recorded", description: result.message, variant: "success" });
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : "Sign in to record an offer click.");
+      const message = reason instanceof Error ? reason.message : "Sign in to record an offer click.";
+      setMessage(message);
+      showToast({ title: "Could not record offer click", description: message, variant: "destructive" });
     } finally {
       setBusy(false);
     }
   }
 
-  return <Shell>
+  return <>
     <Button variant="link" asChild><Link href="/offers" className="text-link"><ArrowLeft size={15} /> Back to offers</Link></Button>
     {loading ? <Card className="panel"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4 w-1/3" /></Card>
       : error || !offer ? <Alert className="state error-state" variant="destructive"><AlertDescription>{error || "Offer not found."}</AlertDescription></Alert>
-      : <Card className="offer-detail panel"><CardContent><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.short_description}</p><div className="detail-reward"><span>Displayed reward</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><dl><div><dt>Estimated time</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} minutes` : "Varies by task"}</dd></div><div><dt>Difficulty</dt><dd>{offer.difficulty}</dd></div><div><dt>Availability</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl><p className="offer-terms">Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation.</p><Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>{offer.is_demo && <p className="demo-label">Development demo offer. External provider redirects are disabled.</p>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}</CardContent></Card>}
-  </Shell>;
+      : <Card className="offer-detail panel"><CardContent><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.short_description}</p><div className="detail-reward"><span>Displayed reward</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><dl><div><dt>Estimated time</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} minutes` : "Varies by task"}</dd></div><div><dt>Difficulty</dt><dd>{offer.difficulty}</dd></div><div><dt>Availability</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl><p className="offer-terms">Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation.</p><Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>{offer.is_demo && <p className="demo-label">Development demo offer. External provider redirects are disabled.</p>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}{message.toLowerCase().includes("package") && <Button variant="outline" asChild><Link href="/packages">View earning packages</Link></Button>}</CardContent></Card>}
+  </>;
+}
+
+export function OfferDetailPage({ id }: { id: string }) {
+  return <Shell><OfferDetailContent id={id} /></Shell>;
 }

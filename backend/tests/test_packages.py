@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from conftest import activate_package
+from conftest import activate_package, configure_payout_rate
 
 
 def login(client, email="workbit-user@example.com"):
@@ -27,6 +27,7 @@ def test_package_catalog_shows_prices_and_configured_mobile_payment_numbers(clie
         "NAGAD": "01811914794",
     }
     assert catalog["package_active"] is False
+    assert catalog["packages"][0]["payment_amount_bdt"] is None
     assert [(item["code"], item["duration_days"]) for item in catalog["packages"]] == [
         ("BASIC", 365),
         ("STANDARD", 730),
@@ -58,6 +59,7 @@ def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
     assert client.get("/api/v1/admin/packages").status_code == 401
     assert login(client).status_code == 200
     assert client.get("/api/v1/admin/packages").status_code == 403
+    configure_payout_rate(client)
 
     purchase = client.post(
         "/api/v1/package-purchases",
@@ -69,6 +71,8 @@ def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
     )
     assert purchase.status_code == 201
     assert Decimal(purchase.json()["amount"]) == Decimal("10.00")
+    assert Decimal(purchase.json()["payment_amount_bdt"]) == Decimal("1200.00")
+    assert Decimal(purchase.json()["usd_bdt_rate"]) == Decimal("120.00")
     assert purchase.json()["duration_days"] == 365
 
     assert login(client, "workbit-admin@example.com").status_code == 200
@@ -134,6 +138,7 @@ def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
 
 def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
     assert login(client).status_code == 200
+    configure_payout_rate(client)
     dashboard = client.get("/api/v1/dashboard")
     assert dashboard.status_code == 200
     assert dashboard.json()["package_active"] is False
@@ -179,6 +184,7 @@ def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
 
 def test_package_purchase_rejects_duplicate_reference_and_pending_request(client):
     assert login(client).status_code == 200
+    configure_payout_rate(client)
     purchase = client.post(
         "/api/v1/package-purchases",
         json={
@@ -210,6 +216,7 @@ def test_package_purchase_rejects_duplicate_reference_and_pending_request(client
 
 def test_rejected_package_does_not_count_as_admin_revenue_or_unlock_ads(client):
     assert login(client).status_code == 200
+    configure_payout_rate(client)
     purchase = client.post(
         "/api/v1/package-purchases",
         json={
@@ -238,14 +245,9 @@ def test_package_routes_require_admin_permissions(client):
     assert client.get("/api/v1/admin/package-purchases").status_code == 403
 
 
-def test_deposit_is_admin_approved_then_can_buy_package_from_wallet(client):
+def test_standalone_deposits_and_wallet_package_purchases_are_retired(client):
     assert login(client).status_code == 200
-    assert login(client, "workbit-admin@example.com").status_code == 200
-    rate = client.put("/api/v1/admin/payout-settings", json={"usd_bdt_rate": "120.00"})
-    assert rate.status_code == 200
-    assert login(client).status_code == 200
-
-    submitted = client.post(
+    standalone_deposit = client.post(
         "/api/v1/deposits",
         json={
             "amount_bdt": "1200.00",
@@ -253,74 +255,66 @@ def test_deposit_is_admin_approved_then_can_buy_package_from_wallet(client):
             "payment_reference": "WALLET-DEPOSIT-001",
         },
     )
-    assert submitted.status_code == 201
-    assert Decimal(submitted.json()["amount"]) == Decimal("10.00000000")
+    assert standalone_deposit.status_code == 410
+    assert "Choose a package" in standalone_deposit.json()["error"]["message"]
     assert client.get("/api/v1/wallet").json()["available_balance"] == "0E-8"
 
-    assert login(client, "workbit-admin@example.com").status_code == 200
-    approved = client.post(
-        f"/api/v1/admin/deposits/{submitted.json()['id']}/approve",
-        json={"note": "Transfer confirmed."},
-    )
-    assert approved.status_code == 200
-    assert approved.json()["status"] == "APPROVED"
-    assert login(client).status_code == 200
-
-    wallet = client.get("/api/v1/wallet").json()
-    assert wallet["available_balance"] == "10.00000000"
-    assert wallet["deposit_balance"] == "10.00000000"
-    assert wallet["earning_balance"] == "0E-8"
-    not_withdrawable = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
-    assert not_withdrawable.status_code == 400
     purchase = client.post(
         "/api/v1/package-purchases/wallet",
         json={"package_code": "BASIC"},
     )
-    assert purchase.status_code == 201
-    assert purchase.json()["deposit_amount"] == "10.00000000"
-    assert purchase.json()["earning_amount"] == "0E-8"
-    assert purchase.json()["expires_at"] is not None
-    wallet_after_purchase = client.get("/api/v1/wallet").json()
-    assert wallet_after_purchase["available_balance"] == "0E-8"
-    assert wallet_after_purchase["deposit_balance"] == "0E-8"
-    assert wallet_after_purchase["package_active"] is True
-    assert login(client, "workbit-admin@example.com").status_code == 200
-    assert client.get("/api/v1/admin/dashboard").json()["registered_user_amount"] == "0"
+    assert purchase.status_code == 410
+    assert "manual payment" in purchase.json()["error"]["message"]
 
 
 def test_deposit_is_blocked_while_package_is_active_and_reference_cannot_be_reused(client):
     activate_package(client, "ACTIVE-PACKAGE-DEPOSIT-001")
-    assert client.post(
+    response = client.post(
         "/api/v1/deposits",
         json={
             "amount_bdt": "1200.00",
             "payment_method": "BKASH",
             "payment_reference": "ACTIVE-DEPOSIT-001",
         },
-    ).status_code == 409
+    )
+    assert response.status_code == 410
 
 
-def test_deposit_payment_reference_cannot_be_reused_for_package_purchase(client):
+def test_package_purchase_requires_configured_rate_and_snapshots_amount(client):
     assert login(client).status_code == 200
-    assert login(client, "workbit-admin@example.com").status_code == 200
-    assert client.put("/api/v1/admin/payout-settings", json={"usd_bdt_rate": "120.00"}).status_code == 200
+    data = {
+        "package_code": "BASIC",
+        "payment_method": "NAGAD",
+        "payment_reference": "PACKAGE-FX-SNAPSHOT-001",
+    }
+    unavailable = client.post("/api/v1/package-purchases", json=data)
+    assert unavailable.status_code == 503
+
+    configure_payout_rate(client, "125.50")
+    catalog = client.get("/api/v1/packages").json()
+    assert Decimal(catalog["packages"][0]["payment_amount_bdt"]) == Decimal("1255.00")
+    purchase = client.post("/api/v1/package-purchases", json=data)
+    assert purchase.status_code == 201
+    assert Decimal(purchase.json()["payment_amount_bdt"]) == Decimal("1255.00")
+    assert Decimal(purchase.json()["usd_bdt_rate"]) == Decimal("125.50")
+
+
+def test_package_payment_reference_cannot_be_reused(client):
     assert login(client).status_code == 200
-    deposit = client.post(
-        "/api/v1/deposits",
+    configure_payout_rate(client)
+    first = client.post(
+        "/api/v1/package-purchases",
         json={
-            "amount_bdt": "1200.00",
+            "package_code": "BASIC",
             "payment_method": "NAGAD",
             "payment_reference": "CROSS-FLOW-REF-001",
         },
     )
-    assert deposit.status_code == 201
+    assert first.status_code == 201
     duplicate = client.post(
         "/api/v1/package-purchases",
         json={
-            "package_code": "BASIC",
+            "package_code": "STANDARD",
             "payment_method": "NAGAD",
             "payment_reference": "CROSS-FLOW-REF-001",
         },

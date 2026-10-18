@@ -1,11 +1,8 @@
 {
-  "/register/page": "app/register/page.js",
+  "/page": "app/page.js",
   "/login/page": "app/login/page.js",
-  "/offers/page": "app/offers/page.js",
-  "/rewards/page": "app/rewards/page.js",
-  "/withdrawals/page": "app/withdrawals/page.js",
-  "/wallet/page": "app/wallet/page.js",
-  "/withdraw/page": "app/withdraw/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/admin/banners/page": "app/admin/banners/page.js"
+  "/packages/page": "app/packages/page.js",
+  "/offers/page": "app/offers/page.js",
+  "/deposit/page": "app/deposit/page.js"
 }

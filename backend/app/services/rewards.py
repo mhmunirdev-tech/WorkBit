@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
 from fastapi import HTTPException
@@ -84,9 +84,32 @@ class RewardDecisionService:
             raise HTTPException(503, "No reward policy is configured.")
         user_reward = self._calculate_user_reward(policy, conversion.provider_payout)
         decision = self._persist_decision(db, conversion, user, policy, status, reason, provider_payout=conversion.provider_payout, user_reward=user_reward, platform_share=self._calculate_platform_share(policy, conversion.provider_payout))
+        if status == "APPROVED":
+            self._ensure_withholding_elapsed(decision)
         self._apply_wallet_projection(db, user, decision)
         db.commit(); db.refresh(decision)
         return decision
+
+    def _ensure_withholding_elapsed(self, decision: RewardDecision) -> None:
+        metadata = json.loads(decision.metadata_json or "{}")
+        policy = decision.policy
+        pending_period_days = int(
+            metadata.get(
+                "pending_period_days",
+                policy.pending_period_days if policy else 0,
+            )
+        )
+        if pending_period_days < 0:
+            raise HTTPException(503, "The reward policy has an invalid withholding period.")
+        created_at = decision.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        eligible_at = created_at + timedelta(days=pending_period_days)
+        if datetime.now(timezone.utc) < eligible_at:
+            raise HTTPException(
+                409,
+                f"This reward is held until {eligible_at.isoformat()}.",
+            )
 
     def transition_decision(self, db: Session, decision: RewardDecision, status: str, reason: str) -> RewardDecision:
         """Record a reviewed outcome and append any required immutable ledger movements."""
@@ -105,6 +128,8 @@ class RewardDecisionService:
                 409,
                 f"Reward cannot transition from {previous_status} to {status}.",
             )
+        if status == "APPROVED":
+            self._ensure_withholding_elapsed(decision)
         user = db.get(User, decision.user_id)
         wallet = user.wallet if user else None
         if wallet is None:
@@ -181,7 +206,12 @@ class RewardDecisionService:
             status=status,
             reason=reason,
             rule_version="v1",
-            metadata_json=json.dumps({"conversion_status": conversion.status, "network_id": conversion.network_id, "offer_id": conversion.offer_id}),
+            metadata_json=json.dumps({
+                "conversion_status": conversion.status,
+                "network_id": conversion.network_id,
+                "offer_id": conversion.offer_id,
+                "pending_period_days": policy.pending_period_days,
+            }),
         )
         db.add(decision)
         db.flush()
@@ -263,7 +293,7 @@ class RewardDecisionService:
         if conversion.status == "PENDING":
             return "PENDING"
         if conversion.status == "APPROVED":
-            return "APPROVED"
+            return "PENDING"
         return "PENDING"
 
     def _apply_wallet_projection(self, db: Session, user: User, decision: RewardDecision) -> None:

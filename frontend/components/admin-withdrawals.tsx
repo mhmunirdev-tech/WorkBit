@@ -1,21 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { formatUsd } from "../lib/utils";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 
 type Withdrawal = {
   id: string;
   amount: string | number;
   currency: string;
+  payout_amount: string | number | null;
+  payout_currency: string | null;
+  exchange_rate: string | number | null;
   method: string;
   destination_hint: string;
   status: string;
+  payment_transaction_id: string | null;
+  paid_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -30,35 +39,70 @@ type WithdrawalDetails = Withdrawal & {
   reviewed_at: string | null;
 };
 
+type PayoutSettings = {
+  usd_bdt_rate: string | number | null;
+  minimum_withdrawal_usd: string | number;
+};
+
 type Action = "approve" | "reject" | "complete";
 
 function formatMoney(amount: string | number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(Number(amount));
+  return formatUsd(amount);
 }
 
 export function AdminWithdrawals() {
   const [records, setRecords] = useState<Withdrawal[]>([]);
+  const [payoutSettings, setPayoutSettings] = useState<PayoutSettings | null>(null);
+  const [exchangeRate, setExchangeRate] = useState("");
   const [selected, setSelected] = useState<WithdrawalDetails | null>(null);
   const [note, setNote] = useState("");
+  const [transactionId, setTransactionId] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
   const refresh = useCallback(async () => {
+    setLoading(true);
     setError("");
+    setSelected(null);
     try {
-      setRecords(await api<Withdrawal[]>("/admin/withdrawals"));
+      const [withdrawals, settings] = await Promise.all([
+        api<Withdrawal[]>("/admin/withdrawals"),
+        api<PayoutSettings>("/admin/payout-settings"),
+      ]);
+      setRecords(withdrawals);
+      setPayoutSettings(settings);
+      setExchangeRate(settings.usd_bdt_rate == null ? "" : String(settings.usd_bdt_rate));
     } catch (loadError) {
+      setRecords([]);
       setError(loadError instanceof Error ? loadError.message : "Withdrawal requests could not be loaded.");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  async function saveExchangeRate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await api<PayoutSettings>("/admin/payout-settings", {
+        method: "PUT",
+        body: JSON.stringify({ usd_bdt_rate: exchangeRate }),
+      });
+      setPayoutSettings(updated);
+      setExchangeRate(String(updated.usd_bdt_rate));
+      const updateMessage = "USD to BDT exchange rate updated. New requests will use this rate.";
+      setMessage(updateMessage);
+      showToast({ title: "Payout settings updated", description: updateMessage, variant: "success" });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "The payout exchange rate could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     void refresh();
@@ -66,6 +110,8 @@ export function AdminWithdrawals() {
 
   async function viewDetails(withdrawal: Withdrawal) {
     setSelected(null);
+    setTransactionId("");
+    setNote("");
     setError("");
     setMessage("");
     setBusy(true);
@@ -80,7 +126,8 @@ export function AdminWithdrawals() {
 
   async function review(action: Action) {
     if (!selected) return;
-    if (action === "complete" && !window.confirm("Confirm this payout has been sent to the user's destination?")) return;
+    if (action === "complete" && !transactionId.trim()) return;
+    if (action === "complete" && !window.confirm("Confirm this payout has been sent to the user's destination and enter the transfer reference?")) return;
 
     setBusy(true);
     setError("");
@@ -88,12 +135,24 @@ export function AdminWithdrawals() {
     try {
       const updated = await api<Withdrawal>(`/admin/withdrawals/${selected.id}/${action}`, {
         method: "POST",
-        body: JSON.stringify({ note: note.trim() || null }),
+        body: JSON.stringify({
+          note: note.trim() || null,
+          ...(action === "complete" ? { transaction_id: transactionId.trim() } : {}),
+        }),
       });
       setRecords((existing) => existing.map((item) => item.id === updated.id ? updated : item));
-      setSelected((existing) => existing ? { ...existing, status: updated.status, updated_at: updated.updated_at } : existing);
+      setSelected((existing) => existing ? {
+        ...existing,
+        status: updated.status,
+        payment_transaction_id: updated.payment_transaction_id,
+        paid_at: updated.paid_at,
+        updated_at: updated.updated_at,
+      } : existing);
       setNote("");
-      setMessage(`Withdrawal marked ${updated.status.toLowerCase()}.`);
+      setTransactionId("");
+      const reviewMessage = `Withdrawal marked ${updated.status.toLowerCase()}.`;
+      setMessage(reviewMessage);
+      showToast({ title: "Withdrawal reviewed", description: reviewMessage, variant: "success" });
     } catch (reviewError) {
       setError(reviewError instanceof Error ? reviewError.message : "The withdrawal could not be updated.");
     } finally {
@@ -118,6 +177,34 @@ export function AdminWithdrawals() {
       {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
       {message && <Alert className="state" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
 
+      <Card className="panel admin-payout-settings">
+        <div className="panel-heading">
+          <div><p className="eyebrow">PAYOUT CONFIGURATION</p><h2>USD to BDT exchange rate</h2></div>
+          <Badge variant="outline">{payoutSettings?.usd_bdt_rate ? "Configured" : "Required"}</Badge>
+        </div>
+        <p className="admin-payout-settings-copy">
+          User requests are paid in BDT using the rate saved here. Every request stores its own rate snapshot; changing this value will not alter existing requests. Minimum withdrawal: {payoutSettings ? formatMoney(payoutSettings.minimum_withdrawal_usd, "USD") : "—"}.
+        </p>
+        <form className="admin-payout-settings-form" onSubmit={(event) => void saveExchangeRate(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+          <Label htmlFor="payout-usd-bdt-rate">1 USD equals (BDT)
+            <Input
+              id="payout-usd-bdt-rate"
+              type="number"
+              inputMode="decimal"
+              min="0.0001"
+              step="0.0001"
+              required
+              value={exchangeRate}
+              onChange={(event) => setExchangeRate(event.target.value)}
+              placeholder="e.g. 120.0000"
+            />
+          </Label>
+          <Button className="primary" type="submit" disabled={busy || !exchangeRate || Number(exchangeRate) <= 0}>
+            {busy ? "Saving…" : "Save exchange rate"}
+          </Button>
+        </form>
+      </Card>
+
       <div className="admin-withdrawals-layout">
         <Card className="panel admin-withdrawals-list" aria-label="Withdrawal requests">
           <div className="panel-heading"><div><p className="eyebrow">REQUEST QUEUE</p><h2>All requests</h2></div></div>
@@ -134,7 +221,7 @@ export function AdminWithdrawals() {
                   onClick={() => void viewDetails(record)}
                   aria-pressed={selected?.id === record.id}
                 >
-                  <span><strong>{formatMoney(record.amount, record.currency)}</strong><small>{record.destination_hint}</small></span>
+                  <span><strong>{formatMoney(record.amount, record.currency)}{record.payout_amount != null && record.payout_currency ? ` → ${formatMoney(record.payout_amount, record.payout_currency)}` : ""}</strong><small>{record.method} · {record.destination_hint}</small></span>
                   <Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{record.status.toLowerCase()}</Badge>
                   <time dateTime={record.created_at}>{new Date(record.created_at).toLocaleDateString()}</time>
                 </Button>
@@ -157,18 +244,34 @@ export function AdminWithdrawals() {
               </div>
               <dl className="admin-withdrawal-fields">
                 <div><dt>User</dt><dd>{selected.user_name} · {selected.user_email}</dd></div>
+                <div><dt>Mobile banking</dt><dd>{selected.method}</dd></div>
                 <div><dt>Destination</dt><dd className="admin-destination">{selected.destination}</dd></div>
+                {selected.payout_amount != null && selected.payout_currency && <div><dt>Expected payout</dt><dd>{formatMoney(selected.payout_amount, selected.payout_currency)}{selected.exchange_rate != null ? ` · 1 ${selected.currency} = ${selected.exchange_rate} BDT` : ""}</dd></div>}
                 <div><dt>Submitted</dt><dd><time dateTime={selected.created_at}>{new Date(selected.created_at).toLocaleString()}</time></dd></div>
+                {selected.payment_transaction_id && <div><dt>Payment transaction ID</dt><dd>{selected.payment_transaction_id}</dd></div>}
+                {selected.paid_at && <div><dt>Paid at</dt><dd><time dateTime={selected.paid_at}>{new Date(selected.paid_at).toLocaleString()}</time></dd></div>}
                 {selected.admin_note && <div><dt>Previous review note</dt><dd>{selected.admin_note}</dd></div>}
               </dl>
 
               {(selected.status === "PENDING" || selected.status === "PROCESSING") && (
                 <div className="admin-withdrawal-review">
+                  {selected.status === "PROCESSING" && (
+                    <>
+                      <label htmlFor="withdrawal-payment-transaction-id">Payment transaction ID (required to mark as paid)</label>
+                      <Input
+                        id="withdrawal-payment-transaction-id"
+                        maxLength={128}
+                        required
+                        value={transactionId}
+                        onChange={(event) => setTransactionId(event.target.value)}
+                      />
+                    </>
+                  )}
                   <label htmlFor="withdrawal-review-note">Review note (optional)</label>
                   <Textarea id="withdrawal-review-note" maxLength={500} value={note} onChange={(event) => setNote(event.target.value)} />
                   <div className="admin-withdrawal-actions">
                     {selected.status === "PENDING" && <Button className="primary" type="button" disabled={busy} onClick={() => void review("approve")}>Approve</Button>}
-                    {selected.status === "PROCESSING" && <Button className="primary" type="button" disabled={busy} onClick={() => void review("complete")}>Mark as paid</Button>}
+                    {selected.status === "PROCESSING" && <Button className="primary" type="button" disabled={busy || !transactionId.trim()} onClick={() => void review("complete")}>Mark as paid</Button>}
                     <Button className="secondary-button is-danger" variant="destructive" type="button" disabled={busy} onClick={() => void review("reject")}>Reject and release funds</Button>
                   </div>
                 </div>

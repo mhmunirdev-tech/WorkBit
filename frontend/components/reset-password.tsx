@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { api } from "../lib/api";
+import { showInvalidFieldToast, showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
-import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { PasswordInput } from "./ui/password-input";
 
 export function ResetPassword({ token }: { token: string | null }) {
   const [busy, setBusy] = useState(false);
@@ -24,8 +25,14 @@ export function ResetPassword({ token }: { token: string | null }) {
     const password = String(data.get("password") ?? "");
     const confirmPassword = String(data.get("confirmPassword") ?? "");
     if (password !== confirmPassword) {
-      setMessage("The passwords do not match.");
+      const passwordMismatch = "The passwords do not match.";
+      setMessage(passwordMismatch);
       setSuccess(false);
+      showToast({
+        title: "Password mismatch",
+        description: passwordMismatch,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -38,9 +45,20 @@ export function ResetPassword({ token }: { token: string | null }) {
       });
       setMessage(result.message);
       setSuccess(true);
+      showToast({
+        title: "Password updated",
+        description: result.message,
+        variant: "success",
+      });
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Your password could not be reset.");
+      const message = error instanceof Error ? error.message : "Your password could not be reset.";
+      setMessage(message);
       setSuccess(false);
+      showToast({
+        title: "Password reset failed",
+        description: message,
+        variant: "destructive",
+      });
     } finally {
       setBusy(false);
     }
@@ -60,14 +78,14 @@ export function ResetPassword({ token }: { token: string | null }) {
         ) : (
           <>
             {token ? (
-              <form onSubmit={submit}>
+              <form onSubmit={submit} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
                 <Label>
                   New password
-                  <Input name="password" type="password" minLength={12} maxLength={128} required autoComplete="new-password" />
+                  <PasswordInput name="password" minLength={12} maxLength={128} required autoComplete="new-password" />
                 </Label>
                 <Label>
                   Confirm new password
-                  <Input name="confirmPassword" type="password" minLength={12} maxLength={128} required autoComplete="new-password" />
+                  <PasswordInput name="confirmPassword" minLength={12} maxLength={128} required autoComplete="new-password" />
                 </Label>
                 <Button className="primary" type="submit" disabled={busy}>
                   {busy ? "Updating…" : "Update password"}

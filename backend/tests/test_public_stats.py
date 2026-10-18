@@ -13,7 +13,7 @@ def test_public_stats_are_database_backed_and_require_no_login(client):
     assert response.status_code == 200
     stats = response.json()
     assert stats["registered_users"] > 0
-    assert stats["total_payouts_bdt"] == 0
+    assert Decimal(stats["total_payouts_bdt"]) == Decimal("0")
     assert stats["active_packages"] == 0
     assert stats["offer_approval_rate"] is None
     assert "email" not in stats
@@ -23,7 +23,7 @@ def test_public_stats_are_database_backed_and_require_no_login(client):
     assert updated["active_packages"] == 1
 
 
-def test_public_stats_include_only_completed_bdt_withdrawals(client):
+def test_public_stats_include_only_paid_bdt_withdrawals(client):
     db = SessionLocal()
     try:
         user = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
@@ -40,7 +40,7 @@ def test_public_stats_include_only_completed_bdt_withdrawals(client):
                     method="BKASH",
                     destination_ciphertext="encrypted-test-value",
                     destination_hint="••••1234",
-                    status="COMPLETED",
+                    status="PAID",
                 ),
                 WithdrawalRequest(
                     user_id=user.id,
@@ -61,4 +61,4 @@ def test_public_stats_include_only_completed_bdt_withdrawals(client):
         db.close()
 
     stats = client.get("/api/v1/public/stats").json()
-    assert stats["total_payouts_bdt"] == 600
+    assert Decimal(stats["total_payouts_bdt"]) == Decimal("600")
