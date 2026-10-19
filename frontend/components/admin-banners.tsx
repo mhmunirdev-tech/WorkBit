@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -169,7 +169,7 @@ export function AdminBanners() {
 
       <div className="admin-banners-layout">
         <Card className="admin-banner-form-card" asChild>
-          <form onSubmit={(event) => void saveBanner(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+          <form onSubmit={(event) => void saveBanner(event)}>
             <div className="admin-section-heading">
               <div>
                 <p className="eyebrow">{editingId ? "EDIT CONTENT" : "NEW CONTENT"}</p>
@@ -232,6 +232,8 @@ export function AdminBanners() {
           </div>
           {loading ? (
             <p className="admin-banner-empty">Loading banners…</p>
+          ) : error && banners.length === 0 ? (
+            <p className="admin-banner-empty" role="status">Banner data is unavailable until the database request succeeds.</p>
           ) : banners.length === 0 ? (
             <Card className="admin-banner-empty"><ImagePlus size={25} /><strong>No banners yet</strong><span>Create your first dashboard announcement.</span></Card>
           ) : (

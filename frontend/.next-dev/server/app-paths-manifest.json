@@ -1,7 +1,8 @@
 {
-  "/wallet/page": "app/wallet/page.js",
   "/dashboard/page": "app/dashboard/page.js",
-  "/offers/page": "app/offers/page.js",
-  "/offers/[id]/page": "app/offers/[id]/page.js",
-  "/withdraw/page": "app/withdraw/page.js"
+  "/wallet/page": "app/wallet/page.js",
+  "/login/page": "app/login/page.js",
+  "/register/page": "app/register/page.js",
+  "/admin/withdrawals/page": "app/admin/withdrawals/page.js",
+  "/admin/page": "app/admin/page.js"
 }

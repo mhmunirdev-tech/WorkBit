@@ -1,15 +1,15 @@
 "use client";
 
-import { CheckCircle2, CircleAlert, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, CircleAlert, X } from "lucide-react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import { cn } from "@/lib/utils";
 import { dismissToast, readQueuedToasts, subscribeToToasts, type ToastMessage } from "@/lib/toast";
 
 const variantClasses: Record<ToastMessage["variant"], string> = {
-  default: "border-slate-200 bg-white text-slate-900",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-950",
-  destructive: "border-red-200 bg-red-50 text-red-950",
+  default: "workbit-toast-default",
+  success: "workbit-toast-success",
+  destructive: "workbit-toast-error",
 };
 
 export function Toaster() {
@@ -22,39 +22,43 @@ export function Toaster() {
     }
 
     const unsubscribe = subscribeToToasts((next) => setToasts(next));
-    return unsubscribe;
+    const timers = synced
+      .filter((toast) => toast.duration && toast.duration > 0)
+      .map((toast) => window.setTimeout(() => dismissToast(toast.id), toast.duration));
+    return () => {
+      unsubscribe();
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, []);
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(360px,calc(100vw-2rem))] flex-col gap-2">
+    <div className="workbit-toaster" aria-live="polite" aria-relevant="additions">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={cn(
-            "pointer-events-auto rounded-xl border px-3.5 py-3 shadow-lg",
-            variantClasses[toast.variant],
-          )}
+          className={cn("workbit-toast", variantClasses[toast.variant])}
           role={toast.variant === "destructive" ? "alert" : "status"}
+          style={{ "--toast-duration": `${toast.duration ?? 4200}ms` } as CSSProperties}
         >
-          <div className="flex items-start gap-2">
-            <div className="mt-0.5 shrink-0">
-              {toast.variant === "success" && <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />}
-              {toast.variant === "destructive" && <CircleAlert className="h-4 w-4 text-red-600" aria-hidden="true" />}
-              {toast.variant === "default" && <div className="h-2 w-2 rounded-full bg-slate-500" aria-hidden="true" />}
+          <div className="workbit-toast-content">
+            <div className="workbit-toast-icon" aria-hidden="true">
+              {toast.variant === "success" && <Check size={18} strokeWidth={2.8} />}
+              {toast.variant === "destructive" && <CircleAlert size={18} strokeWidth={2.4} />}
             </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-semibold leading-5">{toast.title}</p>
-              <p className="text-sm leading-5 text-current/80">{toast.description}</p>
+            <div className="workbit-toast-copy">
+              <p className="workbit-toast-title">{toast.title}</p>
+              <p className="workbit-toast-description">{toast.description}</p>
             </div>
             <button
               type="button"
               aria-label="Dismiss notification"
-              className="ml-1 rounded-md p-1 text-current/70 transition-colors hover:bg-black/5 hover:text-current"
+              className="workbit-toast-dismiss"
               onClick={() => dismissToast(toast.id)}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
+          {toast.duration && toast.duration > 0 && <span className="workbit-toast-progress" aria-hidden="true" />}
         </div>
       ))}
     </div>

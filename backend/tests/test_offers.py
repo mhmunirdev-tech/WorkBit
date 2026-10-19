@@ -144,6 +144,7 @@ def test_simulated_ad_completion_splits_gross_rewards_and_reports_platform_share
 def test_simulated_ad_completion_requires_development_mock_rewards(client, monkeypatch):
     from app.core.config import settings
 
+    monkeypatch.setattr(settings, "enable_mock_rewards", False)
     login(client)
     _hits.clear()
     disabled = client.post("/api/v1/offers/mock-game/simulate-completion")

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 
 import { Toaster } from "@/components/ui/toaster";
+import { AnalyticsTracker } from "@/components/analytics-tracker";
 import "./styles.css";
 import "./dashboard.css";
+import "./admin-console.css";
 import "./landing-modern.css";
 
 export const metadata: Metadata = {
@@ -15,6 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <Toaster />
+        <AnalyticsTracker />
         {children}
       </body>
     </html>

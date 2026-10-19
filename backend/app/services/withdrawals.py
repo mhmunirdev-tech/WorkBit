@@ -211,8 +211,9 @@ class WithdrawalService:
             raise HTTPException(503, "Withdrawals are unavailable until WorkBit configures the USD to BDT exchange rate.")
         if wallet.currency.upper() != "USD":
             raise HTTPException(409, "Mobile banking payouts are currently available for USD wallets only.")
-        if amount < settings.withdrawal_minimum_amount:
-            raise HTTPException(400, f"The minimum request is {settings.withdrawal_minimum_amount} USD.")
+        minimum_withdrawal = payout_settings.minimum_withdrawal_usd
+        if amount < minimum_withdrawal:
+            raise HTTPException(400, f"The minimum request is {minimum_withdrawal} USD.")
 
         outstanding = db.scalar(
             select(WithdrawalRequest.id)

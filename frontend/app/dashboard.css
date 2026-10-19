@@ -2,6 +2,121 @@
 @tailwind components;
 @tailwind utilities;
 
+.workbit-toaster {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: min(420px, calc(100vw - 28px));
+  flex-direction: column;
+  gap: 10px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.workbit-toast {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e3eaf3;
+  border-radius: 16px;
+  background: #fff;
+  color: #17243a;
+  box-shadow: 0 18px 52px #10234224, 0 3px 10px #1023420d;
+  animation: workbit-toast-enter .28s cubic-bezier(.2, .8, .2, 1) both;
+  pointer-events: auto;
+  backdrop-filter: blur(18px);
+}
+
+.workbit-toast-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 16px 17px;
+}
+
+.workbit-toast-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 11px;
+  background: #e9f8f0;
+  color: #168556;
+}
+
+.workbit-toast-error .workbit-toast-icon {
+  background: #fff0ee;
+  color: #d74c42;
+}
+
+.workbit-toast-copy {
+  min-width: 0;
+  flex: 1;
+  padding-top: 1px;
+}
+
+.workbit-toast-title {
+  margin: 0;
+  color: #17243a;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.workbit-toast-description {
+  margin: 3px 0 0;
+  color: #637188;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.workbit-toast-dismiss {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  margin: -2px -3px 0 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8290a3;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+
+.workbit-toast-dismiss:hover {
+  background: #f1f4f8;
+  color: #25334a;
+}
+
+.workbit-toast-progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  transform-origin: left;
+  background: linear-gradient(90deg, #22a773, #65d4a4);
+  animation: workbit-toast-progress var(--toast-duration) linear both;
+}
+
+.workbit-toast-error .workbit-toast-progress {
+  background: linear-gradient(90deg, #da554e, #f19a72);
+}
+
+@keyframes workbit-toast-enter {
+  from { opacity: 0; transform: translateY(-10px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes workbit-toast-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 :root {
   --background: 210 40% 98%;
   --foreground: 222 47% 11%;
@@ -1916,36 +2031,63 @@ body {
 }
 
 .payout-account-dialog {
-  width: min(680px, calc(100vw - 28px));
+  width: min(500px, calc(100vw - 28px));
   max-width: none;
-  max-height: min(88vh, 760px);
-  overflow: auto;
+  max-height: min(88vh, 720px);
+  overflow-x: hidden;
+  overflow-y: auto;
   margin: auto;
-  border: 1px solid #e2e8f2;
-  border-radius: 20px;
-  padding: 24px;
+  border: 1px solid #dce5f2;
+  border-radius: 22px;
+  padding: 0;
   color: var(--dashboard-ink);
-  background: #fff;
-  box-shadow: 0 28px 90px #10234238;
+  background: linear-gradient(155deg, #fff, #fbfcff);
+  box-shadow: 0 32px 100px #10234245, 0 8px 24px #10234214;
 }
 
 .payout-account-dialog::backdrop {
-  background: #10234280;
-  backdrop-filter: blur(4px);
+  background: #0d1c3385;
+  backdrop-filter: blur(7px);
 }
 
 .payout-dialog-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
+  padding: 23px 24px 20px;
+  border-bottom: 1px solid #e8edf6;
+  background:
+    radial-gradient(circle at 100% 0, #e9efff 0, transparent 43%),
+    linear-gradient(135deg, #f8faff, #fff);
+}
+
+.payout-dialog-title-block {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.payout-dialog-header-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #dbe5ff;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff, #eef3ff);
+  color: #315efb;
+  box-shadow: 0 6px 16px #315efb12;
 }
 
 .payout-dialog-heading h2 {
-  margin: 4px 0 6px;
+  margin: 4px 0 7px;
   color: #1d304d;
-  font-size: 21px;
-  letter-spacing: -.45px;
+  font-size: 20px;
+  letter-spacing: -.55px;
+  line-height: 1.2;
 }
 
 .payout-dialog-heading p:last-child {
@@ -1956,18 +2098,26 @@ body {
 }
 
 .payout-dialog-close {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
-  border-radius: 10px;
+  border: 1px solid #e6ebf3;
+  border-radius: 11px;
+  background: #ffffffb8;
   color: #748198;
 }
 
 .payout-dialog-forms {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 22px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.payout-dialog-form {
+  gap: 11px;
+  padding: 22px 24px 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .payout-account-form {
@@ -2020,11 +2170,74 @@ body {
   font-size: 12px;
 }
 
+.payout-dialog-form > small {
+  margin-top: -5px;
+  color: #7d8a9e;
+  font-size: 10px;
+}
+
+.payout-dialog-form > label:has(#payout-account-code) {
+  display: grid;
+  gap: 7px;
+  margin-top: 3px;
+}
+
+.payout-dialog-form #payout-account-code {
+  letter-spacing: .22em;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.payout-remove-summary {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid #e5eaf3;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #fff, #f6f8fc);
+}
+
+.payout-remove-summary > div {
+  display: grid;
+  gap: 4px;
+}
+
+.payout-remove-summary strong {
+  color: #213451;
+  font-size: 13px;
+}
+
+.payout-remove-summary span:not(.payout-account-icon) {
+  color: #52627a;
+  font-size: 12px;
+}
+
+.payout-remove-summary small {
+  color: #8793a5;
+  font-size: 10px;
+}
+
 .payout-account-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 3px;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.payout-dialog-form .payout-account-actions > button {
+  width: 100%;
+  min-height: 43px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #315efb, #4773ff);
+  box-shadow: 0 8px 18px #315efb2a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.payout-dialog .inline-status {
+  margin: 0 24px 20px;
 }
 
 .wallet-withdrawal-management .withdrawal-loading {
@@ -4810,6 +5023,18 @@ body {
 }
 
 @media (max-width: 560px) {
+  .payout-dialog-heading {
+    padding: 19px 18px 17px;
+  }
+
+  .payout-dialog-form {
+    padding: 19px 18px 20px;
+  }
+
+  .payout-dialog .inline-status {
+    margin: 0 18px 18px;
+  }
+
   .dashboard-banner-heading h2 {
     font-size: 17px;
   }

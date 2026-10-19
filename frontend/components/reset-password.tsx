@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -78,7 +78,7 @@ export function ResetPassword({ token }: { token: string | null }) {
         ) : (
           <>
             {token ? (
-              <form onSubmit={submit} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+              <form onSubmit={submit}>
                 <Label>
                   New password
                   <PasswordInput name="password" minLength={12} maxLength={128} required autoComplete="new-password" />

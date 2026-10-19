@@ -8,6 +8,7 @@ from app.database.session import get_db
 from app.models import User
 from app.schemas.auth import EmailRequest, LoginRequest, RegisterRequest, ResetPasswordRequest, TokenRequest, UserResponse, VerifyEmailRequest
 from app.security.tokens import create_session
+from app.services.analytics import record_login_failure
 from app.services.auth import authenticate, consume_token, issue_token, issue_verification_code, register, user_response, verify_email_code
 from app.services.email import EmailDeliveryError, email_service
 from app.services.rate_limit import enforce_cooldown
@@ -38,21 +39,46 @@ def set_session(response: Response, user_id: str, *, admin: bool = False) -> Non
     cookie_name = settings.admin_session_cookie_name if admin else settings.session_cookie_name
     response.set_cookie(cookie_name, create_session(user_id), max_age=settings.session_max_age_seconds, httponly=True, secure=settings.environment == "production", samesite="lax", path="/")
 
+def authenticate_for_login(data: LoginRequest, request: Request, db: Session, login_type: str) -> User:
+    try:
+        return authenticate(db, str(data.email), data.password)
+    except HTTPException as error:
+        if error.status_code in {401, 403}:
+            record_login_failure(
+                db,
+                str(data.email),
+                login_type,
+                request.client.host if request.client else None,
+            )
+        raise
+
 @router.post("/register", response_model=UserResponse, status_code=201)
 def create_account(data: RegisterRequest, db: Session = Depends(get_db)):
     user = register(db, data); logging.info("registration user_id=%s", user.id); return user_response(user)
 @router.post("/login", response_model=UserResponse)
-def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
-    user = authenticate(db, str(data.email), data.password)
+def login(data: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    user = authenticate_for_login(data, request, db, "user")
     role_names = {role.name for role in user.roles}
     if "USER" not in role_names or {"ADMIN", "SUPER_ADMIN"}.intersection(role_names):
+        record_login_failure(
+            db,
+            str(data.email),
+            "user",
+            request.client.host if request.client else None,
+        )
         raise HTTPException(403, "This sign-in page is for user accounts.")
     set_session(response, user.id); logging.info("login user_id=%s", user.id); return user_response(user)
 @router.post("/admin/login", response_model=UserResponse)
-def admin_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
-    user = authenticate(db, str(data.email), data.password)
+def admin_login(data: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    user = authenticate_for_login(data, request, db, "admin")
     role_names = {role.name for role in user.roles}
     if not {"ADMIN", "SUPER_ADMIN"}.intersection(role_names) or "USER" in role_names:
+        record_login_failure(
+            db,
+            str(data.email),
+            "admin",
+            request.client.host if request.client else None,
+        )
         raise HTTPException(403, "This sign-in page is for administrator accounts.")
     set_session(response, user.id, admin=True); logging.info("admin login user_id=%s", user.id); return user_response(user)
 @router.post("/logout", status_code=204)

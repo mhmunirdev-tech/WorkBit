@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -9,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import DepositRequest, EarningPackage, PackagePurchase, PaymentReference, PayoutSettings, User, Wallet
+from app.models import DepositRequest, EarningPackage, PackagePurchase, PaymentReference, PayoutSettings, User, Wallet, WalletTransaction
 from app.schemas.packages import PackagePurchaseCreate, WalletPackagePurchaseCreate
 
 INITIAL_PACKAGES = (
@@ -20,6 +21,9 @@ INITIAL_PACKAGES = (
     ("VIP_PRO", "VIP Pro", "Details", Decimal("1000.00"), 1825, 50),
     ("FOUNDER", "Founder", "Package Duration", Decimal("500.00"), 3650, 60),
 )
+REFERRAL_COMMISSION_RATE = Decimal("0.05")
+REFERRAL_COMMISSION_TYPE = "REFERRAL_REWARD_APPROVAL"
+REFERRAL_COMMISSION_PRECISION = Decimal("0.00000001")
 
 
 def seed_earning_packages(db: Session) -> None:
@@ -271,9 +275,70 @@ class PackageService:
         purchase.reviewed_at = datetime.now(timezone.utc)
         if status == "APPROVED":
             self._set_package_term(db, purchase)
+            self._credit_referral_commission(db, purchase)
         db.commit()
         db.refresh(purchase)
         return purchase
+
+    @staticmethod
+    def _credit_referral_commission(db: Session, purchase: PackagePurchase) -> None:
+        referred_user = db.get(User, purchase.user_id)
+        if referred_user is None or referred_user.referred_by is None:
+            return
+
+        existing_commission = db.scalar(
+            select(WalletTransaction.id).where(
+                WalletTransaction.type == REFERRAL_COMMISSION_TYPE,
+                WalletTransaction.reference_type == "package_purchase",
+                WalletTransaction.reference_id == purchase.id,
+            )
+        )
+        if existing_commission:
+            return
+
+        referrer_wallet = db.scalar(
+            select(Wallet)
+            .where(Wallet.user_id == referred_user.referred_by)
+            .with_for_update()
+        )
+        if referrer_wallet is None:
+            raise HTTPException(409, "The referring account wallet is unavailable.")
+        if referrer_wallet.currency.upper() != purchase.currency.upper():
+            raise HTTPException(409, "The package currency does not match the referring account wallet.")
+
+        commission = (purchase.amount * REFERRAL_COMMISSION_RATE).quantize(
+            REFERRAL_COMMISSION_PRECISION,
+            rounding=ROUND_HALF_UP,
+        )
+        if commission <= 0:
+            return
+
+        before = referrer_wallet.available_balance
+        referrer_wallet.available_balance += commission
+        referrer_wallet.lifetime_earned += commission
+        db.add(
+            WalletTransaction(
+                wallet_id=referrer_wallet.id,
+                user_id=referrer_wallet.user_id,
+                type=REFERRAL_COMMISSION_TYPE,
+                amount=commission,
+                currency=referrer_wallet.currency,
+                status="APPROVED",
+                reference_type="package_purchase",
+                reference_id=purchase.id,
+                description=f"5% referral commission for {purchase.package_name} package",
+                metadata_json=json.dumps(
+                    {
+                        "purchase_id": purchase.id,
+                        "referred_user_id": purchase.user_id,
+                        "package_amount": str(purchase.amount),
+                        "commission_rate": str(REFERRAL_COMMISSION_RATE),
+                    }
+                ),
+                balance_before=before,
+                balance_after=referrer_wallet.available_balance,
+            )
+        )
 
     @staticmethod
     def _set_package_term(db: Session, purchase: PackagePurchase) -> None:

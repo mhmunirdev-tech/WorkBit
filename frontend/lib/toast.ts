@@ -1,16 +1,39 @@
 export type ToastVariant = "default" | "success" | "destructive";
+export type ToastKind =
+  | "login-error"
+  | "login-success"
+  | "otp-sent"
+  | "payout-account-saved"
+  | "payout-account-removed"
+  | "withdrawal-requested"
+  | "withdrawal-paid"
+  | "package-payment-submitted"
+  | "package-activated";
 
 export type ToastMessage = {
   id: string;
   title: string;
   description: string;
   variant: ToastVariant;
+  kind?: ToastKind;
   duration?: number;
+  expiresAt?: number;
 };
 
 const TOAST_STORAGE_KEY = "workbit:queued-toasts";
 const listeners = new Set<(toasts: ToastMessage[]) => void>();
 let activeToasts: ToastMessage[] = [];
+const allowedToastKinds = new Set<ToastKind>([
+  "login-error",
+  "login-success",
+  "otp-sent",
+  "payout-account-saved",
+  "payout-account-removed",
+  "withdrawal-requested",
+  "withdrawal-paid",
+  "package-payment-submitted",
+  "package-activated",
+]);
 
 function notify() {
   listeners.forEach((listener) => listener(activeToasts));
@@ -24,6 +47,8 @@ function generateId() {
 }
 
 export function showToast(input: Omit<ToastMessage, "id">) {
+  if (!input.kind || !allowedToastKinds.has(input.kind)) return;
+
   if (activeToasts.some((toast) => toast.variant === input.variant && toast.description === input.description)) {
     return;
   }
@@ -31,7 +56,8 @@ export function showToast(input: Omit<ToastMessage, "id">) {
   const toast: ToastMessage = {
     id: generateId(),
     ...input,
-    duration: input.duration ?? 5000,
+    duration: input.duration ?? 4200,
+    expiresAt: input.duration === 0 ? undefined : Date.now() + (input.duration ?? 4200),
   };
 
   activeToasts = [toast, ...activeToasts].slice(0, 4);
@@ -52,39 +78,21 @@ export function showToast(input: Omit<ToastMessage, "id">) {
   }
 }
 
-export function showInvalidFieldToast(target: EventTarget | null) {
-  if (
-    !(target instanceof HTMLInputElement) &&
-    !(target instanceof HTMLTextAreaElement) &&
-    !(target instanceof HTMLSelectElement)
-  ) {
-    return;
-  }
-
-  const field = target;
-  if (field.validity.valid) return;
-
-  const isEmail = field instanceof HTMLInputElement && field.type === "email";
-  const isPassword = field instanceof HTMLInputElement && field.type === "password";
-  const description = isEmail
-    ? "Enter a valid email address."
-    : isPassword && field.validity.tooShort
-      ? `Password must be at least ${field.minLength} characters.`
-      : field.validity.valueMissing
-        ? "Complete this required field."
-        : field.validity.patternMismatch
-          ? "Enter a value in the required format."
-          : "Check the value and try again.";
-
-  showToast({
-    title: isEmail ? "Invalid email address" : isPassword ? "Check your password" : "Invalid form value",
-    description,
-    variant: "destructive",
-  });
-}
-
 export function dismissToast(id: string) {
   activeToasts = activeToasts.filter((toast) => toast.id !== id);
+  if (typeof window !== "undefined") {
+    try {
+      const queued = readQueuedToasts();
+      if (queued.length > 0) {
+        sessionStorage.setItem(
+          TOAST_STORAGE_KEY,
+          JSON.stringify(queued.filter((toast) => toast.id !== id)),
+        );
+      }
+    } catch {
+      // Keep dismissal functional when session storage is unavailable.
+    }
+  }
   notify();
 }
 
@@ -103,7 +111,23 @@ export function readQueuedToasts(): ToastMessage[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as ToastMessage[];
     sessionStorage.removeItem(TOAST_STORAGE_KEY);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const now = Date.now();
+    return parsed
+      .filter(
+        (toast): toast is ToastMessage =>
+          Boolean(
+            toast &&
+              toast.kind &&
+              allowedToastKinds.has(toast.kind) &&
+              (toast.expiresAt === undefined || toast.expiresAt > now),
+          ),
+      )
+      .map((toast) =>
+        toast.expiresAt === undefined
+          ? toast
+          : { ...toast, duration: Math.max(0, toast.expiresAt - now) },
+      );
   } catch {
     sessionStorage.removeItem(TOAST_STORAGE_KEY);
     return [];

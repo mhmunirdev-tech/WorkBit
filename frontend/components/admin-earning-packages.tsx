@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { ArrowUpRight, Check, PackageCheck, RefreshCw, Save } from "lucide-react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -133,6 +133,8 @@ export function AdminEarningPackages() {
 
       {loading ? (
         <Card className="panel admin-package-list" aria-busy="true">Loading package settings…</Card>
+      ) : error && packages.length === 0 ? (
+        <Card className="panel admin-package-list" role="status">Package data is unavailable until the database request succeeds.</Card>
       ) : packages.length === 0 ? (
         <Card className="panel admin-package-list">No earning packages were found.</Card>
       ) : (
@@ -149,7 +151,7 @@ export function AdminEarningPackages() {
                     {form.is_active ? "Visible" : "Hidden"}
                   </Badge>
                 </header>
-                <form className="admin-earning-package-form" onSubmit={(event) => void savePackage(event, item)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+                <form className="admin-earning-package-form" onSubmit={(event) => void savePackage(event, item)}>
                   <label>Package title
                     <Input value={form.name} onChange={(event) => updateForm(item.code, "name", event.target.value)} required maxLength={80} />
                   </label>

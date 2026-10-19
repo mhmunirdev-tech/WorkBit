@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowUpRight, BadgeCheck, Camera, Copy, KeyRound, Save, UserRound, WalletCards } from "lucide-react";
 import { api } from "../lib/api";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import { formatUsd } from "../lib/utils";
-import { Shell, ShellUser } from "./shell";
+import { Shell, ShellUser, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -14,7 +15,7 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { PasswordInput } from "./ui/password-input";
 import { Skeleton } from "./ui/skeleton";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 
 type AccountData = {
   currency: string;
@@ -50,23 +51,21 @@ function useAccount() {
   const [account, setAccount] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const refresh = useCallback(async () => {
+    try {
+      setAccount(await api<AccountData>("/dashboard"));
+      setError("");
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "Account information could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    api<AccountData>("/dashboard")
-      .then((result) => {
-        if (active) setAccount(result);
-      })
-      .catch((reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "Account information could not be loaded.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    void refresh();
+  }, [refresh]);
+  useLiveRefresh(refresh, { eventName: WALLET_UPDATED_EVENT });
 
   return { account, setAccount, loading, error };
 }
@@ -431,7 +430,7 @@ export function SettingsPage() {
     try {
       const result = await api<{ message: string }>("/auth/resend-verification", { method: "POST" });
       setVerificationMessage(result.message);
-      showToast({ title: "Verification email sent", description: result.message, variant: "success" });
+      showToast({ title: "Verification code sent", description: result.message, variant: "success", kind: "otp-sent" });
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "The verification request could not be sent.";
       setVerificationMessage(message);
@@ -461,7 +460,7 @@ export function SettingsPage() {
                 <p className="panel-subtitle">Update the name shown on your WorkBit account.</p>
               </div>
             </div>
-            <form className="settings-form" onSubmit={updateName} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+            <form className="settings-form" onSubmit={updateName}>
               <label htmlFor="settings-full-name">Full name</label>
               <Input
                 id="settings-full-name"
@@ -489,7 +488,7 @@ export function SettingsPage() {
                 <p className="panel-subtitle">Use your current password to set a new one. New passwords need at least 12 characters with uppercase, lowercase, and a number.</p>
               </div>
             </div>
-            <form className="settings-form settings-password-form" onSubmit={updatePassword} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+            <form className="settings-form settings-password-form" onSubmit={updatePassword}>
               <label htmlFor="settings-current-password">Current password</label>
               <PasswordInput
                 id="settings-current-password"

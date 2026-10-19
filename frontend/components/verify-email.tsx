@@ -26,13 +26,6 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
         ? "Enter a valid email address."
         : "Enter the six-digit verification code.";
       setMessage(message);
-      showToast({
-        title: invalidField instanceof HTMLInputElement && invalidField.type === "email"
-          ? "Invalid email address"
-          : "Invalid verification code",
-        description: message,
-        variant: "destructive",
-      });
       return;
     }
     setBusy(true);
@@ -44,19 +37,9 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
       });
       setState("success");
       setMessage(result.message);
-      showToast({
-        title: "Email verified",
-        description: result.message,
-        variant: "success",
-      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Your email could not be verified.";
       setMessage(message);
-      showToast({
-        title: "Verification failed",
-        description: message,
-        variant: "destructive",
-      });
     } finally {
       setBusy(false);
     }
@@ -66,11 +49,6 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
     if (!email.trim()) {
       const message = "Enter the email address you used to create your account.";
       setMessage(message);
-      showToast({
-        title: "Email required",
-        description: message,
-        variant: "destructive",
-      });
       return;
     }
     setBusy(true);
@@ -85,15 +63,11 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
         title: "Verification code sent",
         description: result.message,
         variant: "success",
+        kind: "otp-sent",
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "A new verification code could not be requested.";
       setMessage(message);
-      showToast({
-        title: "Verification request failed",
-        description: message,
-        variant: "destructive",
-      });
     } finally {
       setBusy(false);
     }

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Table, Column, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Table, Column, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import event
 from app.database.base import Base
@@ -200,6 +200,11 @@ class PayoutSettings(Base):
     __tablename__ = "payout_settings"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default="default")
     usd_bdt_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    minimum_withdrawal_usd: Mapped[Decimal] = mapped_column(
+        Numeric(18, 8),
+        default=Decimal("5.00"),
+        server_default="5.00",
+    )
     updated_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
 
@@ -315,6 +320,24 @@ class AdminLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(512))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+    __table_args__ = (
+        Index("ix_analytics_events_type_created", "event_type", "created_at"),
+        Index("ix_analytics_events_visitor_created", "visitor_hash", "created_at"),
+        Index("ix_analytics_events_created", "created_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    visitor_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    path: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    login_type: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    email_masked: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
+
 
 class OfferNetwork(Base):
     __tablename__ = "offer_networks"

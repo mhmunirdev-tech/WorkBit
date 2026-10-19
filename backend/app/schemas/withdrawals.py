@@ -28,6 +28,10 @@ class PayoutAccountCreate(PayoutAccountOtpRequest):
     code: str = Field(pattern=r"^\d{6}$")
 
 
+class PayoutAccountDelete(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
 class WithdrawalOtpRequest(BaseModel):
     amount: Decimal = Field(gt=0, max_digits=18, decimal_places=8)
     account_id: str = Field(min_length=36, max_length=36)
@@ -106,3 +110,9 @@ class PayoutSettingsRead(BaseModel):
 
 class PayoutSettingsUpdate(BaseModel):
     usd_bdt_rate: Decimal = Field(gt=0, max_digits=12, decimal_places=4)
+    minimum_withdrawal_usd: Decimal | None = Field(
+        default=None,
+        gt=0,
+        max_digits=18,
+        decimal_places=8,
+    )

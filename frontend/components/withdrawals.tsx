@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { Banknote, Plus, Smartphone, X } from "lucide-react";
+import { Banknote, Plus, ShieldCheck, Smartphone, X } from "lucide-react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, ShellUser } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -73,6 +73,8 @@ function useWithdrawalData() {
   const [historyError, setHistoryError] = useState("");
   const [payoutAccountsError, setPayoutAccountsError] = useState("");
   const active = useRef(false);
+  const hasLoadedHistory = useRef(false);
+  const previousWithdrawalStatuses = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -90,6 +92,25 @@ function useWithdrawalData() {
       setSummaryError(summaryResult.reason instanceof Error ? summaryResult.reason.message : "Your wallet summary could not be loaded.");
     }
     if (historyResult.status === "fulfilled") {
+      if (hasLoadedHistory.current) {
+        for (const record of historyResult.value) {
+          if (
+            record.status === "PAID" &&
+            previousWithdrawalStatuses.current.get(record.id) !== "PAID"
+          ) {
+            showToast({
+              title: "Withdrawal successful",
+              description: `${formatMoney(record.amount, record.currency)} was marked paid.`,
+              variant: "success",
+              kind: "withdrawal-paid",
+            });
+          }
+        }
+      }
+      previousWithdrawalStatuses.current = new Map(
+        historyResult.value.map((record) => [record.id, record.status]),
+      );
+      hasLoadedHistory.current = true;
       setRecords(historyResult.value);
       setHistoryError("");
     } else {
@@ -113,6 +134,12 @@ function useWithdrawalData() {
       active.current = false;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!records.some((record) => record.status === "PENDING" || record.status === "PROCESSING")) return;
+    const timer = window.setInterval(() => void refresh(), 10_000);
+    return () => window.clearInterval(timer);
+  }, [records, refresh]);
 
   return {
     summary,
@@ -147,6 +174,7 @@ function PayoutAccountsPanel({
   const [message, setMessage] = useState("");
   const [messageIsError, setMessageIsError] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingRemovalAccount, setPendingRemovalAccount] = useState<PayoutAccount | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -174,6 +202,12 @@ function PayoutAccountsPanel({
         });
         setCodeSent(true);
         setMessage(result.message);
+        showToast({
+          title: "Confirmation code sent",
+          description: result.message,
+          variant: "success",
+          kind: "otp-sent",
+        });
         return;
       }
       const saved = await api<PayoutAccount>("/wallet/payout-accounts", {
@@ -191,6 +225,12 @@ function PayoutAccountsPanel({
       setCodeSent(false);
       setEditingAccountId(null);
       setMessage(`${method === "BKASH" ? "bKash" : "Nagad"} number verified and ${editingAccountId ? "updated" : "saved"} securely.`);
+      showToast({
+        title: editingAccountId ? "Payout account updated" : "Payout account added",
+        description: `${method === "BKASH" ? "bKash" : "Nagad"} number saved securely.`,
+        variant: "success",
+        kind: "payout-account-saved",
+      });
     } catch (saveError) {
       setMessage(saveError instanceof Error ? saveError.message : "The payout number could not be saved.");
       setMessageIsError(true);
@@ -204,9 +244,34 @@ function PayoutAccountsPanel({
     setMessage("");
     setMessageIsError(false);
     try {
-      await api<void>(`/wallet/payout-accounts/${account.id}`, { method: "DELETE" });
+      if (!codeSent) {
+        const result = await api<{ message: string }>(`/wallet/payout-accounts/${account.id}/otp`, {
+          method: "POST",
+        });
+        setCodeSent(true);
+        setMessage(result.message);
+        showToast({
+          title: "Confirmation code sent",
+          description: result.message,
+          variant: "success",
+          kind: "otp-sent",
+        });
+        return;
+      }
+      await api<void>(`/wallet/payout-accounts/${account.id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ code }),
+      });
       setAccounts((current) => current.filter((item) => item.id !== account.id));
       setMessage(`${account.method === "BKASH" ? "bKash" : "Nagad"} number removed.`);
+      setPendingRemovalAccount(null);
+      setDialogOpen(false);
+      showToast({
+        title: "Payout account removed",
+        description: `${account.method === "BKASH" ? "bKash" : "Nagad"} number removed securely.`,
+        variant: "success",
+        kind: "payout-account-removed",
+      });
     } catch (removeError) {
       setMessage(removeError instanceof Error ? removeError.message : "The payout number could not be removed.");
       setMessageIsError(true);
@@ -220,7 +285,7 @@ function PayoutAccountsPanel({
       <Card className="panel wallet-payout-accounts" id="payout-accounts">
         <div className="panel-heading payout-accounts-heading">
           <div><p className="eyebrow">SAVED PAYOUT ACCOUNTS</p><h2>Withdrawal accounts</h2><p className="panel-subtitle">Choose where WorkBit should send your manually reviewed withdrawal.</p></div>
-          <Button type="button" className="payout-add-button" onClick={() => { setMessage(""); setNumber(""); setCode(""); setCodeSent(false); setEditingAccountId(null); setMethod("BKASH"); setDialogOpen(true); }}>
+          <Button type="button" className="payout-add-button" onClick={() => { setMessage(""); setNumber(""); setCode(""); setCodeSent(false); setPendingRemovalAccount(null); setEditingAccountId(null); setMethod("BKASH"); setDialogOpen(true); }}>
             <Plus size={17} aria-hidden="true" /> Add Account
           </Button>
         </div>
@@ -237,9 +302,9 @@ function PayoutAccountsPanel({
                     <span>{account.destination_hint}</span>
                     <small>Saved for manual withdrawals</small>
                   </div>
-                  <Button type="button" variant="ghost" disabled={saving} onClick={() => { setMessage(""); setEditingAccountId(account.id); setMethod(account.method); setNumber(""); setCode(""); setCodeSent(false); setDialogOpen(true); }}>Replace</Button>
+                  <Button type="button" variant="ghost" disabled={saving} onClick={() => { setMessage(""); setPendingRemovalAccount(null); setEditingAccountId(account.id); setMethod(account.method); setNumber(""); setCode(""); setCodeSent(false); setDialogOpen(true); }}>Replace</Button>
                   <span className="payout-account-ready"><Banknote size={14} aria-hidden="true" /> Ready</span>
-                  <Button type="button" variant="ghost" aria-label={`Remove ${displayName} ${account.destination_hint}`} disabled={saving} onClick={() => void removeAccount(account)}>Remove</Button>
+                  <Button type="button" variant="ghost" aria-label={`Remove ${displayName} ${account.destination_hint}`} disabled={saving} onClick={() => { setMessage(""); setPendingRemovalAccount(account); setEditingAccountId(null); setMethod(account.method); setNumber(""); setCode(""); setCodeSent(false); setDialogOpen(true); }}>Remove</Button>
                 </article>
               );
             })}
@@ -261,43 +326,70 @@ function PayoutAccountsPanel({
         onClick={(event) => { if (event.target === event.currentTarget) setDialogOpen(false); }}
       >
         <div className="payout-dialog-heading">
-          <div><p className="eyebrow">WALLET SETTINGS</p><h2 id="payout-dialog-title">{editingAccountId ? "Replace payout account" : "Add payout account"}</h2><p>A code will be sent to your registered email before your number is saved.</p></div>
+          <div className="payout-dialog-title-block">
+            <span className="payout-dialog-header-icon" aria-hidden="true"><ShieldCheck size={20} /></span>
+            <div>
+              <p className="eyebrow">WALLET SETTINGS</p>
+              <h2 id="payout-dialog-title">{pendingRemovalAccount ? "Remove payout account" : editingAccountId ? "Replace payout account" : "Add payout account"}</h2>
+              <p>{pendingRemovalAccount ? "Verify this change with the code sent to your registered email." : "Verify your email before saving a payout number."}</p>
+            </div>
+          </div>
           <Button type="button" variant="ghost" className="payout-dialog-close" aria-label="Close dialog" onClick={() => setDialogOpen(false)}><X size={19} /></Button>
         </div>
         <div className="payout-dialog-forms">
-          <form className={`payout-account-form payout-dialog-form payout-account-${method.toLowerCase()}`} onSubmit={(event) => void saveAccount(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
-            <Label>Service
-              <Select value={method} disabled={Boolean(editingAccountId)} onValueChange={(value) => { setMethod(value as PayoutAccount["method"]); setCodeSent(false); setCode(""); }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BKASH" disabled={accounts.filter((account) => account.method === "BKASH").length >= 2}>bKash ({accounts.filter((account) => account.method === "BKASH").length}/2)</SelectItem>
-                  <SelectItem value="NAGAD" disabled={accounts.filter((account) => account.method === "NAGAD").length >= 2}>Nagad ({accounts.filter((account) => account.method === "NAGAD").length}/2)</SelectItem>
-                </SelectContent>
-              </Select>
-            </Label>
-            <Label htmlFor="payout-number">{method === "BKASH" ? "bKash number" : "Nagad number"}</Label>
-            <Input
-              id="payout-number"
-              name="payout-number"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              minLength={11}
-              maxLength={16}
-              pattern="(\+?88)?01[3-9][0-9]{8}"
-              placeholder="01XXXXXXXXX"
-              value={number}
-              onChange={(event) => { setNumber(event.target.value); setCodeSent(false); setCode(""); }}
-              required
-              aria-describedby="payout-number-help"
-            />
-            <small id="payout-number-help">You can save up to two numbers for each service.</small>
+          <form
+            className={`payout-account-form payout-dialog-form payout-account-${method.toLowerCase()}`}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (pendingRemovalAccount) void removeAccount(pendingRemovalAccount);
+              else void saveAccount(event);
+            }}
+          >
+            {pendingRemovalAccount ? (
+              <div className="payout-remove-summary">
+                <span className="payout-account-icon" aria-hidden="true"><Smartphone size={19} /></span>
+                <div>
+                  <strong>{pendingRemovalAccount.method === "BKASH" ? "bKash" : "Nagad"}</strong>
+                  <span>{pendingRemovalAccount.destination_hint}</span>
+                  <small>Removal requires email verification</small>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Label>Service
+                  <Select value={method} disabled={Boolean(editingAccountId)} onValueChange={(value) => { setMethod(value as PayoutAccount["method"]); setCodeSent(false); setCode(""); }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent portalContainer={dialogRef.current}>
+                      <SelectItem value="BKASH" disabled={accounts.filter((account) => account.method === "BKASH").length >= 2}>bKash ({accounts.filter((account) => account.method === "BKASH").length}/2)</SelectItem>
+                      <SelectItem value="NAGAD" disabled={accounts.filter((account) => account.method === "NAGAD").length >= 2}>Nagad ({accounts.filter((account) => account.method === "NAGAD").length}/2)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Label>
+                <Label htmlFor="payout-number">{method === "BKASH" ? "bKash number" : "Nagad number"}</Label>
+                <Input
+                  id="payout-number"
+                  name="payout-number"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  minLength={11}
+                  maxLength={16}
+                  pattern="(\+?88)?01[3-9][0-9]{8}"
+                  placeholder="01XXXXXXXXX"
+                  value={number}
+                  onChange={(event) => { setNumber(event.target.value); setCodeSent(false); setCode(""); }}
+                  required
+                  aria-describedby="payout-number-help"
+                />
+                <small id="payout-number-help">You can save up to two numbers for each service.</small>
+              </>
+            )}
             {codeSent && <Label htmlFor="payout-account-code">Email confirmation code
               <Input id="payout-account-code" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={(event) => setCode(event.target.value)} required />
             </Label>}
             <div className="payout-account-actions">
-              <Button type="submit" disabled={saving || !number.trim() || (codeSent && code.length !== 6)}>
-                {saving ? "Please wait…" : codeSent ? `Verify and ${editingAccountId ? "replace" : "save"} number` : "Send email code"}
+              <Button type="submit" disabled={saving || (!pendingRemovalAccount && !number.trim()) || (codeSent && code.length !== 6)}>
+                {saving ? "Please wait…" : pendingRemovalAccount ? codeSent ? "Verify and remove number" : "Send removal code" : codeSent ? `Verify and ${editingAccountId ? "replace" : "save"} number` : "Send email code"}
               </Button>
             </div>
           </form>
@@ -410,17 +502,13 @@ export function WithdrawalPage({
         title: "Withdrawal request submitted",
         description: successMessage,
         variant: "success",
+        kind: "withdrawal-requested",
       });
       await refresh();
     } catch (error) {
       const message = error instanceof Error ? error.message : "The withdrawal request could not be submitted.";
       setMessage(message);
       setMessageIsError(true);
-      showToast({
-        title: "Withdrawal request failed",
-        description: message,
-        variant: "destructive",
-      });
     } finally {
       setSubmitting(false);
     }
@@ -438,6 +526,12 @@ export function WithdrawalPage({
       });
       setCodeSent(true);
       setMessage(result.message);
+      showToast({
+        title: "Confirmation code sent",
+        description: result.message,
+        variant: "success",
+        kind: "otp-sent",
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "The confirmation code could not be sent.");
       setMessageIsError(true);
@@ -504,7 +598,7 @@ export function WithdrawalPage({
               ) : Number(summary.withdrawable_balance) < Number(summary.withdrawal_summary.minimum_amount) ? (
                 <div className="state withdrawal-disabled" role="status">Your withdrawable earnings have not reached the configured minimum. Deposit balance can only be used for packages.</div>
               ) : (
-                <form className="withdrawal-form" onSubmit={submitRequest} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+                <form className="withdrawal-form" onSubmit={submitRequest}>
                   <Label>
                     Wallet amount ({summary.currency})
                     <Input

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Award, Crown, Layers, Medal, RefreshCw, Search, Trophy } from "lucide-react";
 import { api } from "../lib/api";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import { formatUsd } from "../lib/utils";
 import { Shell } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -71,8 +72,8 @@ export function RanksPage() {
   const [sortBy, setSortBy] = useState<SortBy>("rank");
   const [search, setSearch] = useState("");
 
-  async function loadRanks() {
-    setLoading(true);
+  const loadRanks = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     setError("");
     try {
       setData(await api<RanksData>("/ranks"));
@@ -81,11 +82,12 @@ export function RanksPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    void loadRanks();
-  }, []);
+    void loadRanks(true);
+  }, [loadRanks]);
+  useLiveRefresh(loadRanks);
 
   const members = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase();
@@ -122,7 +124,7 @@ export function RanksPage() {
             className={styles.refresh}
             variant="outline"
             type="button"
-            onClick={() => void loadRanks()}
+            onClick={() => void loadRanks(true)}
             disabled={loading}
             aria-label="Refresh ranks"
           >

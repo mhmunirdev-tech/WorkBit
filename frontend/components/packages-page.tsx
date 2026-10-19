@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, BadgeCheck, Clock3, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
-import { Shell } from "./shell";
+import { Shell, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
@@ -22,6 +23,7 @@ type PackageOption = {
 };
 
 type Purchase = {
+  id: string;
   package_name: string;
   amount: string;
   currency: string;
@@ -56,6 +58,7 @@ function PackagesContent() {
   const [catalog, setCatalog] = useState<PackageCatalog | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const previousPurchaseStatus = useRef<Purchase["status"] | null>(null);
 
   const refresh = useCallback(async () => {
     setError("");
@@ -71,21 +74,37 @@ function PackagesContent() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  useLiveRefresh(refresh, { eventName: WALLET_UPDATED_EVENT });
 
   const latest = catalog?.latest_purchase;
   const pending = latest?.status === "PENDING";
 
   useEffect(() => {
-    if (latest?.status === "REJECTED") {
-      showToast({
-        title: "Package payment not approved",
-        description: latest.admin_note
-          ? `Your last payment was not approved. ${latest.admin_note}`
-          : "Your last payment was not approved. You can submit a new package payment.",
-        variant: "destructive",
-      });
+    if (!latest) return;
+    let submittedPurchaseId: string | null = null;
+    try {
+      submittedPurchaseId = sessionStorage.getItem("workbit:pending-package-purchase");
+    } catch {
+      submittedPurchaseId = null;
     }
-  }, [latest?.admin_note, latest?.status]);
+    if (
+      latest.status === "APPROVED" &&
+      (previousPurchaseStatus.current === "PENDING" || submittedPurchaseId === latest.id)
+    ) {
+      showToast({
+        title: "Package activated",
+        description: `${latest.package_name} is active and ready to use.`,
+        variant: "success",
+        kind: "package-activated",
+      });
+      try {
+        sessionStorage.removeItem("workbit:pending-package-purchase");
+      } catch {
+        // Ignore storage failures; the status transition remains tracked in memory.
+      }
+    }
+    previousPurchaseStatus.current = latest.status;
+  }, [latest]);
 
   return (
     <main className="package-page package-catalog-page">

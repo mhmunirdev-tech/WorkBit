@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldCheck, X, ArrowDownToLine, Settings2 } from "lucide-react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { Activity, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldCheck, X, ArrowDownToLine, Settings2 } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -12,15 +12,38 @@ import { Button } from "./ui/button";
 type AdminIdentity = {
   full_name: string;
   email: string;
+  roles: string[];
 };
 
-const navigation = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/withdrawals", label: "Manual withdrawals", icon: Banknote },
-  { href: "/admin/deposits", label: "Deposit requests", icon: ArrowDownToLine },
-  { href: "/admin/package-purchases", label: "Package payments", icon: PackageCheck },
-  { href: "/admin/packages", label: "Package settings", icon: Settings2 },
-  { href: "/admin/banners", label: "Dashboard banners", icon: ImagePlus },
+const AdminIdentityContext = createContext<AdminIdentity | null>(null);
+
+export function useAdminIdentity() {
+  return useContext(AdminIdentityContext);
+}
+
+const navigationGroups = [
+  {
+    label: "Workspace",
+    items: [
+      { href: "/admin", label: "Overview", icon: LayoutDashboard },
+      { href: "/admin/analytics", label: "Analysis", icon: Activity },
+    ],
+  },
+  {
+    label: "Financial operations",
+    items: [
+      { href: "/admin/withdrawals", label: "Manual withdrawals", icon: Banknote },
+      { href: "/admin/deposits", label: "Deposit requests", icon: ArrowDownToLine },
+      { href: "/admin/package-purchases", label: "Package payments", icon: PackageCheck },
+    ],
+  },
+  {
+    label: "Platform setup",
+    items: [
+      { href: "/admin/packages", label: "Package settings", icon: Settings2 },
+      { href: "/admin/banners", label: "Dashboard banners", icon: ImagePlus },
+    ],
+  },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -58,11 +81,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .map((part) => part[0].toUpperCase())
     .join("");
+  const currentPage = navigationGroups
+    .flatMap((group) => group.items)
+    .find((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`)));
 
   if (pathname === "/admin/login") return <>{children}</>;
 
   return (
-    <main className="app-shell admin-app-shell">
+    <AdminIdentityContext.Provider value={identity}>
+      <main className="app-shell admin-app-shell">
       <Button
         className="mobile-menu-toggle"
         variant="ghost"
@@ -89,24 +116,28 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <i aria-hidden="true">W</i> WorkBit
         </Link>
         <p className="tagline">Platform operations</p>
-        <p className="nav-caption">ADMIN CONSOLE</p>
         <nav id="admin-navigation" aria-label="Admin navigation">
-          {navigation.map((item) => {
-            const active = pathname === item.href ||
-              (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
-            return (
-              <Link
-                className={`app-nav-link${active ? " is-active" : ""}`}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                key={item.href}
-                onClick={() => setMenuOpen(false)}
-              >
-                <span className="nav-icon" aria-hidden="true"><item.icon size={17} /></span>
-                {item.label}
-              </Link>
-            );
-          })}
+          {navigationGroups.map((group) => (
+            <div className="admin-nav-group" key={group.label}>
+              <p className="nav-caption">{group.label}</p>
+              {group.items.map((item) => {
+                const active = pathname === item.href ||
+                  (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
+                return (
+                  <Link
+                    className={`app-nav-link${active ? " is-active" : ""}`}
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    key={item.href}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span className="nav-icon" aria-hidden="true"><item.icon size={17} /></span>
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <Link className="admin-user-space-link" href="/dashboard">
           <span className="nav-icon" aria-hidden="true"><ShieldCheck size={17} /></span>
@@ -119,8 +150,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <AvatarFallback>{initials || "AD"}</AvatarFallback>
           </Avatar>
           <span className="sidebar-user-copy">
-            <strong>{identity?.full_name || "Admin account"}</strong>
-            <small>Administrator</small>
+            <strong>{identity?.full_name || "Loading profile…"}</strong>
+            <small>{identity?.roles.join(", ") || "Loading role…"}</small>
           </span>
           <Button
             className="logout-button"
@@ -135,7 +166,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
       </aside>
-      <section className="app-content admin-app-content">{children}</section>
-    </main>
+      <section className="app-content admin-app-content">
+        <header className="admin-console-topbar">
+          <div>
+            <p>WORKBIT <span>/</span> ADMIN CONSOLE</p>
+            <strong>{currentPage?.label ?? "Operations"}</strong>
+          </div>
+          <div className="admin-console-session">
+            <span className="admin-console-secure"><ShieldCheck size={15} /> Secure admin session</span>
+            <span className="admin-console-user">{identity?.full_name || "Loading profile…"}</span>
+          </div>
+        </header>
+        {children}
+      </section>
+      </main>
+    </AdminIdentityContext.Provider>
   );
 }

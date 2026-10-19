@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, useShellUser, WALLET_UPDATED_EVENT } from "./shell";
@@ -46,6 +47,21 @@ function OffersCatalog() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const refreshOffers = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ limit: "100" });
+    if (account?.country) params.set("country", account.country);
+    if (category !== "All") params.set("category", category);
+    if (device) params.set("device", device);
+    try {
+      setOffers(await api<Offer[]>(`/offers?${params.toString()}`));
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "Offers could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [account?.country, category, device]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -58,19 +74,9 @@ function OffersCatalog() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError("");
-    const params = new URLSearchParams({ limit: "100" });
-    if (account?.country) params.set("country", account.country);
-    if (category !== "All") params.set("category", category);
-    if (device) params.set("device", device);
-    api<Offer[]>(`/offers?${params.toString()}`)
-      .then((data) => { if (active) setOffers(data); })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Offers could not be loaded."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [account?.country, category, device]);
+    void refreshOffers(true);
+  }, [refreshOffers]);
+  useLiveRefresh(refreshOffers);
 
   const visibleOffers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();

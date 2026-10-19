@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.auth import router as auth_router
+from app.api.analytics import router as analytics_router
 from app.api.banners import router as banners_router
 from app.api.dashboard import router as dashboard_router
 from app.api.deposits import router as deposits_router
@@ -44,6 +45,7 @@ app.add_exception_handler(Exception, unexpected_exception_handler)
 from fastapi.exceptions import RequestValidationError
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(banners_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(deposits_router, prefix="/api/v1")

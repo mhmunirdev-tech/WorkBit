@@ -40,13 +40,14 @@ export function AuthForm({
           ? "Check the password and make sure it meets the minimum length."
           : "Please complete all required fields with valid information.";
       setMessage(message);
-      showToast({
-        title: invalidField instanceof HTMLInputElement && invalidField.type === "email"
-          ? "Invalid email address"
-          : "Check the form",
-        description: message,
-        variant: "destructive",
-      });
+      if (mode === "login") {
+        showToast({
+          title: "Check your sign-in details",
+          description: message,
+          variant: "destructive",
+          kind: "login-error",
+        });
+      }
       return;
     }
     setBusy(true);
@@ -78,6 +79,7 @@ export function AuthForm({
           title: "Signed in",
           description: "Welcome back to WorkBit.",
           variant: "success",
+          kind: "login-success",
         });
         window.location.assign(destination);
         return;
@@ -89,11 +91,6 @@ export function AuthForm({
           body: JSON.stringify({ email: data.get("email") }),
         });
         setMessage(result.message);
-        showToast({
-          title: "Reset link sent",
-          description: result.message,
-          variant: "success",
-        });
         return;
       }
 
@@ -111,19 +108,23 @@ export function AuthForm({
         }),
       });
       showToast({
-        title: "Account created",
-        description: "We sent a verification code to your email address.",
+        title: "Verification code sent",
+        description: "Your account is ready. Check your email for the verification code.",
         variant: "success",
+        kind: "otp-sent",
       });
       window.location.assign(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "The request could not be completed.";
       setMessage(message);
-      showToast({
-        title: "Request failed",
-        description: message,
-        variant: "destructive",
-      });
+      if (mode === "login") {
+        showToast({
+          title: "Sign-in failed",
+          description: message,
+          variant: "destructive",
+          kind: "login-error",
+        });
+      }
     } finally {
       setBusy(false);
     }

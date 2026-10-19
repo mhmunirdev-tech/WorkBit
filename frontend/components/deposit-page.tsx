@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { ArrowLeft, ArrowDownToLine, Clock3 } from "lucide-react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { useLiveRefresh } from "../lib/use-live-refresh";
+import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
-import { Shell } from "./shell";
+import { Shell, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -26,6 +27,7 @@ type PackageOption = {
 };
 
 type Purchase = {
+  id: string;
   package_name: string;
   amount: string;
   currency: string;
@@ -59,6 +61,7 @@ export function DepositPage({ packageCode }: { packageCode: string }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const previousPurchaseStatus = useRef<Purchase["status"] | null>(null);
 
   const refresh = useCallback(async () => {
     setError("");
@@ -74,6 +77,7 @@ export function DepositPage({ packageCode }: { packageCode: string }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  useLiveRefresh(refresh, { eventName: WALLET_UPDATED_EVENT });
 
   async function submitPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -92,20 +96,21 @@ export function DepositPage({ packageCode }: { packageCode: string }) {
         }),
       });
       setCatalog((current) => current ? { ...current, latest_purchase: purchase } : current);
+      try {
+        sessionStorage.setItem("workbit:pending-package-purchase", purchase.id);
+      } catch {
+        // The purchase status is still refreshed while this page remains open.
+      }
       setReference("");
       showToast({
         title: "Deposit request submitted",
         description: "Your package payment is now pending admin review.",
         variant: "success",
+        kind: "package-payment-submitted",
       });
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "Package payment could not be submitted.";
       setError(message);
-      showToast({
-        title: "Deposit request failed",
-        description: message,
-        variant: "destructive",
-      });
     } finally {
       setBusy(false);
     }
@@ -120,14 +125,23 @@ export function DepositPage({ packageCode }: { packageCode: string }) {
   const pending = catalog?.latest_purchase?.status === "PENDING";
 
   useEffect(() => {
-    if (!loading && catalog && (!rate || rate <= 0)) {
+    const latest = catalog?.latest_purchase;
+    if (!latest) return;
+    if (previousPurchaseStatus.current === "PENDING" && latest.status === "APPROVED") {
       showToast({
-        title: "Deposit temporarily unavailable",
-        description: "Package payment is unavailable until the USD to BDT exchange rate is configured.",
-        variant: "destructive",
+        title: "Package activated",
+        description: `${latest.package_name} is active and ready to use.`,
+        variant: "success",
+        kind: "package-activated",
       });
+      try {
+        sessionStorage.removeItem("workbit:pending-package-purchase");
+      } catch {
+        // The in-memory status transition still prevents duplicate notices.
+      }
     }
-  }, [catalog, loading, rate]);
+    previousPurchaseStatus.current = latest.status;
+  }, [catalog?.latest_purchase]);
 
   return (
     <Shell>
@@ -170,7 +184,7 @@ export function DepositPage({ packageCode }: { packageCode: string }) {
               <small>Calculated at 1 USD = BDT {rate.toLocaleString("en-BD")} and fixed when you submit the payment.</small>
             </div>
 
-            <form className="package-payment-form" onSubmit={(event) => void submitPayment(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+            <form className="package-payment-form" onSubmit={(event) => void submitPayment(event)}>
               <Label>Payment method
                 <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as "BKASH" | "NAGAD")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>

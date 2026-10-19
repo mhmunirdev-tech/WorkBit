@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import { formatUsd } from "../lib/utils";
-import { Shell } from "./shell";
+import { Shell, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -51,14 +52,22 @@ function useAccountData<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    api<T>(path)
-      .then((result) => { if (active) setData(result); })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Account data could not be loaded."); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+  const refresh = useCallback(async () => {
+    try {
+      setData(await api<T>(path));
+      setError("");
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "Account data could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
   }, [path]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+  useLiveRefresh(refresh, { eventName: WALLET_UPDATED_EVENT });
+
   return { data, loading, error };
 }
 

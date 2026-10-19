@@ -3,7 +3,7 @@ from sqlalchemy import select
 from app.database.session import SessionLocal
 from decimal import Decimal
 from app.core.config import settings
-from app.models import AdNetwork, Offer, OfferNetwork, Permission, RankTier, RewardPolicy, Role, User, Wallet
+from app.models import AdNetwork, Offer, OfferNetwork, PayoutSettings, Permission, RankTier, RewardPolicy, Role, User, Wallet
 from app.services.packages import seed_earning_packages
 from app.security.passwords import hash_password
 PERMISSIONS = ["users.view", "users.edit", "users.suspend", "wallets.view", "withdrawals.view", "withdrawals.review", "offers.view", "offers.manage", "settings.manage", "admins.manage"]
@@ -151,6 +151,13 @@ def seed() -> None:
         if settings.environment == "development":
             seed_demo_offers(db)
         seed_earning_packages(db)
+        if db.get(PayoutSettings, "default") is None:
+            db.add(
+                PayoutSettings(
+                    id="default",
+                    minimum_withdrawal_usd=settings.withdrawal_minimum_amount,
+                )
+            )
         existing_policy = db.scalar(select(RewardPolicy).where(RewardPolicy.name == "default_offer_reward"))
         if not existing_policy:
             db.add(RewardPolicy(name="default_offer_reward", description="Default offer reward policy", enabled=True, user_reward_percentage=Decimal("80.00"), platform_share_percentage=Decimal("20.00"), minimum_reward=Decimal("0.00"), maximum_reward=Decimal("0.00"), pending_period_days=0, rounding_precision=2, country_code=None, network_id=None, offer_id=None))

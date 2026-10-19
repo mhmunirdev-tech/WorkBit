@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
-import { showInvalidFieldToast, showToast } from "../lib/toast";
+import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
@@ -50,10 +50,19 @@ function formatMoney(amount: string | number, currency: string) {
   return formatUsd(amount);
 }
 
+function formatSettingInput(value: string | number | null): string {
+  if (value == null) return "";
+  const normalized = String(value);
+  if (!normalized.includes(".")) return normalized;
+  const trimmed = normalized.replace(/0+$/, "").replace(/\.$/, "");
+  return trimmed || "0";
+}
+
 export function AdminWithdrawals() {
   const [records, setRecords] = useState<Withdrawal[]>([]);
   const [payoutSettings, setPayoutSettings] = useState<PayoutSettings | null>(null);
   const [exchangeRate, setExchangeRate] = useState("");
+  const [minimumWithdrawal, setMinimumWithdrawal] = useState("");
   const [selected, setSelected] = useState<WithdrawalDetails | null>(null);
   const [note, setNote] = useState("");
   const [transactionId, setTransactionId] = useState("");
@@ -73,9 +82,9 @@ export function AdminWithdrawals() {
       ]);
       setRecords(withdrawals);
       setPayoutSettings(settings);
-      setExchangeRate(settings.usd_bdt_rate == null ? "" : String(settings.usd_bdt_rate));
+      setExchangeRate(formatSettingInput(settings.usd_bdt_rate));
+      setMinimumWithdrawal(formatSettingInput(settings.minimum_withdrawal_usd));
     } catch (loadError) {
-      setRecords([]);
       setError(loadError instanceof Error ? loadError.message : "Withdrawal requests could not be loaded.");
     } finally {
       setLoading(false);
@@ -90,11 +99,15 @@ export function AdminWithdrawals() {
     try {
       const updated = await api<PayoutSettings>("/admin/payout-settings", {
         method: "PUT",
-        body: JSON.stringify({ usd_bdt_rate: exchangeRate }),
+        body: JSON.stringify({
+          usd_bdt_rate: exchangeRate,
+          minimum_withdrawal_usd: minimumWithdrawal,
+        }),
       });
       setPayoutSettings(updated);
-      setExchangeRate(String(updated.usd_bdt_rate));
-      const updateMessage = "USD to BDT exchange rate updated. New requests will use this rate.";
+      setExchangeRate(formatSettingInput(updated.usd_bdt_rate));
+      setMinimumWithdrawal(formatSettingInput(updated.minimum_withdrawal_usd));
+      const updateMessage = "Payout settings updated. New requests will use the saved exchange rate and minimum.";
       setMessage(updateMessage);
       showToast({ title: "Payout settings updated", description: updateMessage, variant: "success" });
     } catch (saveError) {
@@ -180,28 +193,41 @@ export function AdminWithdrawals() {
 
       <Card className="panel admin-payout-settings">
         <div className="panel-heading">
-          <div><p className="eyebrow">PAYOUT CONFIGURATION</p><h2>USD to BDT exchange rate</h2></div>
+          <div><p className="eyebrow">PAYOUT CONFIGURATION</p><h2>Exchange rate & withdrawal minimum</h2></div>
           <Badge variant="outline">{payoutSettings?.usd_bdt_rate ? "Configured" : "Required"}</Badge>
         </div>
         <p className="admin-payout-settings-copy">
-          User requests are paid in BDT using the rate saved here. Every request stores its own rate snapshot; changing this value will not alter existing requests. Minimum withdrawal: {payoutSettings ? formatMoney(payoutSettings.minimum_withdrawal_usd, "USD") : "—"}.
+          Both settings are stored in the database. Exchange-rate changes affect new requests only; the minimum amount is checked when a user requests a payout.
         </p>
-        <form className="admin-payout-settings-form" onSubmit={(event) => void saveExchangeRate(event)} onInvalidCapture={(event) => showInvalidFieldToast(event.target)}>
+        <form className="admin-payout-settings-form" onSubmit={(event) => void saveExchangeRate(event)}>
           <Label htmlFor="payout-usd-bdt-rate">1 USD equals (BDT)
             <Input
               id="payout-usd-bdt-rate"
               type="number"
               inputMode="decimal"
               min="0.0001"
-              step="0.0001"
+              step="any"
               required
               value={exchangeRate}
               onChange={(event) => setExchangeRate(event.target.value)}
-              placeholder="e.g. 120.0000"
+              placeholder="e.g. 120"
             />
           </Label>
-          <Button className="primary" type="submit" disabled={busy || !exchangeRate || Number(exchangeRate) <= 0}>
-            {busy ? "Saving…" : "Save exchange rate"}
+          <Label htmlFor="payout-minimum-withdrawal">Minimum withdrawal (USD)
+            <Input
+              id="payout-minimum-withdrawal"
+              type="number"
+              inputMode="decimal"
+              min="0.00000001"
+              step="any"
+              required
+              value={minimumWithdrawal}
+              onChange={(event) => setMinimumWithdrawal(event.target.value)}
+              placeholder="e.g. 5.00"
+            />
+          </Label>
+          <Button className="primary" type="submit" disabled={busy || !exchangeRate || Number(exchangeRate) <= 0 || !minimumWithdrawal || Number(minimumWithdrawal) <= 0}>
+            {busy ? "Saving…" : "Save payout settings"}
           </Button>
         </form>
       </Card>
@@ -209,7 +235,9 @@ export function AdminWithdrawals() {
       <div className="admin-withdrawals-layout">
         <Card className="panel admin-withdrawals-list" aria-label="Withdrawal requests">
           <div className="panel-heading"><div><p className="eyebrow">REQUEST QUEUE</p><h2>All requests</h2></div></div>
-          {loading ? <p className="state">Loading withdrawal requests…</p> : records.length === 0 ? (
+          {loading ? <p className="state">Loading withdrawal requests…</p> : error && records.length === 0 ? (
+            <p className="state" role="status">Withdrawal records are unavailable until the database request succeeds.</p>
+          ) : records.length === 0 ? (
             <p className="state">There are no withdrawal requests to review.</p>
           ) : (
             <div className="admin-withdrawal-items">

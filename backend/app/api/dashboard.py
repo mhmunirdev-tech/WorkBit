@@ -1,7 +1,7 @@
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -159,6 +159,8 @@ def dashboard(
         else None
     )
     payout_settings = db.get(PayoutSettings, "default")
+    if payout_settings is None:
+        raise HTTPException(503, "Payout settings are not initialized in the database.")
     referral_count = db.scalar(
         select(func.count(User.id)).where(User.referred_by == user.id)
     ) or 0
@@ -253,7 +255,7 @@ def dashboard(
                 and payout_settings.usd_bdt_rate
                 and payout_settings.usd_bdt_rate > 0
             ),
-            minimum_amount=settings.withdrawal_minimum_amount,
+            minimum_amount=payout_settings.minimum_withdrawal_usd,
             usd_bdt_rate=payout_settings.usd_bdt_rate if payout_settings else None,
             pending_request=(
                 DashboardWithdrawalRequest(
@@ -288,7 +290,18 @@ def dashboard(
 @router.get("/admin/dashboard")
 def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Session = Depends(get_db)):
     total = db.scalar(select(func.count()).select_from(User)) or 0
-    active = db.scalar(select(func.count()).select_from(User).where(User.status == "ACTIVE")) or 0
+    now = datetime.now(timezone.utc)
+    active = db.scalar(
+        select(func.count(func.distinct(PackagePurchase.user_id)))
+        .join(User, User.id == PackagePurchase.user_id)
+        .join(User.roles)
+        .where(
+            Role.name == "USER",
+            User.status == "ACTIVE",
+            PackagePurchase.status == "APPROVED",
+            PackagePurchase.expires_at > now,
+        )
+    ) or 0
     pending = db.scalar(select(func.count()).select_from(User).where(User.status == "PENDING_VERIFICATION")) or 0
     balance = db.scalar(select(func.coalesce(func.sum(Wallet.available_balance), Decimal("0")))) or Decimal("0")
     approved_ad_payout = db.scalar(

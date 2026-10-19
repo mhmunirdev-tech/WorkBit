@@ -94,7 +94,9 @@ export function AdminPackagePurchases() {
       {message && <Alert className="state" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
       <Card className="panel admin-package-list">
         <div className="panel-heading"><div><p className="eyebrow">PAYMENT REVIEW</p><h2>Submitted transactions</h2></div></div>
-        {loading ? <p className="state">Loading package payments…</p> : purchases.length === 0 ? (
+        {loading ? <p className="state">Loading package payments…</p> : error && purchases.length === 0 ? (
+          <p className="state" role="status">Package payment records are unavailable until the database request succeeds.</p>
+        ) : purchases.length === 0 ? (
           <p className="state">No package payment submissions yet.</p>
         ) : (
           <div className="admin-package-items">

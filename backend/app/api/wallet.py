@@ -6,7 +6,12 @@ from app.api.deps import current_user, require_permission
 from app.database.session import get_db
 from app.models import RewardDecision, User, UserPayoutAccount
 from app.schemas.wallet import RewardDecisionRead, WalletRead, WalletTransactionRead
-from app.schemas.withdrawals import PayoutAccountCreate, PayoutAccountOtpRequest, PayoutAccountRead
+from app.schemas.withdrawals import (
+    PayoutAccountCreate,
+    PayoutAccountDelete,
+    PayoutAccountOtpRequest,
+    PayoutAccountRead,
+)
 from app.services.auth import consume_action_code, issue_action_code
 from app.services.email import EmailDeliveryError, email_service
 from app.services.rate_limit import enforce_cooldown
@@ -15,11 +20,16 @@ from app.services.withdrawals import withdrawal_service
 
 router = APIRouter(tags=["wallet"])
 PAYOUT_ACCOUNT_OTP_PURPOSE = "PAYOUT_ACCOUNT"
+PAYOUT_ACCOUNT_DELETE_OTP_PURPOSE = "PAYOUT_ACCOUNT_DELETE"
 OTP_RESEND_COOLDOWN_SECONDS = 60
 
 
 def _account_code_context(method: str, destination: str, account_id: str | None) -> str:
     return f"{method}:{destination}:{account_id or 'new'}"
+
+
+def _delete_account_code_context(account_id: str) -> str:
+    return f"DELETE:{account_id}"
 
 
 def _account_read(account: UserPayoutAccount) -> dict:
@@ -93,6 +103,42 @@ def send_payout_account_otp(
     return {"message": "A confirmation code has been sent to your registered email."}
 
 
+@router.post("/wallet/payout-accounts/{account_id}/otp", status_code=202)
+def send_payout_account_delete_otp(
+    account_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    if not user.email_verified or user.status != "ACTIVE":
+        raise HTTPException(403, "An active, verified account is required.")
+    account = db.scalar(
+        select(UserPayoutAccount).where(
+            UserPayoutAccount.id == account_id,
+            UserPayoutAccount.user_id == user.id,
+        )
+    )
+    if account is None:
+        raise HTTPException(404, "Saved payout account not found.")
+    enforce_cooldown(
+        f"payout-account-otp:{user.id}",
+        seconds=OTP_RESEND_COOLDOWN_SECONDS,
+        message="Please wait before requesting another confirmation code.",
+    )
+    code = issue_action_code(
+        db,
+        user,
+        PAYOUT_ACCOUNT_DELETE_OTP_PURPOSE,
+        _delete_account_code_context(account.id),
+    )
+    try:
+        email_service.send_security_code(user.email, code, "payout account removal")
+    except EmailDeliveryError as error:
+        db.rollback()
+        raise HTTPException(503, "The confirmation email could not be delivered. Please try again later.") from error
+    db.commit()
+    return {"message": "A confirmation code has been sent to your registered email."}
+
+
 @router.post("/wallet/payout-accounts", response_model=PayoutAccountRead)
 def save_payout_account(
     data: PayoutAccountCreate,
@@ -110,9 +156,25 @@ def save_payout_account(
 @router.delete("/wallet/payout-accounts/{account_id}", status_code=204)
 def delete_payout_account(
     account_id: str,
+    data: PayoutAccountDelete,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> Response:
+    account = db.scalar(
+        select(UserPayoutAccount).where(
+            UserPayoutAccount.id == account_id,
+            UserPayoutAccount.user_id == user.id,
+        )
+    )
+    if account is None:
+        raise HTTPException(404, "Saved payout account not found.")
+    consume_action_code(
+        db,
+        user,
+        PAYOUT_ACCOUNT_DELETE_OTP_PURPOSE,
+        _delete_account_code_context(account.id),
+        data.code,
+    )
     withdrawal_service.delete_payout_account(db, user, account_id)
     return Response(status_code=204)
 

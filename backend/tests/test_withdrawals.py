@@ -51,6 +51,18 @@ def add_payout_account(client, method, destination, account_id=None):
     )
 
 
+def remove_payout_account(client, account_id):
+    _hits.clear()
+    sent = client.post(f"/api/v1/wallet/payout-accounts/{account_id}/otp")
+    if sent.status_code != 202:
+        return sent
+    return client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{account_id}",
+        json={"code": security_codes[-1][1]},
+    )
+
+
 def request_withdrawal(client, amount, method="BKASH", destination="01712345678"):
     accounts = client.get("/api/v1/wallet/payout-accounts").json()
     existing = next((account for account in accounts if account["method"] == method), None)
@@ -125,9 +137,68 @@ def test_users_can_save_update_and_remove_encrypted_payout_accounts(client, monk
     finally:
         db.close()
 
-    removed = client.delete(f"/api/v1/wallet/payout-accounts/{saved.json()['id']}")
+    removed = remove_payout_account(client, saved.json()["id"])
     assert removed.status_code == 204
     assert [account["method"] for account in client.get("/api/v1/wallet/payout-accounts").json()] == ["NAGAD"]
+
+
+def test_removing_payout_account_requires_matching_one_time_email_code(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"e" * 32).decode("ascii"),
+    )
+    assert login(client).status_code == 200
+    saved = add_payout_account(client, "BKASH", "01712345678")
+    assert saved.status_code == 200
+    other = add_payout_account(client, "NAGAD", "01812345678")
+    assert other.status_code == 200
+    account_id = saved.json()["id"]
+
+    direct_delete = client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{account_id}",
+        json={"code": "123456"},
+    )
+    assert direct_delete.status_code == 400
+    assert len(client.get("/api/v1/wallet/payout-accounts").json()) == 2
+
+    _hits.clear()
+    issued = client.post(f"/api/v1/wallet/payout-accounts/{account_id}/otp")
+    assert issued.status_code == 202
+    recipient, code, action = security_codes[-1]
+    assert recipient == "workbit-user@example.com"
+    assert action == "payout account removal"
+
+    mismatched_account = client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{other.json()['id']}",
+        json={"code": code},
+    )
+    assert mismatched_account.status_code == 400
+    assert len(client.get("/api/v1/wallet/payout-accounts").json()) == 2
+
+    wrong = client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{account_id}",
+        json={"code": "000000" if code != "000000" else "000001"},
+    )
+    assert wrong.status_code == 400
+    assert len(client.get("/api/v1/wallet/payout-accounts").json()) == 2
+
+    removed = client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{account_id}",
+        json={"code": code},
+    )
+    assert removed.status_code == 204
+    assert [item["id"] for item in client.get("/api/v1/wallet/payout-accounts").json()] == [other.json()["id"]]
+    reused = client.request(
+        "DELETE",
+        f"/api/v1/wallet/payout-accounts/{account_id}",
+        json={"code": code},
+    )
+    assert reused.status_code == 404
 
 
 def test_users_can_save_two_accounts_per_method_but_not_a_third(client, monkeypatch):
@@ -398,7 +469,7 @@ def test_payout_exchange_rate_is_admin_configurable_and_snapshotted(client, monk
     summary = client.get("/api/v1/dashboard").json()
     assert summary["withdrawal_summary"]["enabled"] is True
     assert summary["withdrawal_summary"]["usd_bdt_rate"] == "120.00000000"
-    assert summary["withdrawal_summary"]["minimum_amount"] == "5.00"
+    assert summary["withdrawal_summary"]["minimum_amount"] == "5.00000000"
 
     invalid_number = client.post(
         "/api/v1/wallet/payout-accounts/otp",
@@ -442,3 +513,51 @@ def test_withdrawal_minimum_is_enforced_by_backend(client, monkeypatch):
     fund_wallet(client, "withdrawal-minimum-check")
     response = request_withdrawal(client, "4.99")
     assert response.status_code == 400
+
+
+def test_admin_manages_withdrawal_minimum_in_database(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"n" * 32).decode("ascii"),
+    )
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    assert login(client, "workbit-admin@example.com").status_code == 200
+
+    updated = client.put(
+        "/api/v1/admin/payout-settings",
+        json={"usd_bdt_rate": "120.00", "minimum_withdrawal_usd": "7.50"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["minimum_withdrawal_usd"] == "7.50000000"
+    retrieved = client.get("/api/v1/admin/payout-settings")
+    assert retrieved.status_code == 200
+    assert retrieved.json()["minimum_withdrawal_usd"] == "7.50000000"
+
+    legacy_update = client.put(
+        "/api/v1/admin/payout-settings",
+        json={"usd_bdt_rate": "121.00"},
+    )
+    assert legacy_update.status_code == 200
+    assert legacy_update.json()["minimum_withdrawal_usd"] == "7.50000000"
+
+    assert login(client).status_code == 200
+    fund_wallet(client, "db-withdrawal-minimum")
+    summary = client.get("/api/v1/dashboard")
+    assert summary.status_code == 200
+    assert summary.json()["withdrawal_summary"]["minimum_amount"] == "7.50000000"
+
+    too_small = request_withdrawal(client, "5.00")
+    assert too_small.status_code == 400
+    assert too_small.json()["error"]["message"] == "The minimum request is 7.50000000 USD."
+
+    from app.database.session import SessionLocal
+    from app.models import PayoutSettings
+
+    db = SessionLocal()
+    try:
+        settings_row = db.get(PayoutSettings, "default")
+        assert settings_row is not None
+        assert settings_row.minimum_withdrawal_usd == Decimal("7.50000000")
+    finally:
+        db.close()

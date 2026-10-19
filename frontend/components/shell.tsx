@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { formatUsd } from "../lib/utils";
+import { useLiveRefresh } from "../lib/use-live-refresh";
 import {
   Award,
   Gift,
@@ -42,6 +43,8 @@ type WalletSnapshot = {
   available_balance: string | number;
   currency: string;
 };
+
+let cachedWallet: WalletSnapshot | null = null;
 
 export const WALLET_UPDATED_EVENT = "workbit:wallet-updated";
 
@@ -81,9 +84,10 @@ export function Shell({
   const [logoutError, setLogoutError] = useState("");
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [fetchedUser, setFetchedUser] = useState<ShellUser | null>(null);
-  const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
+  const [wallet, setWallet] = useState<WalletSnapshot | null>(() => cachedWallet);
   const [walletLoadError, setWalletLoadError] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const walletActive = useRef(false);
   const displayUser = user ?? fetchedUser;
   const initials = displayUser?.full_name
     .split(/\s+/)
@@ -113,38 +117,27 @@ export function Shell({
     };
   }, [user]);
 
-  useEffect(() => {
-    let active = true;
-    async function refreshWallet() {
-      try {
-        const snapshot = await api<WalletSnapshot>("/wallet");
-        if (active) {
-          setWallet(snapshot);
-          setWalletLoadError(false);
-        }
-      } catch {
-        if (active) {
-          setWallet(null);
-          setWalletLoadError(true);
-        }
+  const refreshWallet = useCallback(async () => {
+    try {
+      const snapshot = await api<WalletSnapshot>("/wallet");
+      cachedWallet = snapshot;
+      if (walletActive.current) {
+        setWallet(snapshot);
+        setWalletLoadError(false);
       }
+    } catch {
+      if (walletActive.current && !cachedWallet) setWalletLoadError(true);
     }
-    void refreshWallet();
-    const refreshIfVisible = () => {
-      if (document.visibilityState === "visible") void refreshWallet();
-    };
-    const timer = window.setInterval(refreshIfVisible, 10_000);
-    window.addEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
-    window.addEventListener("focus", refreshIfVisible);
-    document.addEventListener("visibilitychange", refreshIfVisible);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-      window.removeEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
-      window.removeEventListener("focus", refreshIfVisible);
-      document.removeEventListener("visibilitychange", refreshIfVisible);
-    };
   }, []);
+
+  useEffect(() => {
+    walletActive.current = true;
+    void refreshWallet();
+    return () => {
+      walletActive.current = false;
+    };
+  }, [refreshWallet]);
+  useLiveRefresh(refreshWallet, { eventName: WALLET_UPDATED_EVENT });
 
   useEffect(() => {
     if (!accountMenuOpen) return;

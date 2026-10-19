@@ -91,9 +91,11 @@ def get_payout_settings(
     db: Session = Depends(get_db),
 ) -> dict:
     payout_settings = db.get(PayoutSettings, "default")
+    if payout_settings is None:
+        raise HTTPException(503, "Payout settings are not initialized in the database.")
     return {
-        "usd_bdt_rate": payout_settings.usd_bdt_rate if payout_settings else None,
-        "minimum_withdrawal_usd": settings.withdrawal_minimum_amount,
+        "usd_bdt_rate": payout_settings.usd_bdt_rate,
+        "minimum_withdrawal_usd": payout_settings.minimum_withdrawal_usd,
     }
 
 
@@ -113,15 +115,22 @@ def update_payout_settings(
         payout_settings = PayoutSettings(id="default")
         db.add(payout_settings)
     payout_settings.usd_bdt_rate = data.usd_bdt_rate
+    if data.minimum_withdrawal_usd is not None:
+        payout_settings.minimum_withdrawal_usd = data.minimum_withdrawal_usd
     payout_settings.updated_by = admin.id
     payout_settings.updated_at = datetime.now(timezone.utc)
     db.add(
         AdminLog(
             admin_id=admin.id,
-            action="PAYOUT_EXCHANGE_RATE_UPDATED",
+            action="PAYOUT_SETTINGS_UPDATED",
             target_type="payout_settings",
             target_id=payout_settings.id,
-            metadata_json=json.dumps({"usd_bdt_rate": str(data.usd_bdt_rate)}),
+            metadata_json=json.dumps(
+                {
+                    "usd_bdt_rate": str(data.usd_bdt_rate),
+                    "minimum_withdrawal_usd": str(payout_settings.minimum_withdrawal_usd),
+                }
+            ),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("user-agent", "")[:512] or None,
         )
@@ -130,7 +139,7 @@ def update_payout_settings(
     db.refresh(payout_settings)
     return {
         "usd_bdt_rate": payout_settings.usd_bdt_rate,
-        "minimum_withdrawal_usd": settings.withdrawal_minimum_amount,
+        "minimum_withdrawal_usd": payout_settings.minimum_withdrawal_usd,
     }
 
 

@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from conftest import activate_package, configure_payout_rate
@@ -6,6 +7,37 @@ from conftest import activate_package, configure_payout_rate
 def login(client, email="workbit-user@example.com"):
     route = "/api/v1/auth/admin/login" if email == "workbit-admin@example.com" else "/api/v1/auth/login"
     return client.post(route, json={"email": email, "password": "WorkBitDev123!"})
+
+
+def register_referred_user(client, email):
+    response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Referred Package User",
+            "email": email,
+            "password": "WorkBitDev123!",
+            "confirm_password": "WorkBitDev123!",
+            "country": "US",
+            "referral_code": "WBUSER001",
+            "terms_accepted": True,
+        },
+    )
+    assert response.status_code == 201
+
+    from sqlalchemy import select
+
+    from app.database.session import SessionLocal
+    from app.models import User
+
+    db = SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.email == email))
+        assert user is not None
+        user.status = "ACTIVE"
+        user.email_verified = True
+        db.commit()
+    finally:
+        db.close()
 
 
 def test_package_catalog_shows_prices_and_configured_mobile_payment_numbers(client):
@@ -53,6 +85,74 @@ def test_public_package_catalog_shows_current_plans_without_login(client):
         ("VIP_PRO", "VIP Pro", "1000.00", "USD", 1825),
         ("FOUNDER", "Founder", "500.00", "USD", 3650),
     ]
+
+
+def test_admin_active_users_counts_unique_users_with_live_approved_packages(client):
+    from sqlalchemy import select
+
+    from app.database.session import SessionLocal
+    from app.models import PackagePurchase, User
+
+    assert login(client, "workbit-admin@example.com").status_code == 200
+    dashboard = client.get("/api/v1/admin/dashboard")
+    assert dashboard.status_code == 200
+    assert dashboard.json()["active_users"] == 0
+
+    activate_package(client, "ACTIVE-PACKAGE-COUNT-001")
+
+    db = SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        admin = db.scalar(select(User).where(User.email == "workbit-admin@example.com"))
+        assert user is not None and admin is not None
+        now = datetime.now(timezone.utc)
+        db.add_all(
+            [
+                PackagePurchase(
+                    user_id=user.id,
+                    package_code="BASIC",
+                    package_name="Basic",
+                    amount=Decimal("10.00"),
+                    currency="USD",
+                    payment_method="BKASH",
+                    payment_reference="ACTIVE-PACKAGE-COUNT-002",
+                    status="APPROVED",
+                    starts_at=now,
+                    expires_at=now + timedelta(days=30),
+                ),
+                PackagePurchase(
+                    user_id=admin.id,
+                    package_code="BASIC",
+                    package_name="Basic",
+                    amount=Decimal("10.00"),
+                    currency="USD",
+                    payment_method="BKASH",
+                    payment_reference="ACTIVE-PACKAGE-COUNT-003",
+                    status="PENDING",
+                    expires_at=now + timedelta(days=30),
+                ),
+                PackagePurchase(
+                    user_id=admin.id,
+                    package_code="BASIC",
+                    package_name="Basic",
+                    amount=Decimal("10.00"),
+                    currency="USD",
+                    payment_method="BKASH",
+                    payment_reference="ACTIVE-PACKAGE-COUNT-004",
+                    status="APPROVED",
+                    starts_at=now - timedelta(days=60),
+                    expires_at=now - timedelta(days=30),
+                ),
+            ]
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    assert login(client, "workbit-admin@example.com").status_code == 200
+    dashboard = client.get("/api/v1/admin/dashboard")
+    assert dashboard.status_code == 200
+    assert dashboard.json()["active_users"] == 1
 
 
 def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
@@ -175,11 +275,122 @@ def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
     assert approved.json()["starts_at"] is not None
     assert approved.json()["expires_at"] is not None
     assert admin.get("/api/v1/admin/dashboard").json()["registered_user_amount"] == "50.00000000"
-
     assert login(admin).status_code == 200
     assert admin.get("/api/v1/packages").json()["package_active"] is True
     assert admin.get("/api/v1/dashboard").json()["package_active"] is True
     assert admin.post("/api/v1/offers/mock-game/click").status_code == 202
+
+
+def test_referrer_gets_five_percent_only_after_referred_package_is_approved(client):
+    from sqlalchemy import select
+
+    from app.database.session import SessionLocal
+    from app.models import User, WalletTransaction
+
+    assert login(client).status_code == 200
+    register_referred_user(client, "referred-package-user@example.com")
+    configure_payout_rate(client)
+    assert login(client, "referred-package-user@example.com").status_code == 200
+
+    purchase = client.post(
+        "/api/v1/package-purchases",
+        json={
+            "package_code": "STANDARD",
+            "payment_method": "NAGAD",
+            "payment_reference": "REFERRED-STANDARD-001",
+        },
+    )
+    assert purchase.status_code == 201
+    assert purchase.json()["status"] == "PENDING"
+
+    assert login(client).status_code == 200
+    before_approval = client.get("/api/v1/wallet").json()
+    assert Decimal(before_approval["available_balance"]) == Decimal("0")
+    assert client.get("/api/v1/dashboard").json()["stats"]["referral_earnings"] == "0"
+
+    assert login(client, "workbit-admin@example.com").status_code == 200
+    approved = client.post(
+        f"/api/v1/admin/package-purchases/{purchase.json()['id']}/approve",
+        json={"note": "Payment verified."},
+    )
+    assert approved.status_code == 200
+    assert approved.json()["status"] == "APPROVED"
+
+    assert login(client).status_code == 200
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["available_balance"]) == Decimal("2.5")
+    assert Decimal(wallet["lifetime_earned"]) == Decimal("2.5")
+    dashboard = client.get("/api/v1/dashboard").json()
+    assert Decimal(dashboard["stats"]["referral_earnings"]) == Decimal("2.5")
+    assert dashboard["stats"]["active_referrals"] == 1
+
+    db = SessionLocal()
+    try:
+        referrer = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        assert referrer is not None
+        commissions = db.scalars(
+            select(WalletTransaction).where(
+                WalletTransaction.user_id == referrer.id,
+                WalletTransaction.type == "REFERRAL_REWARD_APPROVAL",
+                WalletTransaction.reference_id == purchase.json()["id"],
+            )
+        ).all()
+        assert len(commissions) == 1
+        assert commissions[0].amount == Decimal("2.50000000")
+        assert commissions[0].status == "APPROVED"
+    finally:
+        db.close()
+
+    duplicate_approval = client.post(
+        f"/api/v1/admin/package-purchases/{purchase.json()['id']}/approve",
+        json={"note": "Duplicate attempt."},
+    )
+    assert duplicate_approval.status_code == 409
+    assert Decimal(client.get("/api/v1/wallet").json()["available_balance"]) == Decimal("2.5")
+
+
+def test_rejected_referred_package_does_not_credit_referrer(client):
+    from sqlalchemy import select
+
+    from app.database.session import SessionLocal
+    from app.models import User, WalletTransaction
+
+    assert login(client).status_code == 200
+    register_referred_user(client, "rejected-referred-user@example.com")
+    configure_payout_rate(client)
+    assert login(client, "rejected-referred-user@example.com").status_code == 200
+    purchase = client.post(
+        "/api/v1/package-purchases",
+        json={
+            "package_code": "BASIC",
+            "payment_method": "BKASH",
+            "payment_reference": "REFERRED-REJECTED-001",
+        },
+    )
+    assert purchase.status_code == 201
+
+    assert login(client, "workbit-admin@example.com").status_code == 200
+    rejected = client.post(
+        f"/api/v1/admin/package-purchases/{purchase.json()['id']}/reject",
+        json={"note": "Payment not verified."},
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["status"] == "REJECTED"
+
+    db = SessionLocal()
+    try:
+        referrer = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        assert referrer is not None and referrer.wallet is not None
+        assert referrer.wallet.available_balance == Decimal("0")
+        assert db.scalar(
+            select(WalletTransaction.id).where(
+                WalletTransaction.user_id == referrer.id,
+                WalletTransaction.type == "REFERRAL_REWARD_APPROVAL",
+                WalletTransaction.reference_id == purchase.json()["id"],
+            )
+        ) is None
+    finally:
+        db.close()
 
 
 def test_package_purchase_rejects_duplicate_reference_and_pending_request(client):

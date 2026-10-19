@@ -45,7 +45,6 @@ export function AdminDeposits() {
     try {
       setDeposits(await api<Deposit[]>("/admin/deposits"));
     } catch (reason) {
-      setDeposits([]);
       setError(reason instanceof Error ? reason.message : "Deposit requests could not be loaded.");
     } finally {
       setLoading(false);
@@ -88,7 +87,9 @@ export function AdminDeposits() {
       {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
       {message && <Alert className="state" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
       <Card className="panel admin-deposit-list">
-        {loading ? <p className="state">Loading deposit requests…</p> : deposits.length === 0 ? (
+        {loading ? <p className="state">Loading deposit requests…</p> : error && deposits.length === 0 ? (
+          <p className="state" role="status">Deposit records are unavailable until the database request succeeds.</p>
+        ) : deposits.length === 0 ? (
           <p className="state">There are no deposit requests to review.</p>
         ) : deposits.map((deposit) => (
           <article className="admin-deposit-item" key={deposit.id}>
