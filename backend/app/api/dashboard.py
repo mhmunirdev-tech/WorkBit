@@ -291,6 +291,12 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
     active = db.scalar(select(func.count()).select_from(User).where(User.status == "ACTIVE")) or 0
     pending = db.scalar(select(func.count()).select_from(User).where(User.status == "PENDING_VERIFICATION")) or 0
     balance = db.scalar(select(func.coalesce(func.sum(Wallet.available_balance), Decimal("0")))) or Decimal("0")
+    approved_ad_payout = db.scalar(
+        select(func.coalesce(func.sum(RewardDecision.provider_payout), Decimal("0"))).where(
+            RewardDecision.status == "APPROVED",
+            RewardDecision.currency == "USD",
+        )
+    ) or Decimal("0")
     platform_ad_revenue = db.scalar(
         select(func.coalesce(func.sum(RewardDecision.platform_share), Decimal("0"))).where(
             RewardDecision.status == "APPROVED",
@@ -309,6 +315,7 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
         "active_users": active,
         "pending_verification": pending,
         "total_wallet_balance": str(balance),
+        "approved_ad_payout": str(approved_ad_payout),
         "platform_ad_revenue": str(platform_ad_revenue),
         "registered_user_amount": str(registered_user_amount),
         "currency": "USD",

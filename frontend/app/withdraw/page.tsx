@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { WithdrawalPage } from "../../components/withdrawals";
 
 export const metadata: Metadata = {
   title: "Withdraw funds | WorkBit",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function WithdrawRoute() {
-  redirect("/wallet#withdraw-request");
+  return <WithdrawalPage />;
 }

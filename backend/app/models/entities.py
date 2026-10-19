@@ -184,6 +184,18 @@ class WithdrawalRequest(Base):
     reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
 
 
+class UserPayoutAccount(Base):
+    __tablename__ = "user_payout_accounts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    method: Mapped[str] = mapped_column(String(16))
+    destination_ciphertext: Mapped[str] = mapped_column(Text)
+    destination_hint: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship()
+
+
 class PayoutSettings(Base):
     __tablename__ = "payout_settings"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default="default")

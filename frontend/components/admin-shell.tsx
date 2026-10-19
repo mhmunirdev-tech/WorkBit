@@ -32,7 +32,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pathname === "/admin/login") return;
-    api<AdminIdentity>("/auth/me")
+    api<AdminIdentity>("/auth/admin/me")
       .then(setIdentity)
       .catch(() => {
         setIdentity(null);
@@ -43,7 +43,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setLoggingOut(true);
     setLogoutError("");
     try {
-      await api<void>("/auth/logout", { method: "POST" });
+      await api<void>("/auth/admin/logout", { method: "POST" });
       showToast({ title: "Signed out", description: "You have been signed out.", variant: "success" });
       window.location.assign("/admin/login");
     } catch (error) {

@@ -26,6 +26,69 @@ def _verification_code_hash(user_id: str, code: str) -> str:
     message = f"VERIFY_EMAIL:{user_id}:{code}".encode("utf-8")
     return hmac.digest(settings.secret_key.encode("utf-8"), message, "sha256").hex()
 
+
+def _action_code_hash(user_id: str, purpose: str, context: str, code: str) -> str:
+    message = f"{purpose}:{user_id}:{context}:{code}".encode("utf-8")
+    return hmac.digest(settings.secret_key.encode("utf-8"), message, "sha256").hex()
+
+
+def issue_action_code(db: Session, user: User, purpose: str, context: str) -> str:
+    db.query(AuthToken).filter(
+        AuthToken.user_id == user.id,
+        AuthToken.purpose == purpose,
+    ).delete(synchronize_session=False)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    db.add(
+        AuthToken(
+            user_id=user.id,
+            purpose=purpose,
+            token_hash=_action_code_hash(user.id, purpose, context, code),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(minutes=settings.email_verification_otp_ttl_minutes),
+        )
+    )
+    return code
+
+
+def consume_action_code(
+    db: Session,
+    user: User,
+    purpose: str,
+    context: str,
+    code: str,
+) -> None:
+    record = db.scalar(
+        select(AuthToken)
+        .where(
+            AuthToken.user_id == user.id,
+            AuthToken.purpose == purpose,
+            AuthToken.used_at.is_(None),
+        )
+        .order_by(AuthToken.created_at.desc())
+    )
+    now = datetime.now(timezone.utc)
+    if record is None:
+        raise HTTPException(400, "The verification code is invalid or expired.")
+
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < now or record.attempt_count >= 5:
+        record.used_at = now
+        db.commit()
+        raise HTTPException(400, "The verification code is invalid or expired.")
+
+    candidate_hash = _action_code_hash(user.id, purpose, context, code)
+    if not hmac.compare_digest(record.token_hash, candidate_hash):
+        record.attempt_count += 1
+        if record.attempt_count >= 5:
+            record.used_at = now
+        db.commit()
+        raise HTTPException(400, "The verification code is invalid or expired.")
+
+    record.used_at = now
+
+
 def issue_verification_code(db: Session, user: User) -> str:
     db.query(AuthToken).filter(
         AuthToken.user_id == user.id,

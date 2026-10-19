@@ -293,7 +293,7 @@ class RewardDecisionService:
         if conversion.status == "PENDING":
             return "PENDING"
         if conversion.status == "APPROVED":
-            return "PENDING"
+            return "APPROVED"
         return "PENDING"
 
     def _apply_wallet_projection(self, db: Session, user: User, decision: RewardDecision) -> None:

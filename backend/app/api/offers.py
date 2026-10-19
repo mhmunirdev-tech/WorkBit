@@ -1,20 +1,110 @@
-from fastapi import APIRouter, Depends, Query, Request
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from app.api.deps import current_user
+from app.core.config import settings
 from app.database.session import get_db
-from app.models import User
+from app.models import Offer, RewardDecision, User, Wallet
+from app.schemas.conversions import MockPostbackRequest
 from app.schemas.offers import OfferRead
+from app.services.conversions import conversion_service
 from app.services.offers import offer_service
+
 router = APIRouter(prefix="/offers", tags=["offers"])
+
+
 @router.get("", response_model=list[OfferRead])
 async def list_offers(country: str = Query("US", min_length=2, max_length=2), category: str | None = None, device: str | None = None, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), db: Session = Depends(get_db)) -> list[OfferRead]:
     return await offer_service.list(db, country.upper(), category, device, offset, limit)
+
+
 @router.get("/{offer_id}", response_model=OfferRead)
 async def offer_detail(offer_id: str, country: str = Query("US", min_length=2, max_length=2), db: Session = Depends(get_db)) -> OfferRead:
     return await offer_service.detail(db, offer_id, country.upper())
+
+
 @router.post("/{offer_id}/click", status_code=202)
 async def offer_click(offer_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict[str, str]:
     return await offer_service.track_click(db, user, offer_id, request.client.host if request.client else None, request.headers.get("user-agent"))
+
+
+@router.post("/{offer_id}/simulate-completion")
+async def simulate_offer_completion(
+    offer_id: str,
+    request: Request,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    if settings.environment != "development" or not settings.enable_mock_rewards:
+        raise HTTPException(
+            503,
+            "Ad completion simulation is available only in development when ENABLE_MOCK_REWARDS=true.",
+        )
+
+    click = await offer_service.track_click(
+        db,
+        user,
+        offer_id,
+        request.client.host if request.client else None,
+        request.headers.get("user-agent"),
+        cooldown_scope="simulation",
+    )
+    wallet = db.scalar(select(Wallet).where(Wallet.user_id == user.id))
+    if wallet is None:
+        raise HTTPException(409, "Wallet is unavailable for this conversion.")
+    offer = db.get(Offer, offer_id)
+    if offer is None:
+        raise HTTPException(404, "Offer not found or unavailable.")
+
+    conversion = conversion_service.process_mock(
+        db,
+        MockPostbackRequest(
+            transaction_id=f"test-ad-{uuid4().hex}",
+            click_id=click["click_id"],
+            offer_id=offer_id,
+            payout=offer.user_reward,
+            currency=wallet.currency,
+            status="APPROVED",
+        ),
+    )
+    decision = db.scalar(
+        select(RewardDecision).where(RewardDecision.conversion_id == conversion.id)
+    )
+    if decision is None:
+        raise HTTPException(503, "The simulated conversion did not create a reward decision.")
+
+    db.refresh(wallet)
+    if decision.status == "PENDING":
+        message = (
+            f"Test ad completed. {decision.user_reward} {decision.currency} was added to "
+            "your pending balance. Admin approval moves it to your available balance."
+        )
+    elif decision.status == "MANUAL_REVIEW":
+        message = "Test ad completed. The reward is waiting for manual review."
+    elif decision.status == "APPROVED":
+        message = (
+            f"Test ad completed. {decision.user_reward} {decision.currency} was added to "
+            f"your available balance; {decision.platform_share} {decision.currency} was "
+            "retained as the platform share."
+        )
+    else:
+        message = f"Test ad completed, but the reward was not approved ({decision.status.lower()})."
+
+    return {
+        "conversion_id": conversion.id,
+        "reward_status": decision.status,
+        "reward_amount": str(decision.user_reward),
+        "platform_share_amount": str(decision.platform_share),
+        "currency": decision.currency,
+        "available_balance": str(wallet.available_balance),
+        "pending_balance": str(wallet.pending_balance),
+        "message": message,
+    }
+
+
 @router.post("/{offer_id}/redirect")
 async def offer_redirect(offer_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)) -> None:
     await offer_service.redirect(db, user, offer_id)

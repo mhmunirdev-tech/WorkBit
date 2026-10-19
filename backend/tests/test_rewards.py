@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.models import OfferConversion, RewardDecision, RewardPolicy, User, WalletTransaction
@@ -36,11 +35,11 @@ def test_reward_policy_seed_exists(client):
         db.close()
 
 
-def test_reward_decision_is_idempotent_and_wallet_projects(client, monkeypatch):
+def test_approved_conversion_credits_available_balance_and_is_idempotent(client, monkeypatch):
     from app.core.config import settings
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
     click_id = create_click(client)
-    first = client.post("/api/v1/postbacks/mock", json=payload(click_id, transaction="mock-tx-reward-2", payout="2.00"))
+    first = client.post("/api/v1/postbacks/mock", json=payload(click_id, transaction="mock-tx-reward-2", payout="2.00", status="APPROVED"))
     assert first.status_code == 202
     second = client.post("/api/v1/postbacks/mock", json=payload(click_id, transaction="mock-tx-reward-2", payout="2.00"))
     assert second.status_code == 409
@@ -56,9 +55,9 @@ def test_reward_decision_is_idempotent_and_wallet_projects(client, monkeypatch):
         db.close()
 
     dashboard = client.get("/api/v1/dashboard").json()
-    assert Decimal(dashboard["available_balance"]) >= Decimal("0")
-    assert Decimal(dashboard["pending_balance"]) == Decimal("1.60")
-    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("0")
+    assert Decimal(dashboard["available_balance"]) == Decimal("1.60")
+    assert Decimal(dashboard["pending_balance"]) == Decimal("0")
+    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("1.60")
     assert len(dashboard["earnings_chart"]) == 90
     assert client.post(
         "/api/v1/auth/admin/login",
@@ -66,7 +65,8 @@ def test_reward_decision_is_idempotent_and_wallet_projects(client, monkeypatch):
     ).status_code == 200
     admin_dashboard = client.get("/api/v1/admin/dashboard")
     assert admin_dashboard.status_code == 200
-    assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == Decimal("0")
+    assert Decimal(admin_dashboard.json()["approved_ad_payout"]) == Decimal("2.00")
+    assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == Decimal("0.40")
     assert Decimal(admin_dashboard.json()["registered_user_amount"]) == Decimal("10")
 
 
@@ -93,16 +93,14 @@ def test_wallet_and_reward_endpoints_require_auth(client):
     assert client.get("/api/v1/rewards").status_code == 200
 
 
-def test_admin_approval_releases_pending_reward_to_available_balance(client, monkeypatch):
+def test_provider_approved_reward_is_available_without_admin_approval(client, monkeypatch):
     from app.core.config import settings
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
     click_id = create_click(client)
-    conversion = client.post("/api/v1/postbacks/mock", json=payload(click_id, transaction="mock-tx-approval", payout="2.00"))
+    conversion = client.post("/api/v1/postbacks/mock", json=payload(click_id, transaction="mock-tx-approval", payout="2.00", status="APPROVED"))
     assert conversion.status_code == 202
     reward = client.get("/api/v1/rewards").json()[0]
-    assert client.post("/api/v1/auth/admin/login", json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"}).status_code == 200
-    assert client.post(f"/api/v1/admin/rewards/{reward['id']}/approve").status_code == 200
-    assert client.post("/api/v1/auth/login", json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"}).status_code == 200
+    assert reward["status"] == "APPROVED"
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
     assert Decimal(wallet["available_balance"]) == Decimal("1.60")
@@ -112,11 +110,12 @@ def test_admin_approval_releases_pending_reward_to_available_balance(client, mon
     ).status_code == 200
     dashboard = client.get("/api/v1/admin/dashboard")
     assert dashboard.status_code == 200
+    assert Decimal(dashboard.json()["approved_ad_payout"]) == Decimal("2.00")
     assert Decimal(dashboard.json()["platform_ad_revenue"]) == Decimal("0.40")
     assert Decimal(dashboard.json()["registered_user_amount"]) == Decimal("10")
 
 
-def test_provider_approval_keeps_reward_pending_until_admin_approval(client, monkeypatch):
+def test_provider_pending_conversion_credits_available_balance_when_approved(client, monkeypatch):
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
@@ -129,6 +128,11 @@ def test_provider_approval_keeps_reward_pending_until_admin_approval(client, mon
     )
     created = client.post("/api/v1/postbacks/mock", json=pending_payload)
     assert created.status_code == 202
+    assert client.get("/api/v1/rewards").json() == []
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["pending_balance"]) == Decimal("0")
+    assert Decimal(wallet["available_balance"]) == Decimal("0")
+
     provider_approval = client.post(
         "/api/v1/postbacks/mock",
         json={**pending_payload, "status": "APPROVED"},
@@ -137,26 +141,14 @@ def test_provider_approval_keeps_reward_pending_until_admin_approval(client, mon
     assert provider_approval.json()["status"] == "APPROVED"
 
     wallet = client.get("/api/v1/wallet").json()
-    assert Decimal(wallet["pending_balance"]) == Decimal("1.60")
-    assert Decimal(wallet["available_balance"]) == Decimal("0")
-
-    decision = client.get("/api/v1/rewards").json()[0]
-    assert decision["status"] == "PENDING"
-    with TestClient(client.app) as admin:
-        assert admin.post(
-            "/api/v1/auth/admin/login",
-            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
-        ).status_code == 200
-        assert admin.post(
-            f"/api/v1/admin/rewards/{decision['id']}/approve"
-        ).status_code == 200
-
-    wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
     assert Decimal(wallet["available_balance"]) == Decimal("1.60")
 
+    decision = client.get("/api/v1/rewards").json()[0]
+    assert decision["status"] == "APPROVED"
 
-def test_reward_withholding_period_must_expire_before_approval(client, monkeypatch):
+
+def test_provider_approved_reward_is_available_without_reward_holding_period(client, monkeypatch):
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
@@ -176,30 +168,14 @@ def test_reward_withholding_period_must_expire_before_approval(client, monkeypat
 
     conversion = client.post(
         "/api/v1/postbacks/mock",
-        json=payload(click_id, transaction="mock-tx-reward-withholding"),
+        json=payload(click_id, transaction="mock-tx-reward-withholding", status="APPROVED"),
     )
     assert conversion.status_code == 202
     decision = client.get("/api/v1/rewards").json()[0]
-
-    with TestClient(client.app) as admin:
-        assert admin.post(
-            "/api/v1/auth/admin/login",
-            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
-        ).status_code == 200
-        approval = admin.post(f"/api/v1/admin/rewards/{decision['id']}/approve")
-        assert approval.status_code == 409
-
-        db = SessionLocal()
-        try:
-            reward = db.get(RewardDecision, decision["id"])
-            assert reward is not None
-            reward.created_at = datetime.now(timezone.utc) - timedelta(days=2)
-            db.commit()
-        finally:
-            db.close()
-
-        approval = admin.post(f"/api/v1/admin/rewards/{decision['id']}/approve")
-        assert approval.status_code == 200
+    assert decision["status"] == "APPROVED"
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["available_balance"]) == Decimal("0.80")
+    assert Decimal(wallet["pending_balance"]) == Decimal("0")
 
 
 def test_provider_reversal_cancels_pending_reward(client, monkeypatch):
@@ -354,7 +330,7 @@ def test_missing_reward_policy_is_not_created_as_a_fallback(client, monkeypatch)
     click_id = create_click(client)
     response = client.post(
         "/api/v1/postbacks/mock",
-        json=payload(click_id, transaction="mock-tx-no-policy"),
+        json=payload(click_id, transaction="mock-tx-no-policy", status="APPROVED"),
     )
     assert response.status_code == 503
 

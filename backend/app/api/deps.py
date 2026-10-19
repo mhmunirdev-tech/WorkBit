@@ -10,8 +10,17 @@ def current_user(session: str | None = Cookie(default=None, alias=settings.sessi
     user = db.get(User, user_id) if user_id else None
     if not user: raise HTTPException(401)
     return user
+
+def current_admin(session: str | None = Cookie(default=None, alias=settings.admin_session_cookie_name), db: Session = Depends(get_db)) -> User:
+    user_id = read_session(session) if session else None
+    user = db.get(User, user_id) if user_id else None
+    if not user: raise HTTPException(401)
+    if not {"ADMIN", "SUPER_ADMIN"}.intersection(role.name for role in user.roles):
+        raise HTTPException(403, "Administrator access is required.")
+    return user
+
 def require_permission(permission: str):
-    def dependency(user: User = Depends(current_user)) -> User:
+    def dependency(user: User = Depends(current_admin)) -> User:
         permissions = {p.name for role in user.roles for p in role.permissions}
         if permission not in permissions: raise HTTPException(403)
         return user

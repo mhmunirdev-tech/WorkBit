@@ -58,7 +58,7 @@ def test_public_package_catalog_shows_current_plans_without_login(client):
 def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
     assert client.get("/api/v1/admin/packages").status_code == 401
     assert login(client).status_code == 200
-    assert client.get("/api/v1/admin/packages").status_code == 403
+    assert client.get("/api/v1/admin/packages").status_code == 401
     configure_payout_rate(client)
 
     purchase = client.post(
@@ -242,7 +242,7 @@ def test_rejected_package_does_not_count_as_admin_revenue_or_unlock_ads(client):
 def test_package_routes_require_admin_permissions(client):
     assert client.get("/api/v1/admin/package-purchases").status_code == 401
     assert login(client).status_code == 200
-    assert client.get("/api/v1/admin/package-purchases").status_code == 403
+    assert client.get("/api/v1/admin/package-purchases").status_code == 401
 
 
 def test_standalone_deposits_and_wallet_package_purchases_are_retired(client):

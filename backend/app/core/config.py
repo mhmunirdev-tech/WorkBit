@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     session_secret: str = "development-only-change-me"
     frontend_origin: str = "http://localhost:3000"
     session_cookie_name: str = "workbit_session"
+    admin_session_cookie_name: str = "workbit_admin_session"
     session_max_age_seconds: int = 60 * 60 * 24 * 7
     token_ttl_minutes: int = 30
     email_verification_otp_ttl_minutes: int = Field(default=10, gt=0, le=60)

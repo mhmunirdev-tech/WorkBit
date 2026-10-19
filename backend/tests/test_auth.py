@@ -59,6 +59,41 @@ def test_admin_and_user_login_are_separate(client):
     )
     assert admin_login.status_code == 200
     assert admin_login.json()["roles"] == ["ADMIN"]
+    assert "workbit_admin_session=" in admin_login.headers["set-cookie"]
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.get("/api/v1/dashboard").status_code == 401
+    assert client.get("/api/v1/auth/admin/me").json()["roles"] == ["ADMIN"]
+
+
+def test_admin_and_public_sessions_are_isolated(client):
+    public_login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert public_login.status_code == 200
+    assert "workbit_session=" in public_login.headers["set-cookie"]
+    assert client.get("/api/v1/admin/dashboard").status_code == 401
+
+    admin_login = client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    )
+    assert admin_login.status_code == 200
+    assert client.get("/api/v1/auth/me").json()["roles"] == ["USER"]
+    assert client.get("/api/v1/auth/admin/me").json()["roles"] == ["ADMIN"]
+    assert client.get("/api/v1/admin/dashboard").status_code == 200
+
+    client.post("/api/v1/auth/admin/logout")
+    assert client.get("/api/v1/auth/admin/me").status_code == 401
+    assert client.get("/api/v1/auth/me").status_code == 200
+
+    assert client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    ).status_code == 200
+    client.post("/api/v1/auth/logout")
+    assert client.get("/api/v1/auth/me").status_code == 401
+    assert client.get("/api/v1/auth/admin/me").status_code == 200
 
 def test_registration_verification_otp_activates_account(client, monkeypatch):
     issued_codes = []
@@ -239,7 +274,7 @@ def test_login_me_and_logout(client):
 
 def test_admin_permission(client):
     client.post("/api/v1/auth/login", json={"email":"workbit-user@example.com","password":"WorkBitDev123!"})
-    assert client.get("/api/v1/admin/dashboard").status_code == 403
+    assert client.get("/api/v1/admin/dashboard").status_code == 401
     client.post("/api/v1/auth/admin/login", json={"email":"workbit-admin@example.com","password":"WorkBitDev123!"})
     assert client.get("/api/v1/admin/dashboard").status_code == 200
 

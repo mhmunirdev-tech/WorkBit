@@ -6,7 +6,7 @@ import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } 
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
-import { Shell, ShellUser } from "./shell";
+import { Shell, ShellUser, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -281,20 +281,34 @@ export function Dashboard() {
 
   useEffect(() => {
     let active = true;
-    api<DashboardData>("/dashboard")
-      .then((result) => {
+    async function refreshDashboard() {
+      try {
+        const result = await api<DashboardData>("/dashboard");
         if (!active) return;
         setData(result);
+        setError("");
         setLoading(false);
-      })
-      .catch((reason: unknown) => {
+      } catch (reason: unknown) {
         if (active) {
           setError(reason instanceof Error ? reason.message : "Your dashboard could not be loaded.");
           setLoading(false);
         }
-      });
+      }
+    }
+    void refreshDashboard();
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void refreshDashboard();
+    };
+    const timer = window.setInterval(refreshIfVisible, 10_000);
+    window.addEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
     return () => {
       active = false;
+      window.clearInterval(timer);
+      window.removeEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
     };
   }, []);
 

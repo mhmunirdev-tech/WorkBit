@@ -41,7 +41,40 @@ function redirectToLogin(): void {
   window.location.replace(`${loginPath}?${query.toString()}`);
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+const inFlightGetRequests = new Map<string, Promise<unknown>>();
+
+export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const method = init.method?.toUpperCase() ?? "GET";
+  const canDeduplicate =
+    method === "GET" &&
+    !init.signal &&
+    !init.body &&
+    !init.headers &&
+    !init.cache &&
+    !init.mode &&
+    !init.redirect &&
+    !init.referrerPolicy &&
+    !init.integrity &&
+    !init.keepalive;
+
+  if (!canDeduplicate) return requestApi<T>(path, init);
+
+  const requestKey = `${apiUrl}${path}`;
+  const inFlightRequest = inFlightGetRequests.get(requestKey);
+  if (inFlightRequest) return inFlightRequest as Promise<T>;
+
+  const request = requestApi<T>(path, init);
+  inFlightGetRequests.set(requestKey, request);
+  const clearRequest = () => {
+    if (inFlightGetRequests.get(requestKey) === request) {
+      inFlightGetRequests.delete(requestKey);
+    }
+  };
+  void request.then(clearRequest, clearRequest);
+  return request;
+}
+
+async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 15_000);
 

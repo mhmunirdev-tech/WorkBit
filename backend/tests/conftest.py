@@ -11,6 +11,8 @@ from app.main import app
 from app.services import auth as auth_service
 from app.services.seed import seed
 
+security_codes = []
+
 engine = create_engine("sqlite:///./test-workbit.db", connect_args={"check_same_thread": False})
 TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
@@ -18,6 +20,12 @@ TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 def database(monkeypatch):
     monkeypatch.setattr(auth_service.email_service, "send_verification", lambda recipient, token: None)
     monkeypatch.setattr(auth_service.email_service, "send_password_reset", lambda recipient, token: None)
+    security_codes.clear()
+    monkeypatch.setattr(
+        auth_service.email_service,
+        "send_security_code",
+        lambda recipient, code, action: security_codes.append((recipient, code, action)),
+    )
     Base.metadata.drop_all(engine); Base.metadata.create_all(engine)
     def override():
         db = TestingSession()

@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 from sqlalchemy import select
+
 from app.models import AdNetwork, Offer, OfferNetwork
 from app.services.rate_limit import _hits
 from conftest import activate_package
@@ -68,10 +71,96 @@ def test_mock_click_is_recorded_without_reward(client):
     assert response.json()["status"] == "recorded"
     assert "No reward" in response.json()["message"]
 
+
+def test_simulated_ad_completion_credits_available_balance_immediately(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    activate_package(client, "TESTOFFER-SIMULATED-AD")
+    _hits.clear()
+
+    click = client.post("/api/v1/offers/mock-game/click")
+    assert click.status_code == 202
+
+    response = client.post("/api/v1/offers/mock-game/simulate-completion")
+
+    assert response.status_code == 200
+    assert response.json()["reward_status"] == "APPROVED"
+    gross_ad_reward = Decimal(client.get("/api/v1/offers/mock-game?country=US").json()["user_reward"])
+    expected_user_reward = gross_ad_reward * Decimal("0.80")
+    expected_platform_share = gross_ad_reward * Decimal("0.20")
+    assert Decimal(response.json()["reward_amount"]) == expected_user_reward
+    assert Decimal(response.json()["platform_share_amount"]) == expected_platform_share
+    assert Decimal(response.json()["available_balance"]) == expected_user_reward
+    assert "was retained as the platform share" in response.json()["message"]
+    assert Decimal(response.json()["pending_balance"]) == Decimal("0")
+    assert "available balance" in response.json()["message"]
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["available_balance"]) == expected_user_reward
+    assert Decimal(wallet["pending_balance"]) == Decimal("0")
+
+    repeated = client.post("/api/v1/offers/mock-game/simulate-completion")
+    assert repeated.status_code == 429
+    assert repeated.json()["error"]["message"] == "Please wait before starting this offer again."
+
+
+def test_simulated_ad_completion_splits_gross_rewards_and_reports_platform_share(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    activate_package(client, "TESTOFFER-SIMULATED-AMOUNTS")
+    _hits.clear()
+
+    offers = client.get("/api/v1/offers?country=US").json()
+    expected_user_total = Decimal("0")
+    expected_platform_total = Decimal("0")
+    for offer in offers:
+        response = client.post(f"/api/v1/offers/{offer['id']}/simulate-completion")
+        gross_ad_reward = Decimal(offer["user_reward"])
+
+        assert response.status_code == 200
+        assert Decimal(response.json()["reward_amount"]) == gross_ad_reward * Decimal("0.80")
+        assert Decimal(response.json()["platform_share_amount"]) == gross_ad_reward * Decimal("0.20")
+        expected_user_total += gross_ad_reward * Decimal("0.80")
+        expected_platform_total += gross_ad_reward * Decimal("0.20")
+
+    wallet = client.get("/api/v1/wallet").json()
+    assert Decimal(wallet["available_balance"]) == expected_user_total
+    assert Decimal(wallet["pending_balance"]) == Decimal("0")
+
+    assert client.post(
+        "/api/v1/auth/admin/login",
+        json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
+    ).status_code == 200
+    admin_dashboard = client.get("/api/v1/admin/dashboard")
+    assert admin_dashboard.status_code == 200
+    assert Decimal(admin_dashboard.json()["approved_ad_payout"]) == sum(
+        (Decimal(offer["user_reward"]) for offer in offers),
+        Decimal("0"),
+    )
+    assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == expected_platform_total
+
+
+def test_simulated_ad_completion_requires_development_mock_rewards(client, monkeypatch):
+    from app.core.config import settings
+
+    login(client)
+    _hits.clear()
+    disabled = client.post("/api/v1/offers/mock-game/simulate-completion")
+    assert disabled.status_code == 503
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    monkeypatch.setattr(settings, "environment", "production")
+    production = client.post("/api/v1/offers/mock-game/simulate-completion")
+    assert production.status_code == 503
+
+
 def test_duplicate_click_is_rate_limited(client):
     activate_package(client, "TESTOFFERPAY03"); _hits.clear()
     assert client.post("/api/v1/offers/mock-game/click").status_code == 202
-    assert client.post("/api/v1/offers/mock-game/click").status_code == 429
+    limited = client.post("/api/v1/offers/mock-game/click")
+    assert limited.status_code == 429
+    assert limited.json()["error"]["message"] == "Please wait before starting this offer again."
 
 
 def test_click_requires_an_approved_package(client):

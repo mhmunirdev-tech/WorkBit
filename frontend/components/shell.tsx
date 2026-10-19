@@ -43,6 +43,8 @@ type WalletSnapshot = {
   currency: string;
 };
 
+export const WALLET_UPDATED_EVENT = "workbit:wallet-updated";
+
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/offers": "Explore offers",
@@ -97,10 +99,7 @@ export function Shell({
     : null;
 
   useEffect(() => {
-    if (user) {
-      setFetchedUser(user);
-      return;
-    }
+    if (user) return;
     let active = true;
     api<ShellUser>("/auth/me")
       .then((account) => {
@@ -116,21 +115,34 @@ export function Shell({
 
   useEffect(() => {
     let active = true;
-    api<WalletSnapshot>("/wallet")
-      .then((snapshot) => {
+    async function refreshWallet() {
+      try {
+        const snapshot = await api<WalletSnapshot>("/wallet");
         if (active) {
           setWallet(snapshot);
           setWalletLoadError(false);
         }
-      })
-      .catch(() => {
+      } catch {
         if (active) {
           setWallet(null);
           setWalletLoadError(true);
         }
-      });
+      }
+    }
+    void refreshWallet();
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void refreshWallet();
+    };
+    const timer = window.setInterval(refreshIfVisible, 10_000);
+    window.addEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
     return () => {
       active = false;
+      window.clearInterval(timer);
+      window.removeEventListener(WALLET_UPDATED_EVENT, refreshIfVisible);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
     };
   }, []);
 

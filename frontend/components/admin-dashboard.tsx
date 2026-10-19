@@ -14,6 +14,7 @@ type AdminDashboardData = {
   active_users: number;
   pending_verification: number;
   total_wallet_balance: string;
+  approved_ad_payout: string;
   registered_user_amount: string;
   platform_ad_revenue: string;
   currency: string;
@@ -104,9 +105,15 @@ export function AdminDashboard() {
         </article></Card>
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-green"><Banknote size={18} /></span><small>APPROVED ADS</small></div>
-          <p>Platform ad share</p>
+          <p>Gross approved ad payouts</p>
+          <strong>{data ? formatMoney(data.approved_ad_payout, data.currency) : "—"}</strong>
+          <small className="admin-metric-foot">Total provider payout for approved ads</small>
+        </article></Card>
+        <Card className="admin-dashboard-metric" asChild><article>
+          <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-green"><Banknote size={18} /></span><small>PLATFORM · 20%</small></div>
+          <p>Platform ad share retained</p>
           <strong>{data ? formatMoney(data.platform_ad_revenue, data.currency) : "—"}</strong>
-          <small className="admin-metric-foot">Your 20% share from approved ad rewards</small>
+          <small className="admin-metric-foot">20% of gross approved ad payouts</small>
         </article></Card>
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-amber"><Banknote size={18} /></span><small>APPROVED PACKAGES</small></div>

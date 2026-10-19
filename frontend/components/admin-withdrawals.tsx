@@ -127,6 +127,7 @@ export function AdminWithdrawals() {
   async function review(action: Action) {
     if (!selected) return;
     if (action === "complete" && !transactionId.trim()) return;
+    if (action === "approve" && !window.confirm("Confirm the payout has already been sent to the user's destination. Approval will mark this withdrawal as paid.")) return;
     if (action === "complete" && !window.confirm("Confirm this payout has been sent to the user's destination and enter the transfer reference?")) return;
 
     setBusy(true);
@@ -166,7 +167,7 @@ export function AdminWithdrawals() {
         <div>
           <p className="eyebrow">WORKBIT ADMIN</p>
           <h1>Manual withdrawals</h1>
-          <p>Review user payout requests and record each manual decision.</p>
+          <p>Send the payout, then approve the request to mark it paid; rejected requests release the reserved balance.</p>
         </div>
         <div className="admin-withdrawals-links">
           <Button className="secondary-button" variant="outline" type="button" onClick={() => void refresh()} disabled={loading || busy}>Refresh</Button>

@@ -36,7 +36,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=frontend_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "PUT"],
+    allow_methods=["DELETE", "GET", "POST", "PATCH", "PUT"],
     allow_headers=["Content-Type", "X-CSRF-Token"],
 )
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)

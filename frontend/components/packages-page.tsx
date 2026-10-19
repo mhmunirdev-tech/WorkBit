@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, BadgeCheck, Clock3 } from "lucide-react";
+import { ArrowRight, BadgeCheck, Clock3, Sparkles } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
@@ -37,6 +37,9 @@ type PackageCatalog = {
   usd_bdt_rate: string | null;
   package_active: boolean;
   package_expires_at: string | null;
+  wallet_balance: string | null;
+  deposit_balance: string | null;
+  earning_balance: string | null;
   latest_purchase: Purchase | null;
 };
 
@@ -135,7 +138,10 @@ function PackagesContent() {
                       key={item.code}
                       aria-label={`Choose ${item.name} package`}
                     >
-                      <span className="package-plan-label">{item.duration_days >= 365 ? "BEST FOR LONG-TERM" : "GET STARTED"}</span>
+                      <div className="package-plan-header">
+                        <span className="package-plan-label">{item.duration_days >= 365 ? "BEST FOR LONG-TERM" : "GET STARTED"}</span>
+                        <span className="package-plan-icon-wrap" aria-hidden="true"><Sparkles size={16} /></span>
+                      </div>
                       <strong>{item.name}</strong>
                       <span className="package-plan-price">
                         <b>{formatUsd(item.amount)}</b>

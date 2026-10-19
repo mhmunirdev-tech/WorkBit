@@ -1,14 +1,15 @@
 import json
 from datetime import datetime, timezone
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user, require_permission
 from app.core.config import settings
 from app.database.session import get_db
-from app.models import AdminLog, PayoutSettings, User, WithdrawalRequest
+from app.models import AdminLog, PayoutSettings, User, UserPayoutAccount, WithdrawalRequest
 from app.schemas.withdrawals import (
     AdminWithdrawalRead,
     PayoutSettingsRead,
@@ -16,11 +17,21 @@ from app.schemas.withdrawals import (
     WithdrawalCreate,
     WithdrawalDecision,
     WithdrawalPayment,
+    WithdrawalOtpRequest,
     WithdrawalRead,
 )
+from app.services.auth import consume_action_code, issue_action_code
+from app.services.email import EmailDeliveryError, email_service
+from app.services.rate_limit import enforce_cooldown
 from app.services.withdrawals import _request_read, withdrawal_service
 
 router = APIRouter(tags=["withdrawals"])
+WITHDRAWAL_OTP_PURPOSE = "WITHDRAWAL_REQUEST"
+OTP_RESEND_COOLDOWN_SECONDS = 60
+
+
+def _withdrawal_code_context(account_id: str, amount: Decimal) -> str:
+    return f"{account_id}:{format(amount.normalize(), 'f')}"
 
 
 @router.get("/withdrawals", response_model=list[WithdrawalRead])
@@ -31,13 +42,47 @@ def list_user_withdrawals(
     return [_request_read(item) for item in withdrawal_service.list_for_user(db, user)]
 
 
+@router.post("/withdrawals/otp", status_code=202)
+def send_withdrawal_otp(
+    data: WithdrawalOtpRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    account = db.get(UserPayoutAccount, data.account_id)
+    if account is None or account.user_id != user.id:
+        raise HTTPException(404, "Saved payout account not found.")
+    withdrawal_service.validate_request(db, user, data.amount, account.id, account.method)
+    enforce_cooldown(
+        f"withdrawal-otp:{user.id}",
+        seconds=OTP_RESEND_COOLDOWN_SECONDS,
+        message="Please wait before requesting another confirmation code.",
+    )
+    context = _withdrawal_code_context(account.id, data.amount)
+    code = issue_action_code(db, user, WITHDRAWAL_OTP_PURPOSE, context)
+    try:
+        email_service.send_security_code(user.email, code, "withdrawal request")
+    except EmailDeliveryError as error:
+        db.rollback()
+        raise HTTPException(503, "The confirmation email could not be delivered. Please try again later.") from error
+    db.commit()
+    return {"message": "A confirmation code has been sent to your registered email."}
+
+
 @router.post("/withdrawals", response_model=WithdrawalRead, status_code=201)
 def create_withdrawal(
     data: WithdrawalCreate,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> WithdrawalRequest:
-    return withdrawal_service.create(db, user, data.amount, data.destination, data.payment_method)
+    withdrawal_service.validate_request(db, user, data.amount, data.account_id, data.payment_method)
+    consume_action_code(
+        db,
+        user,
+        WITHDRAWAL_OTP_PURPOSE,
+        _withdrawal_code_context(data.account_id, data.amount),
+        data.code,
+    )
+    return withdrawal_service.create(db, user, data.amount, data.account_id, data.payment_method)
 
 
 @router.get("/admin/payout-settings", response_model=PayoutSettingsRead)

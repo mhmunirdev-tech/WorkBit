@@ -122,6 +122,22 @@ class EmailService:
             ),
         )
 
+    def send_security_code(self, recipient: str, code: str, action: str) -> None:
+        expiry = settings.email_verification_otp_ttl_minutes
+        safe_action = html.escape(action)
+        safe_code = html.escape(code)
+        self._send(
+            recipient,
+            f"Confirm your WorkBit {action}",
+            f"Your WorkBit confirmation code is {code}. It expires in {expiry} minutes.",
+            (
+                f"<p>Use this code to confirm your {safe_action}.</p>"
+                f"<p>Your confirmation code is <strong>{safe_code}</strong>.</p>"
+                f"<p>This code expires in {expiry} minutes. If you did not request this, "
+                "you can ignore this email.</p>"
+            ),
+        )
+
     def send_password_reset(self, recipient: str, token: str) -> None:
         link = f"{settings.frontend_origin.rstrip('/')}/reset-password?{urlencode({'token': token})}"
         safe_link = html.escape(link, quote=True)

@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react"
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
-import { Shell, useShellUser } from "./shell";
+import { Shell, useShellUser, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -98,7 +98,7 @@ function OffersCatalog() {
               <CardTitle>{offer.title}</CardTitle>
               <p>{offer.short_description}</p>
               <div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
-              <div className="offer-foot"><div className="offer-reward"><small>YOUR REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
+              <div className="offer-foot"><div className="offer-reward"><small>GROSS AD REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
               {offer.is_demo && <small className="demo-label">Development demo — no provider redirect</small>}
             </CardContent>
           </Card>)}
@@ -135,7 +135,10 @@ function OfferDetailContent({ id }: { id: string }) {
     setBusy(true);
     setMessage("");
     try {
-      const result = await api<{ message: string }>(`/offers/${encodeURIComponent(id)}/click`, { method: "POST" });
+      const result = await api<{ message: string }>(
+        `/offers/${encodeURIComponent(id)}/click`,
+        { method: "POST" },
+      );
       setMessage(result.message);
       showToast({ title: "Offer click recorded", description: result.message, variant: "success" });
     } catch (reason) {
@@ -147,11 +150,31 @@ function OfferDetailContent({ id }: { id: string }) {
     }
   }
 
+  async function simulateCompletion() {
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await api<{ message: string }>(
+        `/offers/${encodeURIComponent(id)}/simulate-completion`,
+        { method: "POST" },
+      );
+      setMessage(result.message);
+      window.dispatchEvent(new Event(WALLET_UPDATED_EVENT));
+      showToast({ title: "Test ad completed", description: result.message, variant: "success" });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Could not simulate ad completion.";
+      setMessage(message);
+      showToast({ title: "Could not complete test ad", description: message, variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <>
     <Button variant="link" asChild><Link href="/offers" className="text-link"><ArrowLeft size={15} /> Back to offers</Link></Button>
     {loading ? <Card className="panel"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4 w-1/3" /></Card>
       : error || !offer ? <Alert className="state error-state" variant="destructive"><AlertDescription>{error || "Offer not found."}</AlertDescription></Alert>
-      : <Card className="offer-detail panel"><CardContent><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.short_description}</p><div className="detail-reward"><span>Displayed reward</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><dl><div><dt>Estimated time</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} minutes` : "Varies by task"}</dd></div><div><dt>Difficulty</dt><dd>{offer.difficulty}</dd></div><div><dt>Availability</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl><p className="offer-terms">Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation.</p><Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>{offer.is_demo && <p className="demo-label">Development demo offer. External provider redirects are disabled.</p>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}{message.toLowerCase().includes("package") && <Button variant="outline" asChild><Link href="/packages">View earning packages</Link></Button>}</CardContent></Card>}
+      : <Card className="offer-detail panel"><CardContent><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.short_description}</p><div className="detail-reward"><span>Gross ad reward</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><dl><div><dt>Estimated time</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} minutes` : "Varies by task"}</dd></div><div><dt>Difficulty</dt><dd>{offer.difficulty}</dd></div><div><dt>Availability</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl><p className="offer-terms">{offer.is_demo ? "This is a development test offer. 20% of the gross ad reward is retained as platform share; the remaining 80% is credited to your available balance." : "Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation."}</p>{offer.is_demo ? <><p className="demo-label">Development demo only — no external ad is played.</p><Button className="primary" onClick={simulateCompletion} disabled={busy}>{busy ? "Adding test earning…" : "Complete demo ad and add test earning"}</Button></> : <Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}{message.toLowerCase().includes("package") && <Button variant="outline" asChild><Link href="/packages">View earning packages</Link></Button>}</CardContent></Card>}
   </>;
 }
 

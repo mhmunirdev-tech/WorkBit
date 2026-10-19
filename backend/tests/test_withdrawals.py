@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import settings
 from app.services.rate_limit import _hits
-from conftest import activate_package, configure_payout_rate
+from conftest import activate_package, configure_payout_rate, security_codes
 
 
 def login(client, email="workbit-user@example.com"):
@@ -34,35 +34,245 @@ def fund_wallet(client, transaction_id="withdrawal-test"):
         },
     )
     assert response.status_code == 202
-    reward = client.get("/api/v1/rewards").json()[0]
-    with TestClient(client.app) as admin:
-        assert admin.post(
-            "/api/v1/auth/admin/login",
-            json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
-        ).status_code == 200
-        approved = admin.post(f"/api/v1/admin/rewards/{reward['id']}/approve")
-        assert approved.status_code == 200
+
+
+def add_payout_account(client, method, destination, account_id=None):
+    _hits.clear()
+    payload = {"method": method, "destination": destination}
+    if account_id:
+        payload["account_id"] = account_id
+    code_response = client.post("/api/v1/wallet/payout-accounts/otp", json=payload)
+    if code_response.status_code != 202:
+        return code_response
+    code = security_codes[-1][1]
+    return client.post(
+        "/api/v1/wallet/payout-accounts",
+        json={**payload, "code": code},
+    )
+
+
+def request_withdrawal(client, amount, method="BKASH", destination="01712345678"):
+    accounts = client.get("/api/v1/wallet/payout-accounts").json()
+    existing = next((account for account in accounts if account["method"] == method), None)
+    saved = add_payout_account(
+        client,
+        method,
+        destination,
+        existing["id"] if existing else None,
+    )
+    if saved.status_code != 200:
+        return saved
+    _hits.clear()
+    code_request = client.post(
+        "/api/v1/withdrawals/otp",
+        json={"amount": amount, "account_id": saved.json()["id"]},
+    )
+    if code_request.status_code != 202:
+        return code_request
+    code = security_codes[-1][1]
+    return client.post(
+        "/api/v1/withdrawals",
+        json={
+            "amount": amount,
+            "account_id": saved.json()["id"],
+            "payment_method": method,
+            "code": code,
+        },
+    )
 
 
 def test_withdrawals_require_configuration_and_are_private(client, monkeypatch):
     login(client)
     assert client.get("/api/v1/withdrawals").status_code == 200
-    response = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    response = request_withdrawal(client, "5.00")
     assert response.status_code == 503
     monkeypatch.setattr(settings, "withdrawal_encryption_key", "not-valid-base64")
-    invalid_key = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "user@example.com"},
-    )
+    invalid_key = request_withdrawal(client, "5.00")
     assert invalid_key.status_code == 503
     assert client.get("/api/v1/dashboard").json()["withdrawal_summary"]["enabled"] is False
-    assert client.get("/api/v1/admin/withdrawals").status_code == 403
+    assert client.get("/api/v1/admin/withdrawals").status_code == 401
 
 
-def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
+def test_users_can_save_update_and_remove_encrypted_payout_accounts(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"a" * 32).decode("ascii"),
+    )
+    assert login(client).status_code == 200
+
+    saved = add_payout_account(client, "BKASH", "+880 1712-345678")
+    assert saved.status_code == 200
+    assert saved.json()["method"] == "BKASH"
+    assert saved.json()["destination_hint"].endswith("5678")
+
+    updated = add_payout_account(client, "NAGAD", "01812345678")
+    assert updated.status_code == 200
+    accounts = client.get("/api/v1/wallet/payout-accounts")
+    assert accounts.status_code == 200
+    assert {account["method"] for account in accounts.json()} == {"BKASH", "NAGAD"}
+    assert "destination_ciphertext" not in str(accounts.json())
+    assert "01712345678" not in str(accounts.json())
+
+    from app.database.session import SessionLocal
+    from app.models import UserPayoutAccount
+
+    db = SessionLocal()
+    try:
+        account = db.query(UserPayoutAccount).filter_by(method="BKASH").one()
+        assert account.destination_ciphertext != "01712345678"
+        assert account.destination_hint.endswith("5678")
+    finally:
+        db.close()
+
+    removed = client.delete(f"/api/v1/wallet/payout-accounts/{saved.json()['id']}")
+    assert removed.status_code == 204
+    assert [account["method"] for account in client.get("/api/v1/wallet/payout-accounts").json()] == ["NAGAD"]
+
+
+def test_users_can_save_two_accounts_per_method_but_not_a_third(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"c" * 32).decode("ascii"),
+    )
+    assert login(client).status_code == 200
+    assert add_payout_account(client, "BKASH", "01712345678").status_code == 200
+    assert add_payout_account(client, "BKASH", "01812345678").status_code == 200
+    assert add_payout_account(client, "BKASH", "01912345678").status_code == 409
+    assert add_payout_account(client, "NAGAD", "01612345678").status_code == 200
+    assert add_payout_account(client, "NAGAD", "01512345678").status_code == 200
+    accounts = client.get("/api/v1/wallet/payout-accounts").json()
+    assert len(accounts) == 4
+    assert sum(item["method"] == "BKASH" for item in accounts) == 2
+    assert sum(item["method"] == "NAGAD" for item in accounts) == 2
+
+
+def test_payout_account_requires_matching_one_time_email_code(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"d" * 32).decode("ascii"),
+    )
+    assert login(client).status_code == 200
+    _hits.clear()
+    payload = {"method": "BKASH", "destination": "01712345678"}
+    issued = client.post("/api/v1/wallet/payout-accounts/otp", json=payload)
+    assert issued.status_code == 202
+    recipient, code, action = security_codes[-1]
+    assert recipient == "workbit-user@example.com"
+    assert action == "payout account change"
+
+    wrong = client.post(
+        "/api/v1/wallet/payout-accounts",
+        json={**payload, "code": "000000" if code != "000000" else "000001"},
+    )
+    assert wrong.status_code == 400
+    assert client.get("/api/v1/wallet/payout-accounts").json() == []
+
+    mismatch = client.post(
+        "/api/v1/wallet/payout-accounts",
+        json={"method": "BKASH", "destination": "01812345678", "code": code},
+    )
+    assert mismatch.status_code == 400
+    saved = client.post(
+        "/api/v1/wallet/payout-accounts",
+        json={**payload, "code": code},
+    )
+    assert saved.status_code == 200
+    reused = client.post(
+        "/api/v1/wallet/payout-accounts",
+        json={**payload, "code": code},
+    )
+    assert reused.status_code == 400
+
+
+def test_withdrawal_uses_saved_number_and_admin_can_review_it(client, monkeypatch):
+    monkeypatch.setattr(
+        settings,
+        "withdrawal_encryption_key",
+        base64.urlsafe_b64encode(b"s" * 32).decode("ascii"),
+    )
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    fund_wallet(client, "withdrawal-saved-payout-account")
+    saved = add_payout_account(client, "NAGAD", "01812345678")
+    assert saved.status_code == 200
+
+    created = request_withdrawal(client, "5.00", "NAGAD", "01812345678")
+    assert created.status_code == 201
+    assert created.json()["method"] == "NAGAD"
+    assert created.json()["destination_hint"].endswith("5678")
+    assert "01812345678" not in str(created.json())
+
+    with TestClient(client.app) as admin:
+        assert login(admin, "workbit-admin@example.com").status_code == 200
+        detail = admin.get(f"/api/v1/admin/withdrawals/{created.json()['id']}")
+        assert detail.status_code == 200
+        assert detail.json()["destination"] == "01812345678"
+
+
+def test_withdrawal_otp_is_bound_to_amount_and_does_not_reserve_balance_early(client, monkeypatch):
+        monkeypatch.setattr(
+            settings,
+            "withdrawal_encryption_key",
+            base64.urlsafe_b64encode(b"e" * 32).decode("ascii"),
+        )
+        monkeypatch.setattr(settings, "enable_mock_rewards", True)
+        fund_wallet(client, "withdrawal-otp-binding")
+        saved = add_payout_account(client, "BKASH", "01712345678")
+        assert saved.status_code == 200
+
+        _hits.clear()
+        issued = client.post(
+            "/api/v1/withdrawals/otp",
+            json={"amount": "5.00", "account_id": saved.json()["id"]},
+        )
+        assert issued.status_code == 202
+        code = security_codes[-1][1]
+        before = client.get("/api/v1/wallet").json()["available_balance"]
+        wrong = client.post(
+            "/api/v1/withdrawals",
+            json={
+                "amount": "5.00",
+                "account_id": saved.json()["id"],
+                "payment_method": "BKASH",
+                "code": "000000" if code != "000000" else "000001",
+            },
+        )
+        assert wrong.status_code == 400
+        mismatch = client.post(
+            "/api/v1/withdrawals",
+            json={
+                "amount": "6.00",
+                "account_id": saved.json()["id"],
+                "payment_method": "BKASH",
+                "code": code,
+            },
+        )
+        assert mismatch.status_code == 400
+        assert client.get("/api/v1/wallet").json()["available_balance"] == before
+
+        _hits.clear()
+        issued = client.post(
+            "/api/v1/withdrawals/otp",
+            json={"amount": "5.00", "account_id": saved.json()["id"]},
+        )
+        assert issued.status_code == 202
+        code = security_codes[-1][1]
+        created = client.post(
+            "/api/v1/withdrawals",
+            json={
+                "amount": "5.00",
+                "account_id": saved.json()["id"],
+                "payment_method": "BKASH",
+                "code": code,
+            },
+        )
+        assert created.status_code == 201
+        assert client.get("/api/v1/wallet").json()["available_balance"] == "3.00000000"
+
+
+def test_withdrawal_reserves_funds_and_admin_approval_marks_paid(client, monkeypatch):
     monkeypatch.setattr(
         settings,
         "withdrawal_encryption_key",
@@ -73,10 +283,7 @@ def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
 
     before = client.get("/api/v1/wallet").json()
     assert before["available_balance"] == "8.00000000"
-    response = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    response = request_withdrawal(client, "5.00")
     assert response.status_code == 201
     request_data = response.json()
     assert request_data["status"] == "PENDING"
@@ -90,10 +297,7 @@ def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
 
     wallet = client.get("/api/v1/wallet").json()
     assert wallet["available_balance"] == "3.00000000"
-    duplicate = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    duplicate = request_withdrawal(client, "5.00")
     assert duplicate.status_code == 409
     history = client.get("/api/v1/withdrawals").json()
     assert len(history) == 1
@@ -104,28 +308,26 @@ def test_withdrawal_reserves_funds_and_admin_completes(client, monkeypatch):
         detail = admin.get(f"/api/v1/admin/withdrawals/{request_data['id']}")
         assert detail.status_code == 200
         assert detail.json()["destination"] == "01712345678"
-        assert admin.post(
+        paid = admin.post(
             f"/api/v1/admin/withdrawals/{request_data['id']}/approve",
             json={"note": "Payout verified."},
-        ).status_code == 200
-        completed = admin.post(
-            f"/api/v1/admin/withdrawals/{request_data['id']}/complete",
-            json={"transaction_id": "BKASH-TRANSFER-12345", "note": "Paid manually."},
         )
-        assert completed.status_code == 200
-        assert completed.json()["status"] == "PAID"
-        assert completed.json()["payment_transaction_id"] == "BKASH-TRANSFER-12345"
-        assert completed.json()["paid_at"] is not None
+        assert paid.status_code == 200
+        assert paid.json()["status"] == "PAID"
+        assert paid.json()["payment_transaction_id"] is None
+        assert paid.json()["paid_at"] is not None
 
     wallet = client.get("/api/v1/wallet").json()
     assert wallet["available_balance"] == "3.00000000"
     assert wallet["lifetime_withdrawn"] == "5.00000000"
+    user_history = client.get("/api/v1/withdrawals").json()
+    assert user_history[0]["status"] == "PAID"
     transactions = client.get("/api/v1/wallet/transactions").json()
     reserved = next(item for item in transactions if item["reference_id"] == request_data["id"])
     assert reserved["status"] == "APPROVED"
 
 
-def test_withdrawal_cannot_be_marked_paid_without_transaction_id(client, monkeypatch):
+def test_admin_approval_marks_withdrawal_paid_without_separate_completion_step(client, monkeypatch):
     monkeypatch.setattr(
         settings,
         "withdrawal_encryption_key",
@@ -133,31 +335,19 @@ def test_withdrawal_cannot_be_marked_paid_without_transaction_id(client, monkeyp
     )
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
     fund_wallet(client, "withdrawal-missing-payment-reference")
-    created = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    created = request_withdrawal(client, "5.00")
     assert created.status_code == 201
 
     with TestClient(client.app) as admin:
         assert login(admin, "workbit-admin@example.com").status_code == 200
         withdrawal_id = created.json()["id"]
-        assert admin.post(
+        paid = admin.post(
             f"/api/v1/admin/withdrawals/{withdrawal_id}/approve",
-            json={"note": "Verified."},
-        ).status_code == 200
-        response = admin.post(
-            f"/api/v1/admin/withdrawals/{withdrawal_id}/complete",
-            json={"note": "Paid manually."},
+            json={"note": "Payout sent."},
         )
-        assert response.status_code == 422
-
-        still_processing = admin.get(
-            f"/api/v1/admin/withdrawals/{withdrawal_id}"
-        )
-        assert still_processing.status_code == 200
-        assert still_processing.json()["status"] == "PROCESSING"
-        assert still_processing.json()["payment_transaction_id"] is None
+        assert paid.status_code == 200
+        assert paid.json()["status"] == "PAID"
+        assert paid.json()["paid_at"] is not None
 
 
 def test_rejected_withdrawal_releases_balance_and_enforces_minimum(client, monkeypatch):
@@ -168,16 +358,10 @@ def test_rejected_withdrawal_releases_balance_and_enforces_minimum(client, monke
     )
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
     fund_wallet(client, "withdrawal-reject-test")
-    invalid = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "4.99", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    invalid = request_withdrawal(client, "4.99")
     assert invalid.status_code == 400
 
-    response = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    response = request_withdrawal(client, "5.00")
     assert response.status_code == 201
 
     with TestClient(client.app) as admin:
@@ -217,15 +401,12 @@ def test_payout_exchange_rate_is_admin_configurable_and_snapshotted(client, monk
     assert summary["withdrawal_summary"]["minimum_amount"] == "5.00"
 
     invalid_number = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "01234567890", "payment_method": "NAGAD"},
+        "/api/v1/wallet/payout-accounts/otp",
+        json={"method": "NAGAD", "destination": "01234567890"},
     )
     assert invalid_number.status_code == 422
 
-    created = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "5.00", "destination": "+8801712345678", "payment_method": "NAGAD"},
-    )
+    created = request_withdrawal(client, "5.00", "NAGAD", "+8801712345678")
     assert created.status_code == 201
     assert created.json()["destination_hint"].endswith("5678")
     assert created.json()["payout_amount"] == "600.00000000"
@@ -243,11 +424,11 @@ def test_payout_exchange_rate_is_admin_configurable_and_snapshotted(client, monk
 
 def test_withdrawal_rate_must_be_configured_and_is_admin_only(client):
     assert login(client).status_code == 200
-    assert client.get("/api/v1/admin/payout-settings").status_code == 403
+    assert client.get("/api/v1/admin/payout-settings").status_code == 401
     assert client.put(
         "/api/v1/admin/payout-settings",
         json={"usd_bdt_rate": "120.00"},
-    ).status_code == 403
+    ).status_code == 401
     assert client.get("/api/v1/dashboard").json()["withdrawal_summary"]["enabled"] is False
 
 
@@ -259,8 +440,5 @@ def test_withdrawal_minimum_is_enforced_by_backend(client, monkeypatch):
     )
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
     fund_wallet(client, "withdrawal-minimum-check")
-    response = client.post(
-        "/api/v1/withdrawals",
-        json={"amount": "4.99", "destination": "01712345678", "payment_method": "BKASH"},
-    )
+    response = request_withdrawal(client, "4.99")
     assert response.status_code == 400

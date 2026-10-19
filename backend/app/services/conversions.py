@@ -32,6 +32,17 @@ class ConversionService:
                 decision = db.scalar(select(RewardDecision).where(RewardDecision.conversion_id == existing.id))
                 if decision and data.status != "APPROVED":
                     reward_decision_service.transition_decision(db, decision, data.status, f"Provider reported {data.status.lower()}.")
+                elif (
+                    settings.environment == "development"
+                    and settings.enable_mock_rewards
+                    and data.status in {"APPROVED", "MANUAL_REVIEW"}
+                ):
+                    if decision:
+                        reward_decision_service.transition_decision(
+                            db, decision, data.status, f"Provider reported {data.status.lower()}."
+                        )
+                    else:
+                        reward_decision_service.process_conversion(db, existing)
                 else:
                     db.commit()
                 db.refresh(existing)
@@ -48,7 +59,11 @@ class ConversionService:
         except IntegrityError:
             db.rollback(); raise HTTPException(409, "Duplicate conversion received.")
         db.refresh(conversion)
-        if settings.environment == "development" and settings.enable_mock_rewards:
+        if (
+            settings.environment == "development"
+            and settings.enable_mock_rewards
+            and status != "PENDING"
+        ):
             reward_decision_service.process_conversion(db, conversion)
         logging.info("conversion created transaction=%s status=%s", data.transaction_id, status); return conversion
 conversion_service = ConversionService()

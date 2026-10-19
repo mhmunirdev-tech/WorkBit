@@ -11,15 +11,16 @@ from decimal import Decimal, ROUND_HALF_UP
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import AdminLog, PayoutSettings, User, Wallet, WalletTransaction, WithdrawalRequest
+from app.models import AdminLog, PayoutSettings, User, UserPayoutAccount, Wallet, WalletTransaction, WithdrawalRequest
 
 OUTSTANDING_STATUSES = {"PENDING", "PROCESSING"}
 AAD_PREFIX = b"workbit-withdrawal-destination:v1:"
+PAYOUT_ACCOUNT_AAD_PREFIX = b"workbit-payout-account:v1:"
 
 
 def _cipher() -> AESGCM:
@@ -56,6 +57,25 @@ def _decrypt_destination(withdrawal: WithdrawalRequest) -> str:
     except (InvalidTag, UnicodeDecodeError, ValueError) as error:
         logging.exception("withdrawal destination could not be decrypted withdrawal_id=%s", withdrawal.id)
         raise HTTPException(503, "Payout details are unavailable for secure processing.") from error
+
+
+def _encrypt_payout_account(user_id: str, method: str, destination: str) -> str:
+    nonce = os.urandom(12)
+    aad = PAYOUT_ACCOUNT_AAD_PREFIX + user_id.encode() + b":" + method.encode()
+    ciphertext = _cipher().encrypt(nonce, destination.encode("utf-8"), aad)
+    return base64.urlsafe_b64encode(nonce + ciphertext).decode("ascii")
+
+
+def _decrypt_payout_account(account: UserPayoutAccount) -> str:
+    try:
+        payload = base64.urlsafe_b64decode(account.destination_ciphertext.encode("ascii"))
+        if len(payload) < 29:
+            raise ValueError("Encrypted payout account is truncated.")
+        aad = PAYOUT_ACCOUNT_AAD_PREFIX + account.user_id.encode() + b":" + account.method.encode()
+        return _cipher().decrypt(payload[:12], payload[12:], aad).decode("utf-8")
+    except (InvalidTag, UnicodeDecodeError, ValueError) as error:
+        logging.exception("payout account could not be decrypted account_id=%s", account.id)
+        raise HTTPException(503, "Saved payout details are unavailable for secure processing.") from error
 
 
 def _request_read(withdrawal: WithdrawalRequest) -> dict:
@@ -99,19 +119,90 @@ def _audit(
 
 
 class WithdrawalService:
-    def create(
+    def list_payout_accounts(self, db: Session, user: User) -> list[UserPayoutAccount]:
+        return db.scalars(
+            select(UserPayoutAccount)
+            .where(UserPayoutAccount.user_id == user.id)
+            .order_by(UserPayoutAccount.method)
+        ).all()
+
+    def save_payout_account(
+        self,
+        db: Session,
+        user: User,
+        method: str,
+        destination: str,
+        account_id: str | None = None,
+    ) -> UserPayoutAccount:
+        db.scalar(select(User.id).where(User.id == user.id).with_for_update())
+        account = None
+        if account_id is not None:
+            account = db.scalar(
+                select(UserPayoutAccount).where(
+                    UserPayoutAccount.id == account_id,
+                    UserPayoutAccount.user_id == user.id,
+                    UserPayoutAccount.method == method,
+                )
+            )
+            if account is None:
+                raise HTTPException(404, "Saved payout account not found.")
+            for existing in self.list_payout_accounts(db, user):
+                if (
+                    existing.id != account.id
+                    and existing.method == method
+                    and _decrypt_payout_account(existing) == destination
+                ):
+                    raise HTTPException(409, "This payout number is already saved.")
+        else:
+            count = db.scalar(
+                select(func.count())
+                .select_from(UserPayoutAccount)
+                .where(
+                    UserPayoutAccount.user_id == user.id,
+                    UserPayoutAccount.method == method,
+                )
+            )
+            if count >= 2:
+                raise HTTPException(409, f"You can save up to two {method.title()} accounts.")
+            for existing in self.list_payout_accounts(db, user):
+                if existing.method == method and _decrypt_payout_account(existing) == destination:
+                    raise HTTPException(409, "This payout number is already saved.")
+            account = UserPayoutAccount(user_id=user.id, method=method)
+        account.destination_ciphertext = _encrypt_payout_account(user.id, method, destination)
+        account.destination_hint = f"••••{destination[-4:]}"
+        account.updated_at = datetime.now(timezone.utc)
+        db.add(account)
+        db.commit()
+        db.refresh(account)
+        return account
+
+    def delete_payout_account(self, db: Session, user: User, account_id: str) -> None:
+        account = db.scalar(
+            select(UserPayoutAccount).where(
+                UserPayoutAccount.id == account_id,
+                UserPayoutAccount.user_id == user.id,
+            )
+        )
+        if account is None:
+            raise HTTPException(404, "Saved payout account not found.")
+        db.delete(account)
+        db.commit()
+
+    def validate_request(
         self,
         db: Session,
         user: User,
         amount: Decimal,
-        destination: str,
-        payment_method: str = "MANUAL",
-    ) -> WithdrawalRequest:
+        account_id: str,
+        payment_method: str,
+        lock_wallet: bool = False,
+    ) -> tuple[Wallet, Decimal, UserPayoutAccount, str]:
         if user.status != "ACTIVE" or not user.email_verified:
             raise HTTPException(403, "Verify your email and activate your account before requesting a withdrawal.")
-        wallet = db.scalar(
-            select(Wallet).where(Wallet.user_id == user.id).with_for_update()
-        )
+        wallet_query = select(Wallet).where(Wallet.user_id == user.id)
+        if lock_wallet:
+            wallet_query = wallet_query.with_for_update()
+        wallet = db.scalar(wallet_query)
         if wallet is None:
             raise HTTPException(409, "Your wallet is unavailable.")
         payout_settings = db.get(PayoutSettings, "default")
@@ -136,6 +227,29 @@ class WithdrawalService:
         withdrawable_balance = wallet.available_balance - wallet.deposit_balance
         if amount > withdrawable_balance:
             raise HTTPException(400, "The requested amount exceeds your withdrawable earnings balance.")
+
+        account = db.scalar(
+            select(UserPayoutAccount).where(
+                UserPayoutAccount.id == account_id,
+                UserPayoutAccount.user_id == user.id,
+                UserPayoutAccount.method == payment_method,
+            )
+        )
+        if account is None:
+            raise HTTPException(400, "Choose one of your saved payout accounts.")
+        return wallet, exchange_rate, account, _decrypt_payout_account(account)
+
+    def create(
+        self,
+        db: Session,
+        user: User,
+        amount: Decimal,
+        account_id: str,
+        payment_method: str,
+    ) -> WithdrawalRequest:
+        wallet, exchange_rate, _account, destination = self.validate_request(
+            db, user, amount, account_id, payment_method, lock_wallet=True
+        )
 
         encrypted_destination = _encrypt_destination(user.id, destination)
         before = wallet.available_balance
@@ -229,7 +343,14 @@ class WithdrawalService:
         if action == "approve":
             if withdrawal.status != "PENDING":
                 raise HTTPException(409, "Only pending withdrawals can be approved.")
-            withdrawal.status = "PROCESSING"
+            wallet = db.scalar(
+                select(Wallet).where(Wallet.user_id == withdrawal.user_id).with_for_update()
+            )
+            if wallet is None:
+                raise HTTPException(409, "The user's wallet is unavailable.")
+            wallet.lifetime_withdrawn += withdrawal.amount
+            withdrawal.status = "PAID"
+            withdrawal.paid_at = datetime.now(timezone.utc)
         elif action == "reject":
             if withdrawal.status not in OUTSTANDING_STATUSES:
                 raise HTTPException(409, "Only outstanding withdrawals can be rejected.")

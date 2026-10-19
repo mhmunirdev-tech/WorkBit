@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.api.deps import current_user
+from app.api.deps import current_admin, current_user
 from app.core.config import settings
 from app.database.session import get_db
 from app.models import User
@@ -34,8 +34,9 @@ def check_resend_cooldown(request: Request, email: str) -> None:
         message="Please wait before requesting another verification code.",
     )
 
-def set_session(response: Response, user_id: str) -> None:
-    response.set_cookie(settings.session_cookie_name, create_session(user_id), max_age=settings.session_max_age_seconds, httponly=True, secure=settings.environment == "production", samesite="lax", path="/")
+def set_session(response: Response, user_id: str, *, admin: bool = False) -> None:
+    cookie_name = settings.admin_session_cookie_name if admin else settings.session_cookie_name
+    response.set_cookie(cookie_name, create_session(user_id), max_age=settings.session_max_age_seconds, httponly=True, secure=settings.environment == "production", samesite="lax", path="/")
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def create_account(data: RegisterRequest, db: Session = Depends(get_db)):
@@ -43,19 +44,25 @@ def create_account(data: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=UserResponse)
 def login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = authenticate(db, str(data.email), data.password)
-    if "USER" not in {role.name for role in user.roles}:
+    role_names = {role.name for role in user.roles}
+    if "USER" not in role_names or {"ADMIN", "SUPER_ADMIN"}.intersection(role_names):
         raise HTTPException(403, "This sign-in page is for user accounts.")
     set_session(response, user.id); logging.info("login user_id=%s", user.id); return user_response(user)
 @router.post("/admin/login", response_model=UserResponse)
 def admin_login(data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = authenticate(db, str(data.email), data.password)
-    if "ADMIN" not in {role.name for role in user.roles}:
+    role_names = {role.name for role in user.roles}
+    if not {"ADMIN", "SUPER_ADMIN"}.intersection(role_names) or "USER" in role_names:
         raise HTTPException(403, "This sign-in page is for administrator accounts.")
-    set_session(response, user.id); logging.info("admin login user_id=%s", user.id); return user_response(user)
+    set_session(response, user.id, admin=True); logging.info("admin login user_id=%s", user.id); return user_response(user)
 @router.post("/logout", status_code=204)
 def logout(response: Response): response.delete_cookie(settings.session_cookie_name, path="/")
+@router.post("/admin/logout", status_code=204)
+def admin_logout(response: Response): response.delete_cookie(settings.admin_session_cookie_name, path="/")
 @router.get("/me", response_model=UserResponse)
 def me(user: User = Depends(current_user)): return user_response(user)
+@router.get("/admin/me", response_model=UserResponse)
+def admin_me(user: User = Depends(current_admin)): return user_response(user)
 @router.post("/verify-email")
 def verify_email(data: VerifyEmailRequest, db: Session = Depends(get_db)):
     verify_email_code(db, str(data.email), data.code)

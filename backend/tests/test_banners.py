@@ -40,6 +40,7 @@ def test_dashboard_banners_are_admin_managed_and_only_published_are_visible(clie
     )
     assert active.status_code == 201
 
+    assert login(client, "workbit-user@example.com").status_code == 200
     assert client.get("/api/v1/dashboard/banners").json() == [active.json()]
     updated = client.post(
         f"/api/v1/admin/dashboard-banners/{active.json()['id']}",
@@ -63,11 +64,11 @@ def test_dashboard_banners_are_admin_managed_and_only_published_are_visible(clie
 def test_dashboard_banner_admin_routes_require_admin_and_validate_image(client, monkeypatch):
     assert client.get("/api/v1/admin/dashboard-banners").status_code == 401
     assert login(client, "workbit-user@example.com").status_code == 200
-    assert client.get("/api/v1/admin/dashboard-banners").status_code == 403
+    assert client.get("/api/v1/admin/dashboard-banners").status_code == 401
     assert client.post(
         "/api/v1/admin/dashboard-banners/upload-image",
         files={"file": ("banner.png", b"\x89PNG\r\n\x1a\nimage", "image/png")},
-    ).status_code == 403
+    ).status_code == 401
 
     assert login(client, "workbit-admin@example.com").status_code == 200
     monkeypatch.setattr(

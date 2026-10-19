@@ -71,7 +71,7 @@ function PageState({ loading, error, empty, children }: { loading: boolean; erro
 
 export function WalletPage() {
   const { data, loading, error } = useAccountData<Wallet>("/wallet");
-  return <Shell><header className="top"><div><p className="eyebrow">YOUR WALLET</p><h1>Balances and ledger</h1><p className="muted">Earning balance can be withdrawn. To buy a package, choose it first and pay its listed price by bKash or Nagad.</p></div><div className="welcome-actions">{data?.can_deposit && <Button className="dashboard-cta deposit-cta" variant="outline" asChild><Link href="/packages">Choose a package</Link></Button>}<Button className="primary dashboard-cta" asChild><Link href="/transactions">View transactions</Link></Button></div></header>
+  return <Shell><header className="top"><div><p className="eyebrow">YOUR WALLET</p><h1>Balances and ledger</h1><p className="muted">Earning balance can be withdrawn. To buy a package, choose it first and pay its listed price by bKash or Nagad.</p></div><div className="welcome-actions">{data?.can_deposit && <Button className="dashboard-cta deposit-cta" variant="outline" asChild><Link href="/packages">Choose a package</Link></Button>}<Button className="dashboard-cta withdraw-cta" asChild><Link href="/withdraw">Withdraw</Link></Button><Button className="primary dashboard-cta" asChild><Link href="/transactions">View transactions</Link></Button></div></header>
     <PageState loading={loading} error={error} empty={!data}>{data && <><section className="stats">
       {[
         ["Available", data.available_balance, "Available balance"],
