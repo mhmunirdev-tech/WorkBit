@@ -1,6 +1,23 @@
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? (
-  process.env.NODE_ENV === "production" ? "/api/v1" : "http://localhost:8000/api/v1"
-);
+const apiPrefix = "/api/v1";
+
+function getApiRequestUrl(path: string): string {
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!configuredApiUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL is required. Set it to the backend URL, such as https://api.workbitbd.com.",
+    );
+  }
+
+  const normalizedApiUrl = configuredApiUrl.replace(/\/+$/, "");
+  const apiRootUrl = normalizedApiUrl.replace(/\/api\/v1$/i, "");
+  const endpointPath = path.startsWith("/") ? path : `/${path}`;
+  const versionedPath =
+    endpointPath === apiPrefix || endpointPath.startsWith(`${apiPrefix}/`)
+      ? endpointPath
+      : `${apiPrefix}${endpointPath}`;
+
+  return `${apiRootUrl}${versionedPath}`;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -57,7 +74,7 @@ export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   if (!canDeduplicate) return requestApi<T>(path, init);
 
-  const requestKey = `${apiUrl}${path}`;
+  const requestKey = getApiRequestUrl(path);
   const inFlightRequest = inFlightGetRequests.get(requestKey);
   if (inFlightRequest) return inFlightRequest as Promise<T>;
 
@@ -81,7 +98,7 @@ async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
     if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(getApiRequestUrl(path), {
       ...init,
       signal: init.signal ?? controller.signal,
       credentials: "include",

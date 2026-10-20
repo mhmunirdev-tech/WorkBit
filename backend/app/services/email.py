@@ -27,34 +27,23 @@ class EmailService:
         text: str,
         html_content: str,
     ) -> None:
-        provider = (settings.email_provider or "resend").strip().lower()
-        if provider not in {"resend", "brevo"}:
-            raise EmailDeliveryError("The configured email provider is unsupported.")
-        if not settings.email_api_key or not settings.email_from_address:
+        provider = self._provider()
+        if not settings.email_from_address:
             logging.error("%s email delivery is not configured", provider)
             raise EmailDeliveryError(
-                "Set EMAIL_API_KEY and EMAIL_FROM_ADDRESS to enable email delivery."
+                "Set EMAIL_FROM_ADDRESS and the selected provider's API key to enable email delivery."
             )
 
-        sender_name, sender_email = parseaddr(settings.email_from_address)
+        _, sender_email = parseaddr(settings.email_from_address)
         if not sender_email or "@" not in sender_email:
             raise EmailDeliveryError(
                 "EMAIL_FROM_ADDRESS must contain a valid sender email address."
             )
 
-        if provider == "brevo":
-            payload_data = {
-                "sender": {"name": sender_name or "WorkBit", "email": sender_email},
-                "to": [{"email": recipient}],
-                "subject": subject,
-                "htmlContent": html_content,
-            }
-            endpoint = BREVO_API_URL
-            headers = {
-                "api-key": settings.email_api_key,
-                "Content-Type": "application/json",
-            }
-        else:
+        if provider == "resend":
+            api_key = settings.resend_api_key
+            if not api_key:
+                raise EmailDeliveryError("Set RESEND_API_KEY for the selected email provider.")
             payload_data = {
                 "from": settings.email_from_address,
                 "to": [recipient],
@@ -64,7 +53,26 @@ class EmailService:
             }
             endpoint = RESEND_API_URL
             headers = {
-                "Authorization": "Bearer " + settings.email_api_key,
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/json",
+            }
+        else:
+            api_key = settings.brevo_api_key
+            if not api_key:
+                raise EmailDeliveryError("Set BREVO_API_KEY for the selected email provider.")
+            payload_data = {
+                "sender": {
+                    "name": parseaddr(settings.email_from_address)[0] or "WorkBit",
+                    "email": sender_email,
+                },
+                "to": [{"email": recipient}],
+                "subject": subject,
+                "htmlContent": html_content,
+                "textContent": text,
+            }
+            endpoint = BREVO_API_URL
+            headers = {
+                "api-key": api_key,
                 "Content-Type": "application/json",
             }
 
@@ -107,6 +115,34 @@ class EmailService:
                 type(error).__name__,
             )
             raise EmailDeliveryError("The email provider could not be reached.") from error
+
+    @staticmethod
+    def _provider() -> str:
+        configured = {
+            "resend": bool(settings.resend_api_key and settings.resend_api_key.strip()),
+            "brevo": bool(settings.brevo_api_key and settings.brevo_api_key.strip()),
+        }
+        requested = (settings.email_provider or "").strip().lower()
+        if requested:
+            if requested not in configured:
+                raise EmailDeliveryError(
+                    "EMAIL_PROVIDER must be either 'resend' or 'brevo'."
+                )
+            if not configured[requested]:
+                key_name = "RESEND_API_KEY" if requested == "resend" else "BREVO_API_KEY"
+                raise EmailDeliveryError(f"Set {key_name} for the selected email provider.")
+            return requested
+
+        providers = [provider for provider, is_configured in configured.items() if is_configured]
+        if len(providers) == 1:
+            return providers[0]
+        if not providers:
+            raise EmailDeliveryError(
+                "Set RESEND_API_KEY or BREVO_API_KEY and EMAIL_FROM_ADDRESS to enable email delivery."
+            )
+        raise EmailDeliveryError(
+            "Multiple email provider API keys are configured. Set EMAIL_PROVIDER to choose one."
+        )
 
     def send_verification(self, recipient: str, token: str) -> None:
         expiry = settings.email_verification_otp_ttl_minutes

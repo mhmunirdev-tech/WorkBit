@@ -5,7 +5,7 @@ Base path: `/api/v1`.
 - `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
 - `POST /auth/verify-email`, `POST /auth/resend-verification`
 - `POST /auth/forgot-password`, `POST /auth/reset-password`
-- Registration and resend-verification deliver a single-use link to the `FRONTEND_ORIGIN/verify-email` page through Resend. Set `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY`, and a verified `EMAIL_FROM_ADDRESS`; registration returns `503` rather than reporting success when email delivery is unavailable.
+- Registration and resend-verification deliver a single-use code through Resend or Brevo. Set the matching `RESEND_API_KEY` or `BREVO_API_KEY` and an `EMAIL_FROM_ADDRESS` verified with that provider. With one provider key configured it is selected automatically; if both are set, select one with `EMAIL_PROVIDER=resend` or `EMAIL_PROVIDER=brevo`. Registration returns `503` rather than reporting success when email delivery is unavailable.
 - `GET /dashboard`, `GET /admin/dashboard`
 - Authenticated `GET /dashboard` returns the current user's account summary, ledger-backed balances and earnings, referral counts/rewards, a 90-day approved-earnings series, and recent wallet transactions. It retains the top-level wallet balance fields for compatibility and is scoped to the signed-in user.
 - `GET /offers` returns the country-eligible offer catalog. Offer clicks must be recorded through `POST /offers/{id}/click`; the client cannot provide a reward or external destination.

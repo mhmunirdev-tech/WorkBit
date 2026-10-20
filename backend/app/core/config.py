@@ -20,8 +20,9 @@ class Settings(BaseSettings):
     session_max_age_seconds: int = 60 * 60 * 24 * 7
     token_ttl_minutes: int = 30
     email_verification_otp_ttl_minutes: int = Field(default=10, gt=0, le=60)
-    email_provider: str = "resend"
-    email_api_key: str | None = None
+    email_provider: str | None = None
+    resend_api_key: str | None = None
+    brevo_api_key: str | None = None
     email_from_address: str | None = None
     cloudinary_cloud_name: str | None = None
     cloudinary_api_key: str | None = None
