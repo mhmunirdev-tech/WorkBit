@@ -33,7 +33,36 @@ The admin dashboard includes traffic and security analytics: visitors active in 
 
 ## Deploying frontend and API on Vercel
 
-Deploy `backend/` and `frontend/` as separate Vercel projects. Set the backend project's Root Directory to `backend` and the frontend project's Root Directory to `frontend`. Before routing traffic to a backend release that changes the database schema, run `python -m alembic upgrade head` from `backend/` against that deployment's configured production database (`DIRECT_URL` when set, otherwise `DATABASE_URL`), then verify with `python -m alembic current`. Do not run migrations against a different database or commit production connection strings. Set `NEXT_PUBLIC_API_URL` in the frontend project's Vercel environment to the backend origin, such as `https://api.workbitbd.com`; the frontend adds the OpenAPI `/api/v1` prefix to endpoint paths and preserves cookie credentials. Set `FRONTEND_ORIGIN` in the backend project to the frontend's exact production origin so credentialed browser requests are allowed. To send email through Brevo, set `EMAIL_PROVIDER=brevo`, `BREVO_API_KEY`, and a Brevo-verified `EMAIL_FROM_ADDRESS` in the backend project's Production environment. Redeploy the backend after changing environment variables.
+Deploy `backend/` and `frontend/` as **separate Vercel projects**. Set the backend project's Root Directory to `backend` and the frontend project's Root Directory to `frontend`. In each project, add the variables below under **Settings → Environment Variables** and select the `Production` environment. Never put backend secrets in the frontend project or commit them to Git.
+
+**Backend Vercel project** (`api.workbitbd.com`):
+
+| Variable | Production value |
+| --- | --- |
+| `ENVIRONMENT` | `production` |
+| `ENABLE_MOCK_REWARDS` | `false` |
+| `DATABASE_URL` | Production PostgreSQL connection string |
+| `DIRECT_URL` | Optional direct database connection string for migrations; otherwise migrations use `DATABASE_URL` |
+| `SECRET_KEY` | A newly generated, long random secret |
+| `SESSION_SECRET` | A different newly generated, long random secret |
+| `FRONTEND_ORIGIN` | `https://workbitbd.com` |
+| `EMAIL_PROVIDER` | `brevo` |
+| `BREVO_API_KEY` | A new Brevo API key with email-sending access |
+| `EMAIL_FROM_ADDRESS` | A sender address verified in Brevo, for example `WorkBitBD <noreply@workbitbd.com>` |
+
+If enabling withdrawals, also set `WITHDRAWAL_ENCRYPTION_KEY` to a securely generated 32-byte URL-safe Base64 key. If enabling profile-photo uploads or dashboard banners, set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET`. `REDIS_URL` is not required by the current API.
+
+**Frontend Vercel project** (`workbitbd.com`):
+
+| Variable | Production value |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | `https://api.workbitbd.com` |
+
+`NEXT_PUBLIC_API_URL` belongs only in the frontend project. Next.js embeds it during the frontend build, so redeploy the frontend after changing it. Redeploy the backend after changing backend environment variables. Do not add a trailing `/api/v1`; the frontend adds the API path itself.
+
+Generate separate application secrets locally with `python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(48)); print('SESSION_SECRET=' + secrets.token_urlsafe(48))"`. Generate the withdrawal key with `python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`. Copy each value directly into the matching Vercel backend variable; do not paste secrets in chat, documentation, or source control. Do not reuse development credentials or the default values from `.env.example` in Production.
+
+Before routing traffic to a backend release that changes the database schema, run `python -m alembic upgrade head` from `backend/` against that deployment's configured production database (`DIRECT_URL` when set, otherwise `DATABASE_URL`), then verify with `python -m alembic current`. Seed each new production database with `python -m app.services.seed` using that same database configuration. Do not run migrations against a different database or commit production connection strings.
 
 WorkBit is a FastAPI service, not a Django project: there is no `manage.py`; start the API with Uvicorn as above. The admin withdrawal review screen is available at `/admin` to authenticated users with the required backend permissions.
 
