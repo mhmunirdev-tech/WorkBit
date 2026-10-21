@@ -15,6 +15,38 @@ RESEND_API_URL = "https://api.resend.com/emails"
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
+def _safe_provider_error_details(
+    response_body: object,
+    api_key: str | None,
+) -> tuple[str, str]:
+    if not isinstance(response_body, dict):
+        return "unknown", "unavailable"
+
+    candidate_code = response_body.get("code") or response_body.get("name")
+    code = (
+        candidate_code
+        if isinstance(candidate_code, str)
+        and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", candidate_code)
+        else "unknown"
+    )
+    candidate_message = response_body.get("message")
+    if not isinstance(candidate_message, str):
+        return code, "unavailable"
+
+    message = candidate_message
+    if api_key:
+        message = message.replace(api_key, "[redacted]")
+    message = re.sub(r"(?i)\bbearer\s+\S+", "Bearer [redacted]", message)
+    message = re.sub(
+        r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
+        "[email]",
+        message,
+        flags=re.IGNORECASE,
+    )
+    message = re.sub(r"[\r\n\t]+", " ", message)
+    return code, message[:300] or "unavailable"
+
+
 class EmailDeliveryError(RuntimeError):
     pass
 
@@ -93,19 +125,21 @@ class EmailService:
                     )
                     raise EmailDeliveryError("The email provider rejected the message.")
         except HTTPError as error:
-            response_code = "unknown"
+            response_body = None
             try:
                 response_body = json.loads(error.read())
-                candidate = response_body.get("code") if isinstance(response_body, dict) else None
-                if isinstance(candidate, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", candidate):
-                    response_code = candidate
             except (UnicodeDecodeError, json.JSONDecodeError):
                 pass
+            response_code, response_message = _safe_provider_error_details(
+                response_body,
+                api_key,
+            )
             logging.error(
-                "%s rejected email delivery status=%s code=%s",
+                "%s rejected email delivery status=%s code=%s message=%s",
                 provider,
                 error.code,
                 response_code,
+                response_message,
             )
             raise EmailDeliveryError("The email provider rejected the message.") from error
         except (URLError, TimeoutError, OSError) as error:

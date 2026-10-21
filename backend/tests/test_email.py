@@ -92,7 +92,7 @@ def test_resend_rejects_invalid_from_address_without_sending(monkeypatch):
         EmailService().send_verification("user@example.com", "token")
 
 
-def test_resend_rejection_logs_only_provider_status_and_error_code(monkeypatch, caplog):
+def test_resend_rejection_logs_safe_provider_error_details(monkeypatch, caplog):
     monkeypatch.setattr(settings, "resend_api_key", "test-api-key")
     monkeypatch.setattr(settings, "email_from_address", "WorkBit <verify@example.com>")
 
@@ -102,7 +102,10 @@ def test_resend_rejection_logs_only_provider_status_and_error_code(monkeypatch, 
             401,
             "Unauthorized",
             {},
-            BytesIO(b'{"code":"unauthorized","message":"private details"}'),
+            BytesIO(
+                b'{"name":"unauthorized","message":"Rejected user@example.com '
+                b'with key test-api-key\\nplease retry"}'
+            ),
         )
 
     monkeypatch.setattr("app.services.email.urlopen", reject_request)
@@ -110,7 +113,8 @@ def test_resend_rejection_logs_only_provider_status_and_error_code(monkeypatch, 
         EmailService().send_verification("user@example.com", "secret-token")
 
     assert "resend rejected email delivery status=401 code=unauthorized" in caplog.text
-    assert "private details" not in caplog.text
+    assert "message=Rejected [email] with key [redacted] please retry" in caplog.text
+    assert "user@example.com" not in caplog.text
     assert "test-api-key" not in caplog.text
     assert "secret-token" not in caplog.text
 
