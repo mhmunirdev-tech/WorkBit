@@ -159,7 +159,7 @@ def register(db: Session, data) -> User:
             "Registration is unavailable because required roles are missing. "
             "Run the seed command against the configured database.",
         )
-    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, referral_code=referral_code(), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
+    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, phone_number=data.phone_number, referral_code=referral_code(), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
     user.roles.append(role); user.profile = Profile(); user.wallet = Wallet(); db.add(user); db.flush()
     try:
         email_service.send_verification(user.email, issue_verification_code(db, user))

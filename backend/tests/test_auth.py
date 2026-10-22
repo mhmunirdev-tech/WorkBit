@@ -12,7 +12,7 @@ from app.services.email import EmailDeliveryError
 
 
 def registration():
-    return {"full_name":"Taylor Test","email":"taylor@example.com","password":"StrongPassword123","confirm_password":"StrongPassword123","country":"US","terms_accepted":True}
+    return {"full_name":"Taylor Test","email":"taylor@example.com","password":"StrongPassword123","confirm_password":"StrongPassword123","country":"US","phone_number":"+12025550123","terms_accepted":True}
 
 def test_registration_creates_wallet(client):
     response = client.post("/api/v1/auth/register", json=registration())
@@ -25,10 +25,19 @@ def test_registration_creates_wallet(client):
     try:
         user = db.scalar(select(User).where(User.email == "taylor@example.com"))
         assert user is not None
+        assert user.phone_number == "+12025550123"
         assert user.terms_accepted_at is not None
         assert user.terms_version == auth_service.TERMS_VERSION
     finally:
         db.close()
+
+
+def test_registration_phone_number_is_optional_for_existing_api_clients(client, monkeypatch):
+    monkeypatch.setattr(auth_service.email_service, "send_verification", lambda *_args: None)
+    payload = registration()
+    payload.pop("phone_number")
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
 
 
 def test_registration_cannot_assign_admin_role(client):

@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
+import { countries, type TCountryCode } from "countries-list";
+import { ArrowRight, ChevronDown, LockKeyhole, Mail, ShieldCheck, Smartphone, UserRound, UsersRound, Zap } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -11,6 +14,10 @@ import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { PasswordInput } from "./ui/password-input";
+
+const countryOptions = Object.entries(countries)
+  .filter(([, country]) => country.phone.length > 0)
+  .sort(([, first], [, second]) => first.name.localeCompare(second.name));
 
 export function AuthForm({
   mode,
@@ -22,10 +29,14 @@ export function AuthForm({
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const [showReferral, setShowReferral] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState<TCountryCode>("BD");
 
   useEffect(() => {
     if (mode === "register") {
-      setReferralCode(new URLSearchParams(window.location.search).get("referral") ?? "");
+      const code = new URLSearchParams(window.location.search).get("referral") ?? "";
+      setReferralCode(code);
+      setShowReferral(Boolean(code));
     }
   }, [mode]);
 
@@ -50,9 +61,13 @@ export function AuthForm({
       }
       return;
     }
+    const data = new FormData(form);
+    if (mode === "register" && data.get("password") !== data.get("confirmPassword")) {
+      setMessage("Your passwords do not match.");
+      return;
+    }
     setBusy(true);
     setMessage("");
-    const data = new FormData(event.currentTarget);
 
     try {
       if (mode === "login") {
@@ -95,6 +110,8 @@ export function AuthForm({
       }
 
       const email = String(data.get("email") ?? "").trim();
+        const localPhone = String(data.get("phoneNumber") ?? "").replace(/\D/g, "").replace(/^0/, "");
+        const countryData = countries[selectedCountry];
       await api("/auth/register", {
         method: "POST",
         body: JSON.stringify({
@@ -102,7 +119,8 @@ export function AuthForm({
           email,
           password: data.get("password"),
           confirm_password: data.get("confirmPassword"),
-          country: data.get("country"),
+          country: selectedCountry,
+          phone_number: localPhone ? `+${countryData.phone[0]}${localPhone}` : null,
           referral_code: referralCode || null,
           terms_accepted: data.get("terms") === "on",
         }),
@@ -138,43 +156,139 @@ export function AuthForm({
         : "Reset your password";
 
   return (
-    <main className="auth-page">
-      <Link className="brand auth-brand" href="/"><i>W</i> WorkBit</Link>
-      <Card className="auth-card" asChild><section>
-        <p className="eyebrow">{mode === "register" ? "GET STARTED" : "SECURE ACCESS"}</p>
+    <main className={`auth-page auth-page-${mode}`}>
+      <div className="auth-layout">
+        <aside className="auth-showcase" aria-label="WorkBit welcome">
+          <Link className="brand auth-showcase-brand" href="/"><i>W</i> WorkBit</Link>
+          <div className="auth-hero-art">
+            <Image
+              src="/images/auth-background.png"
+              alt="A WorkBit member working at a laptop, with secure account and community symbols"
+              width={1536}
+              height={1024}
+              priority
+              unoptimized
+              sizes="(max-width: 700px) 100vw, 50vw"
+            />
+          </div>
+          <div className="auth-showcase-copy">
+            <span className="auth-showcase-mark">WORK SMARTER</span>
+            <h2>Your journey <span>begins here.</span></h2>
+            <p>Make your ideas a reality with a community built around progress and rewards.</p>
+          </div>
+          <div className="auth-benefits">
+            <div><Zap aria-hidden="true" /><span><strong>Fast &amp; Easy</strong><small>Get started in minutes</small></span></div>
+            <div><ShieldCheck aria-hidden="true" /><span><strong>Secure</strong><small>Your data is safe</small></span></div>
+            <div><UsersRound aria-hidden="true" /><span><strong>Grow Together</strong><small>Build your future</small></span></div>
+          </div>
+        </aside>
+        <Card className="auth-card auth-form-panel" asChild><section>
+        <Link className="auth-brand-badge" href="/"><i>W</i><span>WorkBit</span></Link>
         <h1>{title}</h1>
-        <p>
+        <p className="auth-subtitle">
           {mode === "forgot"
             ? "Enter your email and we’ll send a reset link if the account exists."
-            : "Work. Complete. Earn — with transparent, verified rewards."}
+            : mode === "register"
+              ? "Work. Connect. Earn — with transparent, verified rewards."
+              : "Work. Connect. Earn — with transparent, verified rewards."}
         </p>
-        <form onSubmit={submit} noValidate>
+        <form className="auth-form" onSubmit={submit} noValidate>
           {mode === "register" && (
             <>
-              <Label>Full name<Input name="fullName" required minLength={2} /></Label>
-              <Label>Country (ISO code)<Input name="country" required maxLength={2} placeholder="US" /></Label>
+              <Label className="auth-field">
+                Full name
+                <span className="auth-input-shell">
+                  <UserRound aria-hidden="true" />
+                  <Input name="fullName" autoComplete="name" required minLength={2} placeholder="Your full name" />
+                </span>
+              </Label>
+              <Label className="auth-field">
+                Country
+                <select
+                  className="auth-country-select"
+                  value={selectedCountry}
+                  onChange={(event) => setSelectedCountry(event.target.value as TCountryCode)}
+                  required
+                  aria-label="Country"
+                >
+                  {countryOptions.map(([code, country]) => (
+                    <option key={code} value={code}>
+                      {country.name} ({code}) +{country.phone[0]}
+                    </option>
+                  ))}
+                </select>
+                <input type="hidden" name="country" value={selectedCountry} />
+              </Label>
+              <Label className="auth-field">
+                Mobile number
+                <span className="auth-phone-control">
+                  <span className="auth-phone-prefix" aria-label={`Calling code +${countries[selectedCountry].phone[0]}`}>
+                    +{countries[selectedCountry].phone[0]}
+                  </span>
+                  <Smartphone aria-hidden="true" />
+                  <Input
+                    name="phoneNumber"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    placeholder="1 555 123 4567"
+                    maxLength={18}
+                    required
+                  />
+                </span>
+              </Label>
             </>
           )}
-          <Label>Email<Input name="email" type="email" required /></Label>
+          <Label className="auth-field">
+            Email address
+            <span className="auth-input-shell">
+              <Mail aria-hidden="true" />
+              <Input name="email" type="email" autoComplete="email" required placeholder="you@example.com" />
+            </span>
+          </Label>
           {mode !== "forgot" && (
-            <Label>Password<PasswordInput name="password" required minLength={12} /></Label>
+            <Label className="auth-field">
+              Password
+              <span className="auth-input-shell">
+                <LockKeyhole aria-hidden="true" />
+                <PasswordInput name="password" autoComplete={mode === "register" ? "new-password" : "current-password"} required minLength={12} placeholder="At least 12 characters" />
+              </span>
+            </Label>
           )}
           {mode === "register" && (
             <>
-              <Label>Confirm password<PasswordInput name="confirmPassword" required minLength={12} /></Label>
-              <Label>
-                Referral code (optional)
-                <Input
-                  name="referral"
-                  value={referralCode}
-                  onChange={(event) => setReferralCode(event.target.value)}
-                />
+              <Label className="auth-field">
+                Confirm password
+                <span className="auth-input-shell">
+                  <LockKeyhole aria-hidden="true" />
+                  <PasswordInput name="confirmPassword" autoComplete="new-password" required minLength={12} placeholder="Re-enter your password" />
+                </span>
               </Label>
+              <input type="hidden" name="referral" value={referralCode} />
+              <button
+                className="auth-referral-toggle"
+                type="button"
+                aria-expanded={showReferral}
+                onClick={() => setShowReferral((shown) => !shown)}
+              >
+                Have a referral code? <ChevronDown aria-hidden="true" />
+              </button>
+              {showReferral && (
+                <Label className="auth-field">
+                  Referral code
+                  <Input
+                    name="referralVisible"
+                    value={referralCode}
+                    onChange={(event) => setReferralCode(event.target.value)}
+                    autoComplete="off"
+                    placeholder="Enter code"
+                  />
+                </Label>
+              )}
               <Label className="check policy-acceptance">
                 <Checkbox name="terms" required />
                 <span>
-                  I accept the <Link href="/terms">Terms of Service</Link> and{" "}
-                  <Link href="/privacy">Privacy Policy</Link>.
+                  I accept the <Link href="/terms">Terms of Service</Link> and <Link href="/privacy">Privacy Policy</Link>.
                 </span>
               </Label>
             </>
@@ -187,6 +301,7 @@ export function AuthForm({
                 : mode === "register"
                   ? "Create account"
                   : "Send reset link"}
+            {mode === "register" && !busy && <ArrowRight aria-hidden="true" />}
           </Button>
         </form>
         {message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
@@ -196,7 +311,8 @@ export function AuthForm({
             : <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link></p>
         )}
         {mode === "register" && <p>Already have an account? <Link href="/login">Sign in</Link></p>}
-      </section></Card>
+        </section></Card>
+      </div>
     </main>
   );
 }

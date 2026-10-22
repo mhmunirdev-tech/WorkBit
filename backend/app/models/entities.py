@@ -34,6 +34,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     full_name: Mapped[str] = mapped_column(String(120))
     country: Mapped[str] = mapped_column(String(2))
+    phone_number: Mapped[str | None] = mapped_column(String(16), nullable=True)
     referral_code: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     referred_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default=UserStatus.PENDING_VERIFICATION.value)

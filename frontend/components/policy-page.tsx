@@ -111,7 +111,7 @@ const documents: Record<string, PolicyDocument> = {
       {
         heading: "1. Information we collect",
         bullets: [
-          "Account details: your name, email address, country, referral details, and account status.",
+          "Account details: your name, email address, country, mobile number, referral details, and account status.",
           "Profile details you choose to provide, such as an avatar or time zone.",
           "Wallet and transaction records: balances, deposits, package purchases, rewards, withdrawals, payment methods, references, statuses, and review notes.",
           "Offer activity and security records: offer identifiers, click and conversion references, timestamps, IP address, browser or device information, and relevant request logs.",

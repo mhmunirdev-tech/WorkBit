@@ -6,6 +6,7 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=12, max_length=128)
     confirm_password: str
     country: str = Field(min_length=2, max_length=2)
+    phone_number: str | None = Field(default=None, pattern=r"^\+[1-9]\d{1,14}$")
     referral_code: str | None = Field(default=None, max_length=20)
     terms_accepted: bool
     @field_validator("country")
