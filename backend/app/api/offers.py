@@ -1,19 +1,39 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import current_user
 from app.core.config import settings
 from app.database.session import get_db
+from app.integrations.offer_providers.offerwall_gg import (
+    OfferwallGGConfigurationError,
+    offerwall_gg_adapter,
+)
 from app.models import Offer, RewardDecision, User, Wallet
 from app.schemas.conversions import MockPostbackRequest
 from app.schemas.offers import OfferRead
 from app.services.conversions import conversion_service
 from app.services.offers import offer_service
+from app.services.packages import has_active_package
 
 router = APIRouter(prefix="/offers", tags=["offers"])
+
+
+@router.get("/providers/offerwall-gg/wall-url")
+def offerwall_gg_wall_url(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    if not has_active_package(db, user.id):
+        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
+    try:
+        wall_url = offerwall_gg_adapter.build_wall_url(user.id)
+    except OfferwallGGConfigurationError as error:
+        raise HTTPException(503, str(error)) from error
+    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 
 
 @router.get("", response_model=list[OfferRead])

@@ -32,6 +32,7 @@ type AccountData = {
   available_balance: string | number;
   deposit_balance: string | number;
   earning_balance: string | number;
+  reversal_debt: string | number;
   pending_balance: string | number;
   lifetime_earned: string | number;
   lifetime_withdrawn: string | number;
@@ -171,6 +172,13 @@ export function ProfilePage() {
       <AccountState loading={loading} error={error} />
       {account && (
         <div className="profile-page">
+          {Number(account.reversal_debt) > 0 && (
+            <Alert className="state" role="status">
+              <AlertDescription>
+                A provider reversal created a {formatMoney(account.reversal_debt, account.currency)} balance debt. Future approved earnings will clear it before becoming withdrawable.
+              </AlertDescription>
+            </Alert>
+          )}
           <Card className="panel profile-hero-card">
             <div className="profile-hero-identity">
               <div className="profile-photo-wrap">

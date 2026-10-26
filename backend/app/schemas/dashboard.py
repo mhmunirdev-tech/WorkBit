@@ -73,6 +73,7 @@ class DashboardRead(BaseModel):
     withdrawable_balance: Decimal
     deposit_balance: Decimal
     earning_balance: Decimal
+    reversal_debt: Decimal
     pending_balance: Decimal
     lifetime_earned: Decimal
     lifetime_withdrawn: Decimal

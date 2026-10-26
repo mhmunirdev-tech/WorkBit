@@ -174,8 +174,6 @@ class RewardDecisionService:
 
     def _reverse_available(self, db: Session, wallet: Wallet, decision: RewardDecision, status: str) -> None:
         amount = decision.user_reward
-        if wallet.available_balance - wallet.deposit_balance < amount:
-            raise HTTPException(409, "Available balance does not cover this reversal.")
         before = wallet.available_balance
         wallet.available_balance -= amount; wallet.lifetime_earned -= amount
         self._append_settlement(db, wallet, decision, "OFFER_REWARD_REVERSAL", -amount, status, before, wallet.available_balance)
@@ -372,6 +370,7 @@ class WalletService:
             "available_balance": str(wallet.available_balance),
             "deposit_balance": str(wallet.deposit_balance),
             "earning_balance": str(wallet.available_balance - wallet.deposit_balance),
+            "reversal_debt": str(max(wallet.deposit_balance - wallet.available_balance, ZERO)),
             "package_active": package_active,
             "can_deposit": bool(
                 user.status == "ACTIVE"

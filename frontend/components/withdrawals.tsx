@@ -45,6 +45,7 @@ type PayoutAccount = {
 type Summary = {
   available_balance: Amount;
   withdrawable_balance: Amount;
+  reversal_debt: Amount;
   currency: string;
   user: ShellUser;
   withdrawal_summary: {
@@ -604,7 +605,11 @@ export function WithdrawalPage({
                 <div><p className="eyebrow">SECURE REQUEST</p><h2>Request a withdrawal</h2><p className="panel-subtitle">Payout details are encrypted at rest. Only authorized withdrawal reviewers can view them.</p>{embedded && <p className="wallet-withdrawal-minimum">Minimum request: <strong>{formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</strong></p>}</div>
               </div>
               {!summary.withdrawal_summary.enabled ? (
-                <div className="state withdrawal-disabled" role="status">Withdrawals are disabled until WorkBit configures its secure payout key and USD to BDT exchange rate.</div>
+                <div className="state withdrawal-disabled" role="status">
+                  {Number(summary.reversal_debt) > 0
+                    ? "Withdrawals are paused while a provider reversal debt is repaid from future approved earnings."
+                    : "Withdrawals are disabled until WorkBit configures its secure payout key and USD to BDT exchange rate."}
+                </div>
               ) : summary.withdrawal_summary.pending_request ? (
                 null
               ) : Number(summary.withdrawable_balance) < Number(summary.withdrawal_summary.minimum_amount) ? (

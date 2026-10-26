@@ -120,15 +120,26 @@ def seed() -> None:
             db.add(item); roles[name] = item
         db.flush(); roles["ADMIN"].permissions = list(permissions.values()); roles["SUPER_ADMIN"].permissions = list(permissions.values())
         for name, slug, priority in OFFER_PROVIDERS:
-            if not db.scalar(select(OfferNetwork).where(OfferNetwork.slug == slug)):
-                env_prefix = slug.upper().replace("-", "_")
+            env_prefix = slug.upper().replace("-", "_")
+            api_key_env = (
+                "OFFERWALL_GG_PUBLIC_KEY"
+                if slug == "offerwall-gg"
+                else f"{env_prefix}_API_KEY"
+            )
+            secret_key_env = (
+                "OFFERWALL_GG_SECRET_KEY"
+                if slug == "offerwall-gg"
+                else f"{env_prefix}_POSTBACK_SECRET"
+            )
+            network = db.scalar(select(OfferNetwork).where(OfferNetwork.slug == slug))
+            if network is None:
                 db.add(OfferNetwork(
                     name=name,
                     provider=env_prefix,
                     slug=slug,
                     enabled=False,
-                    api_key_env=f"{env_prefix}_API_KEY",
-                    secret_key_env=f"{env_prefix}_POSTBACK_SECRET",
+                    api_key_env=api_key_env,
+                    secret_key_env=secret_key_env,
                     postback_url=f"/api/v1/postbacks/{slug}",
                     integration_type="OFFERWALL",
                     country_support="[]",
@@ -136,6 +147,9 @@ def seed() -> None:
                     priority=priority,
                     status="NOT_CONFIGURED",
                 ))
+            else:
+                network.api_key_env = api_key_env
+                network.secret_key_env = secret_key_env
         for name, slug, integration_type, priority in AD_NETWORKS:
             if not db.scalar(select(AdNetwork).where(AdNetwork.slug == slug)):
                 db.add(AdNetwork(

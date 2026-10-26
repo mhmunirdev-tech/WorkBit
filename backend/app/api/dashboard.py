@@ -193,6 +193,7 @@ def dashboard(
         withdrawable_balance=wallet.available_balance - wallet.deposit_balance,
         deposit_balance=wallet.deposit_balance,
         earning_balance=wallet.available_balance - wallet.deposit_balance,
+        reversal_debt=max(wallet.deposit_balance - wallet.available_balance, Decimal("0")),
         pending_balance=wallet.pending_balance,
         lifetime_earned=wallet.lifetime_earned,
         lifetime_withdrawn=wallet.lifetime_withdrawn,
@@ -254,6 +255,7 @@ def dashboard(
                 and payout_settings
                 and payout_settings.usd_bdt_rate
                 and payout_settings.usd_bdt_rate > 0
+                and wallet.available_balance >= wallet.deposit_balance
             ),
             minimum_amount=payout_settings.minimum_withdrawal_usd,
             usd_bdt_rate=payout_settings.usd_bdt_rate if payout_settings else None,

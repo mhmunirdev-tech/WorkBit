@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     cloudinary_cloud_name: str | None = None
     cloudinary_api_key: str | None = None
     cloudinary_api_secret: str | None = None
+    offerwall_gg_enabled: bool = False
+    offerwall_gg_public_key: str | None = None
+    offerwall_gg_secret_key: str | None = None
+    offerwall_gg_currency_name: str = "USD"
     enable_mock_rewards: bool = False
     package_bkash_number: str = "01839299096"
     package_nagad_number: str = "01811914794"

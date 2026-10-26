@@ -8,6 +8,7 @@ class WalletRead(BaseModel):
     available_balance: Decimal
     deposit_balance: Decimal
     earning_balance: Decimal
+    reversal_debt: Decimal
     package_active: bool
     can_deposit: bool
     pending_balance: Decimal
