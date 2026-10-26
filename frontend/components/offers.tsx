@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
 import { AdsPlacements } from "./ads/ads-placements";
+import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { api } from "../lib/api";
 import { useLiveRefresh } from "../lib/use-live-refresh";
 import { showToast } from "../lib/toast";
@@ -87,7 +88,15 @@ function OffersCatalog() {
   return (
     <>
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
+      <OfferwallGGCatalog />
       <AdsPlacements />
+      <div className="offer-catalog-toolbar">
+        <div>
+          <p className="eyebrow">WORKBIT CATALOG</p>
+          <h2>Browse more available offers</h2>
+        </div>
+        <span aria-live="polite">{loading ? "Loading offers..." : `${visibleOffers.length} ${visibleOffers.length === 1 ? "offer" : "offers"}`}</span>
+      </div>
       <section className="offer-controls" aria-label="Offer filters">
         <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
         <Label>Category<Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item === "All" ? "All categories" : item[0] + item.slice(1).toLowerCase()}</SelectItem>)}</SelectContent></Select></Label>

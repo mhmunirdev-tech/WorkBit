@@ -215,16 +215,48 @@ class RewardDecisionService:
         db.flush()
         return decision
 
-    def _select_policy(self, db: Session, user: User, conversion: OfferConversion) -> RewardPolicy | None:
+    def estimate_user_reward(
+        self,
+        db: Session,
+        user: User,
+        network_id: str,
+        offer_id: str,
+        provider_payout: Decimal,
+    ) -> Decimal:
+        policy = self._select_policy_for_offer(db, user, network_id, offer_id)
+        if policy is None:
+            raise HTTPException(503, "No reward policy is configured.")
+        return self._calculate_user_reward(policy, provider_payout)
+
+    def _select_policy(
+        self,
+        db: Session,
+        user: User,
+        conversion: OfferConversion,
+    ) -> RewardPolicy | None:
+        return self._select_policy_for_offer(
+            db,
+            user,
+            conversion.network_id,
+            conversion.offer_id,
+        )
+
+    def _select_policy_for_offer(
+        self,
+        db: Session,
+        user: User,
+        network_id: str,
+        offer_id: str,
+    ) -> RewardPolicy | None:
         candidates = db.scalars(select(RewardPolicy).where(RewardPolicy.enabled.is_(True))).all()
         candidates = [p for p in candidates if self._policy_active(p)]
         ranked: list[tuple[int, str, str, RewardPolicy]] = []
         for policy in candidates:
             if policy.country_code and policy.country_code.upper() != user.country.upper():
                 continue
-            if policy.network_id and policy.network_id != conversion.network_id:
+            if policy.network_id and policy.network_id != network_id:
                 continue
-            if policy.offer_id and policy.offer_id != conversion.offer_id:
+            if policy.offer_id and policy.offer_id != offer_id:
                 continue
             score = 0
             if policy.country_code:

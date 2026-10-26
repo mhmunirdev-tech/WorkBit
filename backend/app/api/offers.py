@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -13,13 +13,57 @@ from app.integrations.offer_providers.offerwall_gg import (
     offerwall_gg_adapter,
 )
 from app.models import Offer, RewardDecision, User, Wallet
+from app.schemas.offerwall_gg import OfferwallGGOffersRead
 from app.schemas.conversions import MockPostbackRequest
 from app.schemas.offers import OfferRead
 from app.services.conversions import conversion_service
 from app.services.offers import offer_service
+from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
 from app.services.packages import has_active_package
 
 router = APIRouter(prefix="/offers", tags=["offers"])
+
+
+@router.get(
+    "/providers/offerwall-gg/catalog",
+    response_model=OfferwallGGOffersRead,
+    response_model_exclude_none=False,
+)
+async def offerwall_gg_catalog(
+    request: Request,
+    response: Response,
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    search: str | None = Query(None, max_length=80),
+    category: str | None = Query(None, min_length=1, max_length=40),
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> OfferwallGGOffersRead:
+    if not has_active_package(db, user.id):
+        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
+
+    user_agent = request.headers.get("user-agent", "").lower()
+    if "android" in user_agent:
+        device = "android"
+    elif "iphone" in user_agent or "ipad" in user_agent:
+        device = "ios"
+    elif "mobile" in user_agent:
+        device = "mobile"
+    else:
+        device = "desktop"
+
+    result = await offerwall_gg_catalog_service.list_offers(
+        db=db,
+        user=user,
+        country=user.country,
+        device=device,
+        page=page,
+        limit=limit,
+        search=search.strip() if search else None,
+        category=category.strip().lower() if category else None,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.get("/providers/offerwall-gg/wall-url")

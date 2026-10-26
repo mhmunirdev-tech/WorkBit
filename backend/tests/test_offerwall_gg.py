@@ -3,6 +3,7 @@ import hmac
 from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
+import httpx
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -199,3 +200,154 @@ def test_offerwall_callback_rejects_unknown_reversal_and_currency_override(clien
         currencyName="BDT",
     )
     assert client.get("/api/v1/postbacks/offerwall-gg", params=wrong_currency).status_code == 403
+
+
+def offerwall_catalog_payload(user_id, click_url=None, offers=None, pages=1):
+    return {
+        "success": True,
+        "data": {
+            "offers": offers
+            if offers is not None
+            else [
+                {
+                    "id": 4021,
+                    "externalId": "network-offer-4021",
+                    "provider": "lootably",
+                    "name": "World of Sea Battle",
+                    "description": "Build a ship and win your first sea battle.",
+                    "requirements": "Reach level 10 within 7 days.",
+                    "image": "https://cdn.example/offers/4021.png",
+                    "categories": ["games"],
+                    "devices": ["desktop"],
+                    "reward": "1.25",
+                    "rewardIsVariable": False,
+                    "rewardUpTo": False,
+                    "paymentModel": "cpa",
+                    "featured": True,
+                    "clickUrl": click_url
+                    or f"https://offerwall.gg/wall/{PUBLIC_KEY}/click/4021?userId={user_id}",
+                }
+            ],
+            "pagination": {"page": 1, "pages": pages, "total": 1, "perPage": 50},
+            "currency": {"name": "USD", "perUsd": 1},
+            "targeting": {"country": "US", "device": "desktop"},
+        },
+    }
+
+
+class MockOfferwallResponse:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self.payload
+
+
+class MockOfferwallClient:
+    def __init__(self, payload, request_error=None):
+        self.payload = payload
+        self.request_error = request_error
+        self.request = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return None
+
+    async def get(self, url, params, headers):
+        self.request = {"url": url, "params": params, "headers": headers}
+        if self.request_error:
+            raise self.request_error
+        return MockOfferwallResponse(self.payload)
+
+
+def mock_offerwall_catalog(monkeypatch, mock_client):
+    monkeypatch.setattr(
+        "app.services.offerwall_gg_catalog.httpx.AsyncClient",
+        lambda **_kwargs: mock_client,
+    )
+
+
+def test_offerwall_catalog_requires_authentication_and_active_package(client, monkeypatch):
+    configure_offerwall(monkeypatch)
+
+    assert client.get("/api/v1/offers/providers/offerwall-gg/catalog").status_code == 401
+    login(client)
+    assert client.get("/api/v1/offers/providers/offerwall-gg/catalog").status_code == 402
+
+
+def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentials(
+    client, monkeypatch
+):
+    configure_offerwall(monkeypatch)
+    login(client)
+    activate_package(client, "TEST-OFFERWALL-CATALOG")
+    user_id = get_user_id()
+    mock_client = MockOfferwallClient(offerwall_catalog_payload(user_id))
+    mock_offerwall_catalog(monkeypatch, mock_client)
+
+    response = client.get("/api/v1/offers/providers/offerwall-gg/catalog?page=1&limit=50")
+
+    assert response.status_code == 200
+    result = response.json()
+    assert result["total"] == 1
+    assert result["offers"][0]["title"] == "World of Sea Battle"
+    assert Decimal(result["offers"][0]["user_reward_usd"]) == Decimal("1.00")
+    assert result["offers"][0]["click_url"].endswith(f"?userId={user_id}")
+    assert SECRET_KEY not in response.text
+    assert mock_client.request["url"] == "https://offerwall.gg/api/v1/offers"
+    assert mock_client.request["headers"] == {"X-Api-Key": SECRET_KEY}
+    assert mock_client.request["params"]["userId"] == user_id
+    assert mock_client.request["params"]["country"]
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_offerwall_catalog_accepts_empty_inventory(client, monkeypatch):
+    configure_offerwall(monkeypatch)
+    login(client)
+    activate_package(client, "TEST-OFFERWALL-CATALOG-EMPTY")
+    mock_offerwall_catalog(
+        monkeypatch,
+        MockOfferwallClient(offerwall_catalog_payload(get_user_id(), offers=[], pages=0)),
+    )
+
+    response = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
+
+    assert response.status_code == 200
+    assert response.json()["offers"] == []
+    assert response.json()["pages"] == 0
+
+
+def test_offerwall_catalog_rejects_untrusted_click_url_and_surfaces_upstream_failure(
+    client, monkeypatch
+):
+    configure_offerwall(monkeypatch)
+    login(client)
+    activate_package(client, "TEST-OFFERWALL-CATALOG-INVALID")
+    user_id = get_user_id()
+    mock_offerwall_catalog(
+        monkeypatch,
+        MockOfferwallClient(
+            offerwall_catalog_payload(
+                user_id,
+                click_url=f"https://advertiser.example/click?userId={user_id}",
+            )
+        ),
+    )
+    invalid_link = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
+    assert invalid_link.status_code == 502
+
+    mock_offerwall_catalog(
+        monkeypatch,
+        MockOfferwallClient(
+            payload=None,
+            request_error=httpx.ConnectError("provider unavailable"),
+        ),
+    )
+    unavailable = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
+    assert unavailable.status_code == 503
+    assert SECRET_KEY not in unavailable.text
