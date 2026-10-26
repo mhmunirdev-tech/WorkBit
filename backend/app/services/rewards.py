@@ -40,7 +40,7 @@ class RewardDecisionService:
             return self._persist_decision(db, conversion, user, policy, "REJECTED", "Provider payout is zero or negative.")
 
         user_reward = self._calculate_user_reward(policy, provider_payout)
-        platform_share = self._calculate_platform_share(policy, provider_payout)
+        platform_share = self._calculate_platform_share(policy, provider_payout, user_reward)
 
         if fraud.action in {"FRAUD", "REJECTED"}:
             return self._persist_decision(db, conversion, user, policy, "REJECTED", f"Fraud assessment: {fraud.action}")
@@ -83,7 +83,7 @@ class RewardDecisionService:
         if not policy:
             raise HTTPException(503, "No reward policy is configured.")
         user_reward = self._calculate_user_reward(policy, conversion.provider_payout)
-        decision = self._persist_decision(db, conversion, user, policy, status, reason, provider_payout=conversion.provider_payout, user_reward=user_reward, platform_share=self._calculate_platform_share(policy, conversion.provider_payout))
+        decision = self._persist_decision(db, conversion, user, policy, status, reason, provider_payout=conversion.provider_payout, user_reward=user_reward, platform_share=self._calculate_platform_share(policy, conversion.provider_payout, user_reward))
         if status == "APPROVED":
             self._ensure_withholding_elapsed(decision)
         self._apply_wallet_projection(db, user, decision)
@@ -269,11 +269,16 @@ class RewardDecisionService:
         quantum = Decimal("1").scaleb(-precision)
         return reward.quantize(quantum, rounding=ROUND_HALF_UP)
 
-    def _calculate_platform_share(self, policy: RewardPolicy, provider_payout: Decimal) -> Decimal:
+    def _calculate_platform_share(self, policy: RewardPolicy, provider_payout: Decimal, user_reward: Decimal | None = None) -> Decimal:
         if provider_payout <= ZERO:
             return ZERO
-        percent = self._normalize_percentage(policy.platform_share_percentage)
-        share = provider_payout * percent
+        if user_reward is not None:
+            share = provider_payout - user_reward
+        else:
+            percent = self._normalize_percentage(policy.platform_share_percentage)
+            share = provider_payout * percent
+        if share < ZERO:
+            share = ZERO
         precision = max(policy.rounding_precision, 2)
         quantum = Decimal("1").scaleb(-precision)
         return share.quantize(quantum, rounding=ROUND_HALF_UP)

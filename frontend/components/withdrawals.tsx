@@ -465,6 +465,18 @@ export function WithdrawalPage({
   const selectedAccount = payoutAccounts.find((account) => account.id === accountId);
   const paymentMethod = selectedAccount?.method ?? "BKASH";
   const hasSelectedAccount = selectedAccount !== undefined;
+  const pendingRequest = summary?.withdrawal_summary.pending_request;
+  const pendingRequestId = pendingRequest?.id;
+  const pendingRequestStatus = pendingRequest?.status;
+  useEffect(() => {
+    if (historyOnly || embedded || !pendingRequestId || !pendingRequestStatus) return;
+    showToast({
+      title: "Pending withdrawal request",
+      description: `You have a ${readableStatus(pendingRequestStatus)} request. Wait for it to be resolved before submitting another.`,
+      variant: "default",
+      kind: "withdrawal-pending",
+    });
+  }, [embedded, historyOnly, pendingRequestId, pendingRequestStatus]);
   useEffect(() => {
     if (!payoutAccounts.some((account) => account.id === accountId) && payoutAccounts.length > 0) {
       setAccountId(payoutAccounts[0].id);
@@ -594,7 +606,7 @@ export function WithdrawalPage({
               {!summary.withdrawal_summary.enabled ? (
                 <div className="state withdrawal-disabled" role="status">Withdrawals are disabled until WorkBit configures its secure payout key and USD to BDT exchange rate.</div>
               ) : summary.withdrawal_summary.pending_request ? (
-                <div className="state withdrawal-disabled" role="status">You have a {readableStatus(summary.withdrawal_summary.pending_request.status)} request. Wait for it to be resolved before submitting another.</div>
+                null
               ) : Number(summary.withdrawable_balance) < Number(summary.withdrawal_summary.minimum_amount) ? (
                 <div className="state withdrawal-disabled" role="status">Your withdrawable earnings have not reached the configured minimum. Deposit balance can only be used for packages.</div>
               ) : (

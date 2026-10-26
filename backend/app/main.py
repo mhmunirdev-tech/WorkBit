@@ -14,6 +14,7 @@ from app.api.profile import router as profile_router
 from app.api.ranks import router as ranks_router
 from app.api.wallet import router as wallet_router
 from app.api.withdrawals import router as withdrawals_router
+from app.api.users import router as users_router
 from app.core.config import settings
 from app.core.errors import http_exception_handler, unexpected_exception_handler, validation_exception_handler
 from app.core.logging import configure_logging
@@ -56,5 +57,6 @@ app.include_router(profile_router, prefix="/api/v1")
 app.include_router(ranks_router, prefix="/api/v1")
 app.include_router(wallet_router, prefix="/api/v1")
 app.include_router(withdrawals_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
 @app.get("/health", tags=["system"])
 def health() -> dict[str, str]: return {"status": "ok"}

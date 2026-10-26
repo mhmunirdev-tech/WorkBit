@@ -6,6 +6,7 @@ export type ToastKind =
   | "payout-account-saved"
   | "payout-account-removed"
   | "withdrawal-requested"
+  | "withdrawal-pending"
   | "withdrawal-paid"
   | "package-payment-submitted"
   | "package-activated";
@@ -30,6 +31,7 @@ const allowedToastKinds = new Set<ToastKind>([
   "payout-account-saved",
   "payout-account-removed",
   "withdrawal-requested",
+  "withdrawal-pending",
   "withdrawal-paid",
   "package-payment-submitted",
   "package-activated",
