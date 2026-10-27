@@ -6,7 +6,6 @@ import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react"
 import { AdsPlacements } from "./ads/ads-placements";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { api } from "../lib/api";
-import { useLiveRefresh } from "../lib/use-live-refresh";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, useShellUser, WALLET_UPDATED_EVENT } from "./shell";
@@ -42,6 +41,7 @@ function reward(value: string, currency: string) {
 }
 
 function OffersCatalog() {
+  const isDevelopment = process.env.NODE_ENV === "development";
   const account = useShellUser();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [category, setCategory] = useState("All");
@@ -50,6 +50,7 @@ function OffersCatalog() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const refreshOffers = useCallback(async (showLoading = false) => {
+    if (!isDevelopment) return;
     if (showLoading) setLoading(true);
     setError("");
     const params = new URLSearchParams({ limit: "100" });
@@ -63,7 +64,7 @@ function OffersCatalog() {
     } finally {
       setLoading(false);
     }
-  }, [account?.country, category, device]);
+  }, [account?.country, category, device, isDevelopment]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -76,9 +77,9 @@ function OffersCatalog() {
   }, []);
 
   useEffect(() => {
+    if (!isDevelopment) return;
     void refreshOffers(true);
-  }, [refreshOffers]);
-  useLiveRefresh(refreshOffers);
+  }, [isDevelopment, refreshOffers]);
 
   const visibleOffers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
@@ -90,37 +91,41 @@ function OffersCatalog() {
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
       <OfferwallGGCatalog />
       <AdsPlacements />
-      <div className="offer-catalog-toolbar">
-        <div>
-          <p className="eyebrow">WORKBIT CATALOG</p>
-          <h2>Browse more available offers</h2>
-        </div>
-        <span aria-live="polite">{loading ? "Loading offers..." : `${visibleOffers.length} ${visibleOffers.length === 1 ? "offer" : "offers"}`}</span>
-      </div>
-      <section className="offer-controls" aria-label="Offer filters">
-        <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
-        <Label>Category<Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item === "All" ? "All categories" : item[0] + item.slice(1).toLowerCase()}</SelectItem>)}</SelectContent></Select></Label>
-        <Label>Device<Select value={device || "ANY"} onValueChange={(value) => setDevice(value === "ANY" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ANY">Any device</SelectItem><SelectItem value="WEB">Web</SelectItem><SelectItem value="IOS">iOS</SelectItem><SelectItem value="ANDROID">Android</SelectItem></SelectContent></Select></Label>
-      </section>
-      {error && <Alert className="state error-state" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      {loading ? <section className="offer-grid" aria-label="Loading offer catalog">{[1, 2, 3].map((item) => <Card className="offer skeleton" key={item}><CardContent className="offer-body"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></CardContent></Card>)}</section>
-        : !error && visibleOffers.length ? <section className="offer-grid" aria-label="Available offers">
-          {visibleOffers.map((offer) => <Card className="offer" key={offer.id}>
-            <div className={`offer-art offer-art-${offer.category.toLowerCase()}`}>
-              <div className="offer-art-topline"><span className="offer-art-label">{offer.featured ? "FEATURED OFFER" : "DISCOVER & EARN"}</span><Badge variant="secondary">{offer.device_type}</Badge></div>
-              <span className="offer-art-icon">{offer.category === "GAME" ? <Gamepad2 /> : offer.category === "SURVEY" ? <Clock3 /> : <Sparkles />}</span>
+      {isDevelopment && (
+        <>
+          <div className="offer-catalog-toolbar">
+            <div>
+              <p className="eyebrow">WORKBIT CATALOG</p>
+              <h2>Browse more available offers</h2>
             </div>
-            <CardContent className="offer-body">
-              <div className="offer-badges"><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category}</Badge></div>
-              <CardTitle>{offer.title}</CardTitle>
-              <p>{offer.short_description}</p>
-              <div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
-              <div className="offer-foot"><div className="offer-reward"><small>GROSS AD REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
-              {offer.is_demo && <small className="demo-label">Development demo — no provider redirect</small>}
-            </CardContent>
-          </Card>)}
-        </section> : !error && <div className="empty"><strong>No matching offers</strong><span>Try another search or filter. Catalog availability can change.</span></div>}
-      <p className="disclaimer">Offer completion and rewards are subject to provider requirements, eligibility, and server-side validation. A displayed reward is not a payment guarantee.</p>
+            <span aria-live="polite">{loading ? "Loading offers..." : `${visibleOffers.length} ${visibleOffers.length === 1 ? "offer" : "offers"}`}</span>
+          </div>
+          <section className="offer-controls" aria-label="Offer filters">
+            <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
+            <Label>Category<Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item === "All" ? "All categories" : item[0] + item.slice(1).toLowerCase()}</SelectItem>)}</SelectContent></Select></Label>
+            <Label>Device<Select value={device || "ANY"} onValueChange={(value) => setDevice(value === "ANY" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ANY">Any device</SelectItem><SelectItem value="WEB">Web</SelectItem><SelectItem value="IOS">iOS</SelectItem><SelectItem value="ANDROID">Android</SelectItem></SelectContent></Select></Label>
+          </section>
+          {error && <Alert className="state error-state" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+          {loading ? <section className="offer-grid" aria-label="Loading offer catalog">{[1, 2, 3].map((item) => <Card className="offer skeleton" key={item}><CardContent className="offer-body"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></CardContent></Card>)}</section>
+            : !error && visibleOffers.length ? <section className="offer-grid" aria-label="Available offers">
+              {visibleOffers.map((offer) => <Card className="offer" key={offer.id}>
+                <div className={`offer-art offer-art-${offer.category.toLowerCase()}`}>
+                  <div className="offer-art-topline"><span className="offer-art-label">{offer.featured ? "FEATURED OFFER" : "DISCOVER & EARN"}</span><Badge variant="secondary">{offer.device_type}</Badge></div>
+                  <span className="offer-art-icon">{offer.category === "GAME" ? <Gamepad2 /> : offer.category === "SURVEY" ? <Clock3 /> : <Sparkles />}</span>
+                </div>
+                <CardContent className="offer-body">
+                  <div className="offer-badges"><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category}</Badge></div>
+                  <CardTitle>{offer.title}</CardTitle>
+                  <p>{offer.short_description}</p>
+                  <div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
+                  <div className="offer-foot"><div className="offer-reward"><small>GROSS AD REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
+                  {offer.is_demo && <small className="demo-label">Development demo — no provider redirect</small>}
+                </CardContent>
+              </Card>)}
+            </section> : !error && <div className="empty"><strong>No matching offers</strong><span>Try another search or filter. Catalog availability can change.</span></div>}
+          <p className="disclaimer">Offer completion and rewards are subject to provider requirements, eligibility, and server-side validation. A displayed reward is not a payment guarantee.</p>
+        </>
+      )}
     </>
   );
 }

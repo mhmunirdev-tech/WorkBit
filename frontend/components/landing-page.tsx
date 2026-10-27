@@ -81,6 +81,7 @@ const steps = [
 ];
 
 export function LandingPage() {
+  const showDevelopmentOffers = process.env.NODE_ENV === "development";
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [offerError, setOfferError] = useState("");
@@ -91,6 +92,7 @@ export function LandingPage() {
   const [packagesError, setPackagesError] = useState("");
 
   useEffect(() => {
+    if (!showDevelopmentOffers) return;
     let active = true;
     api<Offer[]>("/offers?limit=3")
       .then((result) => { if (active) setOffers(result); })
@@ -99,7 +101,7 @@ export function LandingPage() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [showDevelopmentOffers]);
 
   useEffect(() => {
     let active = true;
@@ -289,13 +291,15 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section className="section-wrap featured-section">
-        <div className="section-heading section-heading-row"><div><span className="eyebrow">LIVE FROM THE CATALOG</span><h2>Offers to explore</h2><p>Offer data comes from the configured catalog; availability may change.</p></div><Link className="text-link" href="/offers">Browse all offers →</Link></div>
-        {loading ? <div className="featured-grid" aria-label="Loading offers">{[1, 2, 3].map((item) => <Card className="featured-card skeleton" key={item}><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></Card>)}</div>
-          : offerError ? <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{offerError}</AlertDescription></Alert>
-          : offers.length ? <div className="featured-grid">{offers.map((offer) => <Card className="featured-card" key={offer.id} asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}><Badge className="offer-category" variant="outline">{offer.category}</Badge><h3>{offer.title}</h3><p>{offer.short_description}</p><div className="featured-foot"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "See requirements"}</span><strong>{formatUsd(offer.user_reward)}</strong></div>{offer.is_demo && <small className="demo-label">Development demo offer</small>}</Link></Card>)}</div>
-          : <div className="empty featured-empty"><strong>No offers are available right now.</strong><span>Check back later or browse the catalog for updates.</span></div>}
-      </section>
+      {showDevelopmentOffers && (
+        <section className="section-wrap featured-section">
+          <div className="section-heading section-heading-row"><div><span className="eyebrow">LIVE FROM THE CATALOG</span><h2>Offers to explore</h2><p>Offer data comes from the configured catalog; availability may change.</p></div><Link className="text-link" href="/offers">Browse all offers →</Link></div>
+          {loading ? <div className="featured-grid" aria-label="Loading offers">{[1, 2, 3].map((item) => <Card className="featured-card skeleton" key={item}><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></Card>)}</div>
+            : offerError ? <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{offerError}</AlertDescription></Alert>
+            : offers.length ? <div className="featured-grid">{offers.map((offer) => <Card className="featured-card" key={offer.id} asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}><Badge className="offer-category" variant="outline">{offer.category}</Badge><h3>{offer.title}</h3><p>{offer.short_description}</p><div className="featured-foot"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "See requirements"}</span><strong>{formatUsd(offer.user_reward)}</strong></div>{offer.is_demo && <small className="demo-label">Development demo offer</small>}</Link></Card>)}</div>
+            : <div className="empty featured-empty"><strong>No offers are available right now.</strong><span>Check back later or browse the catalog for updates.</span></div>}
+        </section>
+      )}
 
       <section className="benefit-band"><div className="section-wrap benefits"><div><span className="eyebrow">BUILT AROUND CLARITY</span><h2>Know what is pending.<br />Know what is available.</h2></div><div className="benefit-list"><p><b>01</b><span><strong>Transparent status</strong>Understand when an offer is awaiting provider confirmation.</span></p><p><b>02</b><span><strong>Wallet records</strong>Balances reflect backend ledger transactions, not browser estimates.</span></p><p><b>03</b><span><strong>Careful verification</strong>Conversions are reviewed before a reward is decided.</span></p></div></div></section>
 
