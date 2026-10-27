@@ -4,6 +4,23 @@ Only `mock` is enabled in development. `POST /api/v1/postbacks/mock` accepts a t
 
 The unique `(network_id, external_transaction_id)` constraint makes conversion creation idempotent even when application processes race. Reversal-like events update the original conversion rather than creating a second record, and reward decisions use a unique conversion reference to prevent duplicate credits.
 
+## BitLabs
+
+The BitLabs integration uses the provider-hosted web offerwall in an iframe and the general Reward & Reconciliation callback. The authenticated `GET /api/v1/offers/providers/bitlabs/wall-url` endpoint requires an approved active WorkBit earning package and returns the documented `https://web.bitlabs.ai/?uid=<workbit-user-id>&token=<app-api-token>` URL. The BitLabs App/API Token is necessarily visible in that iframe URL; do not use it as a secret. The URL is returned with `Cache-Control: no-store`.
+
+Configure these backend environment variables:
+
+- `BITLABS_ENABLED=true`
+- `BITLABS_API_KEY`: BitLabs Integration page's **App/API Token**.
+- `BITLABS_POSTBACK_SECRET`: BitLabs Integration page's **Secret Key**. BitLabs documents this key for callback hash verification.
+- `BITLABS_CALLBACK_URL`: the exact public HTTPS endpoint URL, for example `https://api.workbitbd.com/api/v1/postbacks/bitlabs` (no query string or trailing slash).
+
+Do not put the App/API Token, Secret Key, or Server-to-Server Key in frontend environment variables. This web iframe/callback flow uses the App/API Token and the Secret Key; it does not use the Server-to-Server Key.
+
+In the BitLabs dashboard, configure the **Reward & Reconciliation Callback** to call the URL in `BITLABS_CALLBACK_URL`. Include the callback parameters `uid` (`USER:UID`), `tx` (`TX`), `usd` (`VALUE:USD`), `ref` (`REF`), and `activity_type` (`ACTIVITY:TYPE`). Offer metadata may also be included as `offer_id` (`OFFER:ID`), `task_id` (`OFFER:TASK:ID`), and `offer_state` (`OFFER:TASK:STATE`). BitLabs appends `hash` automatically. The callback endpoint verifies the HMAC-SHA1 over the exact callback URL and raw query string using the BitLabs **Secret Key**, rejects duplicate parameters and invalid signatures, and acknowledges dashboard `debug=true` tests without crediting a wallet.
+
+Only completed callbacks with a positive `VALUE:USD` are processed. Screen-outs, start bonuses, pending/reconciled offer states, and zero-value callbacks do not create credits. `REF` links reconciliation callbacks to the original transaction; an eligible existing reward is reversed through WorkBit's reward ledger. Repeated transaction callbacks are idempotent. If a non-zero reconciliation amount differs from the original provider payout, WorkBit fails closed with a retry response rather than guessing how to apply a partial adjustment; review such cases before manually resending the callback. WorkBit treats BitLabs `VALUE:USD` as publisher payout and applies the configured WorkBit reward policy; check the BitLabs app-currency configuration so the amount shown in their wall is clear and consistent with the WorkBit credit. Test the endpoint with BitLabs' **Callback Tester** after saving the callback settings. The BitLabs offerwall is hidden when `BITLABS_ENABLED=false`.
+
 ## Offerwall.GG
 
 Explore offers displays a WorkBit-native Offerwall.GG card catalog (not the provider-hosted full-page wall) when `OFFERWALL_GG_ENABLED=true` and the backend public/secret keys are configured. The authenticated `GET /api/v1/offers/providers/offerwall-gg/catalog` endpoint requires an approved active earning package and requests targeted, paginated inventory using the stable WorkBit user UUID and the account's country. The backend sends the secret only in the `X-Api-Key` header, validates the response and user-specific tracked click URLs, and sets `Cache-Control: no-store`. The browser follows only Offerwall.GG's returned click URL, never a direct advertiser URL. The older `GET /api/v1/offers/providers/offerwall-gg/wall-url` endpoint remains available and generates the documented HMAC-SHA256 signature over the sorted `appId` and user UUID; it is not used by the Explore offers UI.

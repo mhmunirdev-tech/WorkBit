@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
 import { AdsPlacements } from "./ads/ads-placements";
+import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
@@ -89,6 +90,7 @@ function OffersCatalog() {
   return (
     <>
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
+      <BitLabsOfferWall />
       <OfferwallGGCatalog />
       <AdsPlacements />
       {isDevelopment && (

@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     offerwall_gg_public_key: str | None = None
     offerwall_gg_secret_key: str | None = None
     offerwall_gg_currency_name: str = "USD"
+    bitlabs_enabled: bool = False
+    bitlabs_api_key: str | None = None
+    bitlabs_postback_secret: str | None = None
+    bitlabs_callback_url: str | None = None
     enable_mock_rewards: bool = False
     package_bkash_number: str = "01839299096"
     package_nagad_number: str = "01811914794"
