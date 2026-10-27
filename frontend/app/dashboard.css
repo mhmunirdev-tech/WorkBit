@@ -4722,6 +4722,70 @@ body {
   background: #fff;
 }
 
+.adsterra-banner {
+  width: min(100%, 728px);
+  min-height: 90px;
+  margin: 0 auto 28px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.adsterra-banner p {
+  margin: 0 0 4px;
+  color: #718096;
+  font-size: 10px;
+}
+
+.adsterra-banner > div {
+  min-height: 90px;
+}
+
+.adsterra-banner-in-content {
+  width: min(100%, 300px);
+  min-height: 250px;
+}
+
+.adsterra-banner-in-content > div {
+  min-height: 250px;
+}
+
+.adsterra-native {
+  width: min(100%, 728px);
+  min-height: 90px;
+}
+
+.adsterra-side-units {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .adsterra-responsive,
+  .adsterra-responsive > div {
+    min-height: 50px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .adsterra-side-units {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    margin: 0 auto 28px;
+  }
+
+  .adsterra-banner.adsterra-side,
+  .adsterra-banner.adsterra-side > div {
+    width: 160px;
+    min-height: 300px;
+  }
+
+  .adsterra-banner.adsterra-side:last-child,
+  .adsterra-banner.adsterra-side:last-child > div {
+    min-height: 600px;
+  }
+}
+
 .offerwall-gg {
   margin: 0 0 28px;
   padding: 22px;

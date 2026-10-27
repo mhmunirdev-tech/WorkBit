@@ -64,7 +64,7 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/offers", label: "Explore offers", icon: Sparkles },
   { href: "/packages", label: "Earning packages", icon: PackageCheck },
-  { href: "/ranks", label: "Ranks", icon: Award },
+  { href: "/ranks", label: "Ranks", icon: Award, prefetch: false },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/rewards", label: "Reward history", icon: Gift },
   { href: "/profile", label: "Profile", icon: UserRound },
@@ -213,6 +213,7 @@ export function Shell({
               <Link
                 className={`app-nav-link${active ? " is-active" : ""}`}
                 href={item.href}
+                prefetch={item.prefetch}
                 aria-current={active ? "page" : undefined}
                 key={item.href}
                 onClick={() => setMenuOpen(false)}
