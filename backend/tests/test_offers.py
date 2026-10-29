@@ -204,7 +204,16 @@ def test_ad_network_registry_is_separate(database):
     db = SessionLocal()
     try:
         ad_networks = db.scalars(select(AdNetwork)).all()
-        assert {network.slug for network in ad_networks} == {"workbit-ad-manager", "other-ads"}
+        assert {network.slug for network in ad_networks} == {
+            "workbit-ad-manager",
+            "a-ads",
+            "coinzilla",
+            "cointraffic",
+            "propellerads",
+            "monetag",
+            "bitmedia",
+            "other-ads",
+        }
         assert all(not network.enabled and network.status == "NOT_CONFIGURED" for network in ad_networks)
     finally:
         db.close()

@@ -3,7 +3,16 @@ from __future__ import annotations
 from app.integrations.ad_providers.base import AdNetworkAdapter, UnconfiguredAdAdapter
 
 
-AD_NETWORK_SLUGS = ("workbit-ad-manager", "other-ads")
+AD_NETWORK_SLUGS = (
+    "workbit-ad-manager",
+    "other-ads",
+    "a-ads",
+    "coinzilla",
+    "cointraffic",
+    "propellerads",
+    "monetag",
+    "bitmedia",
+)
 
 
 class AdAdapterRegistry:

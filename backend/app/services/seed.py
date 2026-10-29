@@ -21,6 +21,12 @@ OFFER_PROVIDERS = (
 )
 AD_NETWORKS = (
     ("WorkBit Ad Manager", "workbit-ad-manager", "AD_MANAGER", 10),
+    ("A-ADS", "a-ads", "DISPLAY", 20),
+    ("Coinzilla", "coinzilla", "DISPLAY", 30),
+    ("Cointraffic", "cointraffic", "DISPLAY", 40),
+    ("PropellerAds", "propellerads", "DISPLAY", 50),
+    ("Monetag", "monetag", "DISPLAY", 60),
+    ("Bitmedia", "bitmedia", "DISPLAY", 70),
     ("Other Ads", "other-ads", "DISPLAY", 100),
 )
 RANK_TIERS = (
