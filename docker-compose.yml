@@ -5,6 +5,9 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY: ${NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY:-}
+        NEXT_PUBLIC_AADS_ENABLED: ${NEXT_PUBLIC_AADS_ENABLED:-false}
+        NEXT_PUBLIC_AADS_UNIT_ID: ${NEXT_PUBLIC_AADS_UNIT_ID:-}
+        NEXT_PUBLIC_AADS_UNIT_SIZE: ${NEXT_PUBLIC_AADS_UNIT_SIZE:-Adaptive}
     ports: ["3000:3000"]
     depends_on: [backend]
   backend:

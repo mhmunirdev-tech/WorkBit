@@ -13,4 +13,16 @@ The display providers are intentionally separate from the offer/reward pipeline.
 
 The provider-specific `*_API_KEY` and `*_POSTBACK_SECRET` entries in `.env.example` are reserved for a future server-side integration. They are not read by these display adapters and should remain empty until an approved API/postback flow is implemented and tested.
 
+## Non-Docker deployment
+
+Docker is not required. For the Vercel frontend project, add the following Production environment variables and redeploy:
+
+```env
+NEXT_PUBLIC_AADS_ENABLED=true
+NEXT_PUBLIC_AADS_UNIT_ID=2460426
+NEXT_PUBLIC_AADS_UNIT_SIZE=Adaptive
+```
+
+The A-ADS dashboard should verify `https://workbitbd.com/offers`, because that is the page where the unit is rendered. Local development can use the same values in `frontend/.env.local`, then run `npm run dev` or `npm run build && npm start` from `frontend/`.
+
 Do not turn display impressions or clicks into WorkBit wallet rewards unless the provider explicitly approves that product and supplies a verified server callback. The current adapters only monetize the platform's ad inventory; they never credit users.
