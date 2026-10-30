@@ -4797,6 +4797,53 @@ body {
   box-shadow: 0 12px 30px #2035520a;
 }
 
+.theoremreach-wall {
+  margin: 0 0 28px;
+  padding: 22px;
+  border: 1px solid #e1e8f2;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 12px 30px #2035520a;
+}
+
+.theoremreach-wall-heading h2 {
+  margin: 0 0 8px;
+  color: #1e2f49;
+  font-size: 21px;
+  letter-spacing: -.4px;
+}
+
+.theoremreach-wall-heading p:last-child {
+  margin: 0;
+}
+
+.theoremreach-wall-frame {
+  display: block;
+  width: 100%;
+  min-height: 780px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.theoremreach-wall-loading {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.theoremreach-wall-note {
+  margin: 14px 0 0;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.theoremreach-wall-action {
+  margin: 12px 0 0 10px;
+}
+
 .offerwall-gg-heading h2 {
   margin: 0 0 5px;
   color: #1d2e49;
@@ -5560,6 +5607,10 @@ body {
 }
 
 @media (max-width: 620px) {
+  .theoremreach-wall {
+    padding: 15px;
+  }
+
   .bitlabs-wall {
     margin: 0 0 28px;
     padding: 22px;

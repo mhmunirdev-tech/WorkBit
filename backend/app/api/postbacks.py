@@ -13,10 +13,16 @@ from app.integrations.offer_providers.offerwall_gg import (
     OfferwallGGConfigurationError,
     offerwall_gg_adapter,
 )
+from app.integrations.offer_providers.theoremreach import (
+    TheoremReachCallbackError,
+    TheoremReachConfigurationError,
+    theoremreach_adapter,
+)
 from app.schemas.conversions import ConversionRead, MockPostbackRequest
 from app.services.conversions import conversion_service
 from app.services.bitlabs import bitlabs_conversion_service
 from app.services.offerwall_gg import offerwall_gg_conversion_service
+from app.services.theoremreach import theoremreach_conversion_service
 router = APIRouter(prefix="/postbacks", tags=["postbacks"])
 
 
@@ -110,6 +116,39 @@ async def receive_offerwall_gg_postback(
         if status_code >= 500:
             return PlainTextResponse("RETRY", status_code=503)
         return PlainTextResponse("REJECTED", status_code=status_code)
+    return PlainTextResponse("OK")
+
+
+@router.get("/theoremreach", response_class=PlainTextResponse)
+async def receive_theoremreach_postback(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    try:
+        raw_query = request.scope["query_string"].decode("ascii")
+    except UnicodeDecodeError:
+        return PlainTextResponse("FORBIDDEN", status_code=400)
+
+    callback_values: dict[str, str] = {}
+    for key, value in request.query_params.multi_items():
+        normalized_key = key.lower()
+        if normalized_key in callback_values:
+            return PlainTextResponse("FORBIDDEN", status_code=400)
+        callback_values[normalized_key] = value
+
+    try:
+        callback = theoremreach_adapter.verify_callback(callback_values, raw_query)
+    except TheoremReachConfigurationError:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    except TheoremReachCallbackError:
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    try:
+        theoremreach_conversion_service.process_callback(db, callback)
+    except HTTPException as error:
+        if error.status_code >= 500:
+            return PlainTextResponse("RETRY", status_code=503)
+        return PlainTextResponse("REJECTED", status_code=error.status_code)
     return PlainTextResponse("OK")
 
 

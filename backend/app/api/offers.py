@@ -16,6 +16,10 @@ from app.integrations.offer_providers.bitlabs import (
     BitLabsConfigurationError,
     bitlabs_adapter,
 )
+from app.integrations.offer_providers.theoremreach import (
+    TheoremReachConfigurationError,
+    theoremreach_adapter,
+)
 from app.models import Offer, RewardDecision, User, Wallet
 from app.schemas.offerwall_gg import OfferwallGGOffersRead
 from app.schemas.conversions import MockPostbackRequest
@@ -26,6 +30,22 @@ from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
 from app.services.packages import has_active_package
 
 router = APIRouter(prefix="/offers", tags=["offers"])
+
+
+@router.get("/providers/theoremreach/wall-url")
+def theoremreach_wall_url(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
+    if not settings.theoremreach_enabled:
+        raise HTTPException(404, "TheoremReach is not enabled.")
+    if not has_active_package(db, user.id):
+        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
+    try:
+        wall_url = theoremreach_adapter.build_wall_url(user.id)
+    except TheoremReachConfigurationError as error:
+        raise HTTPException(503, str(error)) from error
+    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 
 
 @router.get(

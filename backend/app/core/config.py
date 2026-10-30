@@ -35,6 +35,15 @@ class Settings(BaseSettings):
     bitlabs_api_key: str | None = None
     bitlabs_postback_secret: str | None = None
     bitlabs_callback_url: str | None = None
+    theoremreach_enabled: bool = False
+    theoremreach_api_key: str | None = None
+    theoremreach_secret_key: str | None = None
+    theoremreach_partner_id: str | None = None
+    theoremreach_callback_url: str | None = None
+    theoremreach_currency_name_singular: str = "Credit"
+    theoremreach_currency_name_plural: str = "Credits"
+    theoremreach_exchange_rate: Decimal = Field(default=Decimal("10"), ge=10)
+    theoremreach_decimals_to_display: int = Field(default=2, ge=0, le=8)
     enable_mock_rewards: bool = False
     package_bkash_number: str = "01839299096"
     package_nagad_number: str = "01811914794"
