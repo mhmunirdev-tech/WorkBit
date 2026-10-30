@@ -23,6 +23,6 @@ NEXT_PUBLIC_AADS_UNIT_ID=2460426
 NEXT_PUBLIC_AADS_UNIT_SIZE=Adaptive
 ```
 
-The A-ADS dashboard should verify `https://workbitbd.com/offers`, because that is the page where the unit is rendered. Local development can use the same values in `frontend/.env.local`, then run `npm run dev` or `npm run build && npm start` from `frontend/`.
+The A-ADS dashboard should verify `https://workbitbd.com/`. The unit is rendered on the public homepage so A-ADS can check it without requiring a signed-in session. It is also rendered on the offers page for signed-in users. Local development can use the same values in `frontend/.env.local`, then run `npm run dev` or `npm run build && npm start` from `frontend/`.
 
 Do not turn display impressions or clicks into WorkBit wallet rewards unless the provider explicitly approves that product and supplies a verified server callback. The current adapters only monetize the platform's ad inventory; they never credit users.

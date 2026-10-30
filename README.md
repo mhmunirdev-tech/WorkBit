@@ -70,7 +70,7 @@ If enabling withdrawals, also set `WITHDRAWAL_ENCRYPTION_KEY` to a securely gene
 
 `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY`, and the A-ADS variables belong only in the frontend project. Next.js embeds them during the frontend build, so redeploy the frontend after changing them. The AmanahAds iframe key and A-ADS unit ID are necessarily visible in the browser; do not use these variables for private API or postback secrets. Redeploy the backend after changing backend environment variables. Do not add a trailing `/api/v1` to `NEXT_PUBLIC_API_URL`; the frontend adds the API path itself.
 
-For the A-ADS unit above, use `https://workbitbd.com/offers` as the ad-unit verification URL. The unit is rendered on the offers page, so the production frontend must be redeployed after adding these variables.
+For the A-ADS unit above, use `https://workbitbd.com/` as the ad-unit verification URL. The unit is rendered on the public homepage so A-ADS can check it without a signed-in session. The production frontend must be redeployed after adding these variables.
 
 Generate separate application secrets locally with `python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(48)); print('SESSION_SECRET=' + secrets.token_urlsafe(48))"`. Generate the withdrawal key with `python -c "import base64,secrets; print(base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())"`. Copy each value directly into the matching Vercel backend variable; do not paste secrets in chat, documentation, or source control. Do not reuse development credentials or the default values from `.env.example` in Production.
 

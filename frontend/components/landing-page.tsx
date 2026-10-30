@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, BadgeCheck, Check, ClipboardList, Clock3, Gamepad2, PackageCheck, ShieldCheck, Smartphone, Sparkles, UsersRound, WalletCards } from "lucide-react";
+import { AAdsBannerPlacement } from "./ads/providers/a-ads/banner";
 import { api } from "../lib/api";
 import { formatUsd } from "../lib/utils";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -290,6 +291,10 @@ export function LandingPage() {
           <div className="category-chips">{["Apps", "Games", "Surveys", "Signups", "Websites", "More offers"].map((item) => <Link href="/offers" key={item}>{item}<span aria-hidden="true">↗</span></Link>)}</div>
         </div>
       </section>
+
+      <div className="section-wrap">
+        <AAdsBannerPlacement />
+      </div>
 
       {showDevelopmentOffers && (
         <section className="section-wrap featured-section">
