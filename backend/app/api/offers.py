@@ -59,7 +59,6 @@ async def offerwall_gg_catalog(
     result = await offerwall_gg_catalog_service.list_offers(
         db=db,
         user=user,
-        country=user.country,
         device=device,
         page=page,
         limit=limit,

@@ -21,6 +21,7 @@ from app.schemas.offerwall_gg import (
 from app.services.rewards import reward_decision_service
 
 API_OFFERS_URL = "https://offerwall.gg/api/v1/offers"
+OFFERWALL_GG_TARGET_COUNTRY = "BD"
 
 
 class OfferwallGGCatalogService:
@@ -28,7 +29,6 @@ class OfferwallGGCatalogService:
         self,
         db: Session,
         user: User,
-        country: str,
         device: str,
         page: int,
         limit: int,
@@ -46,7 +46,7 @@ class OfferwallGGCatalogService:
         params: dict[str, str | int] = {
             "appId": public_key,
             "userId": user.id,
-            "country": country.upper(),
+            "country": OFFERWALL_GG_TARGET_COUNTRY,
             "device": device,
             "page": page,
             "limit": limit,

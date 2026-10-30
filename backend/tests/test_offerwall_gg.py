@@ -302,7 +302,7 @@ def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentia
     assert mock_client.request["url"] == "https://offerwall.gg/api/v1/offers"
     assert mock_client.request["headers"] == {"X-Api-Key": SECRET_KEY}
     assert mock_client.request["params"]["userId"] == user_id
-    assert mock_client.request["params"]["country"]
+    assert mock_client.request["params"]["country"] == "BD"
     assert response.headers["cache-control"] == "no-store"
 
 
