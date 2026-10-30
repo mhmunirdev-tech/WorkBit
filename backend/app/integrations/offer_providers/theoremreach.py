@@ -40,17 +40,23 @@ class TheoremReachAdapter:
     def _configuration(
         self,
         require_enabled: bool = True,
-    ) -> tuple[str, str, str, str]:
+    ) -> tuple[str, str, str, str, str]:
         if require_enabled and not settings.theoremreach_enabled:
             raise TheoremReachConfigurationError("TheoremReach integration is disabled.")
 
         api_key = (settings.theoremreach_api_key or "").strip()
         secret_key = settings.theoremreach_secret_key or ""
         partner_id = (settings.theoremreach_partner_id or "").strip()
+        placement_id = (settings.theoremreach_placement_id or "").strip()
         callback_url = (settings.theoremreach_callback_url or "").strip()
-        if not api_key or not secret_key or not partner_id or not callback_url:
+        if (
+            not api_key
+            or not secret_key
+            or not placement_id
+            or not callback_url
+        ):
             raise TheoremReachConfigurationError(
-                "TheoremReach API key, secret key, partner ID, and callback URL must be configured."
+                "TheoremReach API key, secret key, placement ID, and callback URL must be configured."
             )
 
         try:
@@ -82,29 +88,30 @@ class TheoremReachAdapter:
             raise TheoremReachConfigurationError(
                 "TheoremReach singular and plural currency names must be configured."
             )
-        return api_key, secret_key, partner_id, callback_url
+        return api_key, secret_key, partner_id, placement_id, callback_url
 
     def build_wall_url(self, user_id: str) -> str:
-        api_key, secret_key, partner_id, _ = self._configuration()
+        api_key, secret_key, partner_id, placement_id, _ = self._configuration()
         try:
             UUID(user_id)
         except ValueError as error:
             raise TheoremReachConfigurationError("WorkBit user ID must be a UUID.") from error
 
         transaction_id = uuid4().hex
-        query = urlencode(
-            [
-                ("api_key", api_key),
-                ("user_id", user_id),
-                ("transaction_id", transaction_id),
-                ("currency_name_plural", settings.theoremreach_currency_name_plural.strip()),
-                ("currency_name_singular", settings.theoremreach_currency_name_singular.strip()),
-                ("exchange_rate", format(settings.theoremreach_exchange_rate, "f")),
-                ("external_id", user_id),
-                ("partner_id", partner_id),
-                ("decimals_to_display", str(settings.theoremreach_decimals_to_display)),
-            ]
-        )
+        parameters = [
+            ("api_key", api_key),
+            ("user_id", user_id),
+            ("transaction_id", transaction_id),
+            ("currency_name_plural", settings.theoremreach_currency_name_plural.strip()),
+            ("currency_name_singular", settings.theoremreach_currency_name_singular.strip()),
+            ("exchange_rate", format(settings.theoremreach_exchange_rate, "f")),
+            ("external_id", user_id),
+            ("placement_id", placement_id),
+            ("decimals_to_display", str(settings.theoremreach_decimals_to_display)),
+        ]
+        if partner_id:
+            parameters.append(("partner_id", partner_id))
+        query = urlencode(parameters)
         unsigned_url = f"{THEOREMREACH_ENTRY_URL}?{query}"
         signature = self._signature(secret_key, unsigned_url)
         return f"{unsigned_url}&hash={signature}"
@@ -114,7 +121,7 @@ class TheoremReachAdapter:
         values: dict[str, str],
         raw_query: str,
     ) -> TheoremReachCallback:
-        _, secret_key, partner_id, callback_url = self._configuration(
+        _, secret_key, partner_id, placement_id, callback_url = self._configuration(
             require_enabled=False
         )
         prefix, separator, supplied_hash = raw_query.rpartition("&hash=")
@@ -134,8 +141,11 @@ class TheoremReachAdapter:
         debug = debug_value in {"1", "true"}
 
         supplied_partner_id = self._value(values, "partner_id")
-        if supplied_partner_id and supplied_partner_id != partner_id:
+        if partner_id and supplied_partner_id and supplied_partner_id != partner_id:
             raise TheoremReachCallbackError("Callback partner ID does not match.")
+        supplied_placement_id = self._value(values, "placement_id")
+        if supplied_placement_id and supplied_placement_id != placement_id:
+            raise TheoremReachCallbackError("Callback placement ID does not match.")
 
         if debug:
             return TheoremReachCallback(

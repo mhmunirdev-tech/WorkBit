@@ -15,6 +15,7 @@ CALLBACK_URL = "https://api.workbitbd.com/api/v1/postbacks/theoremreach"
 API_KEY = "test-theoremreach-api-key"
 SECRET_KEY = "test-theoremreach-secret"
 PARTNER_ID = "test-theoremreach-placement"
+PLACEMENT_ID = "test-theoremreach-currency-placement"
 
 
 def configure_theoremreach(monkeypatch):
@@ -22,6 +23,7 @@ def configure_theoremreach(monkeypatch):
     monkeypatch.setattr(settings, "theoremreach_api_key", API_KEY)
     monkeypatch.setattr(settings, "theoremreach_secret_key", SECRET_KEY)
     monkeypatch.setattr(settings, "theoremreach_partner_id", PARTNER_ID)
+    monkeypatch.setattr(settings, "theoremreach_placement_id", PLACEMENT_ID)
     monkeypatch.setattr(settings, "theoremreach_callback_url", CALLBACK_URL)
     monkeypatch.setattr(settings, "theoremreach_currency_name_singular", "Credit")
     monkeypatch.setattr(settings, "theoremreach_currency_name_plural", "Credits")
@@ -98,10 +100,25 @@ def test_theoremreach_wall_url_requires_auth_and_active_package(client, monkeypa
     assert query["user_id"] == [get_user_id()]
     assert query["external_id"] == [get_user_id()]
     assert query["partner_id"] == [PARTNER_ID]
+    assert query["placement_id"] == [PLACEMENT_ID]
     assert query["exchange_rate"] == ["10"]
     assert query["currency_name_plural"] == ["Credits"]
     assert "hash" in query
     assert SECRET_KEY not in wall_url
+
+
+def test_theoremreach_partner_id_is_optional_and_placement_id_is_distinct(client, monkeypatch):
+    configure_theoremreach(monkeypatch)
+    monkeypatch.setattr(settings, "theoremreach_partner_id", None)
+    login_user(client)
+    activate_package(client, "THEOREMREACH-WALL-OPTIONAL-PARTNER")
+
+    response = client.get("/api/v1/offers/providers/theoremreach/wall-url")
+
+    assert response.status_code == 200
+    query = parse_qs(urlsplit(response.json()["wall_url"]).query)
+    assert query["placement_id"] == [PLACEMENT_ID]
+    assert "partner_id" not in query
 
 
 def test_theoremreach_debug_callback_does_not_change_wallet(client, monkeypatch):

@@ -60,7 +60,8 @@ Deploy `backend/` and `frontend/` as **separate Vercel projects**. Set the backe
 | `THEOREMREACH_ENABLED` | `false` during callback testing; set `true` after publisher approval |
 | `THEOREMREACH_API_KEY` | TheoremReach publisher app API key |
 | `THEOREMREACH_SECRET_KEY` | TheoremReach app secret for URL signatures |
-| `THEOREMREACH_PARTNER_ID` | TheoremReach app/placement partner ID |
+| `THEOREMREACH_PARTNER_ID` | Optional Offerwall partner ID, if TheoremReach provides one |
+| `THEOREMREACH_PLACEMENT_ID` | Generated ID from the app's Placements table |
 | `THEOREMREACH_CALLBACK_URL` | `https://api.workbitbd.com/api/v1/postbacks/theoremreach` |
 | `THEOREMREACH_CURRENCY_NAME_SINGULAR` / `THEOREMREACH_CURRENCY_NAME_PLURAL` | `Credit` / `Credits` |
 | `THEOREMREACH_EXCHANGE_RATE` | `10` or greater |

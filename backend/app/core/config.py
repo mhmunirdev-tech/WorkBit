@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     theoremreach_api_key: str | None = None
     theoremreach_secret_key: str | None = None
     theoremreach_partner_id: str | None = None
+    theoremreach_placement_id: str | None = None
     theoremreach_callback_url: str | None = None
     theoremreach_currency_name_singular: str = "Credit"
     theoremreach_currency_name_plural: str = "Credits"
