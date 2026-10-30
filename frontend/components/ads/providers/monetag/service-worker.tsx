@@ -3,9 +3,7 @@
 import { useEffect } from "react";
 
 export function MonetagServiceWorker() {
-  const enabled =
-    process.env.NEXT_PUBLIC_MONETAG_ENABLED?.toLowerCase() === "true" &&
-    Boolean(process.env.NEXT_PUBLIC_MONETAG_TAG_SRC?.trim());
+  const enabled = process.env.NEXT_PUBLIC_MONETAG_ENABLED?.toLowerCase() === "true";
 
   useEffect(() => {
     if (!enabled || !("serviceWorker" in navigator)) return;
