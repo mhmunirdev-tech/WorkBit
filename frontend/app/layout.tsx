@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: "A transparent marketplace for legitimate, provider-confirmed reward offers.",
   other: {
     "offerwall-verification": "ow-b83eb7451b057e11c305",
+    monetag: "a7f8446bddb7a130f150e5d42760058b",
   },
 };
 
