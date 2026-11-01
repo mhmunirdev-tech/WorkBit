@@ -45,6 +45,9 @@ async def receive_cpx_research_postback(
     request: Request,
     db: Session = Depends(get_db),
 ) -> PlainTextResponse:
+    if not settings.cpx_research_postback_enabled:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+
     callback_values: dict[str, str] = {}
     for key, value in request.query_params.multi_items():
         normalized_key = key.lower()
@@ -58,9 +61,6 @@ async def receive_cpx_research_postback(
         return PlainTextResponse("UNAVAILABLE", status_code=503)
     except CPXResearchCallbackError:
         return PlainTextResponse("FORBIDDEN", status_code=403)
-
-    if not settings.cpx_research_enabled:
-        return PlainTextResponse("UNAVAILABLE", status_code=503)
 
     try:
         cpx_research_conversion_service.process_callback(db, callback)

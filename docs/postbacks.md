@@ -11,6 +11,7 @@ The CPX Research wall uses the authenticated WorkBit user's UUID as `ext_user_id
 Configure these backend environment variables:
 
 - `CPX_RESEARCH_ENABLED=true` only after CPX publisher approval and callback setup.
+- `CPX_RESEARCH_POSTBACK_ENABLED=false` keeps wallet callbacks disabled while allowing the wall to be displayed. Set it to `true` only after the callback endpoint is protected by a source-IP allowlist or another provider-approved verification method.
 - `CPX_RESEARCH_APP_ID=37861` (the App ID shown in the supplied publisher screenshot).
 - `CPX_RESEARCH_SECURE_HASH`: the current App Security Hash from CPX General Settings.
 

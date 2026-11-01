@@ -15,6 +15,7 @@ APP_SECURE_HASH = "test-cpx-secure-hash"
 
 def configure_cpx_research(monkeypatch):
     monkeypatch.setattr(settings, "cpx_research_enabled", True)
+    monkeypatch.setattr(settings, "cpx_research_postback_enabled", True)
     monkeypatch.setattr(settings, "cpx_research_app_id", APP_ID)
     monkeypatch.setattr(settings, "cpx_research_secure_hash", APP_SECURE_HASH)
 
@@ -199,3 +200,17 @@ def test_cpx_research_callback_rejects_amount_change_for_existing_transaction(
     assert credited.status_code == 200
     assert changed_amount.status_code == 409
     assert get_wallet_balance()[0] - before[0] == Decimal("1.00000000")
+
+
+def test_cpx_research_callback_is_disabled_separately_from_wall(client, monkeypatch):
+    configure_cpx_research(monkeypatch)
+    monkeypatch.setattr(settings, "cpx_research_postback_enabled", False)
+    activate_package(client, "CPX-RESEARCH-POSTBACK-DISABLED")
+    login_user(client)
+
+    wall = client.get("/api/v1/offers/providers/cpx-research/wall-url")
+    callback = client.get(callback_url(get_user_id()))
+
+    assert wall.status_code == 200
+    assert callback.status_code == 503
+    assert get_wallet_balance() == (Decimal("0E-8"), Decimal("0E-8"))
