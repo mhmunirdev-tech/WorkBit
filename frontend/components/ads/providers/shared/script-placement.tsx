@@ -8,6 +8,7 @@ type ScriptPlacementProps = {
   zoneId?: string;
   width?: number;
   height?: number;
+  scriptTarget?: "head" | "container";
 };
 
 /**
@@ -21,6 +22,7 @@ export function ScriptPlacement({
   zoneId,
   width = 300,
   height = 250,
+  scriptTarget = "head",
 }: ScriptPlacementProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -33,13 +35,13 @@ export function ScriptPlacement({
     script.src = scriptSrc;
     script.dataset.workbitProvider = provider;
     if (zoneId) script.dataset.zoneId = zoneId;
-    document.head.appendChild(script);
+    (scriptTarget === "container" ? container : document.head).appendChild(script);
 
     return () => {
       script.remove();
       container.replaceChildren();
     };
-  }, [provider, scriptSrc, zoneId]);
+  }, [provider, scriptSrc, scriptTarget, zoneId]);
 
   return (
     <section aria-label={`${provider} sponsored advertisement`} className={`ad-provider ad-provider-${provider}`}>

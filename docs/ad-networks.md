@@ -8,7 +8,7 @@ The display providers are intentionally separate from the offer/reward pipeline.
 | Coinzilla | `frontend/components/ads/providers/coinzilla/native.tsx` | `NEXT_PUBLIC_COINZILLA_ZONE_ID` | Coinzilla native widget |
 | Cointraffic | `frontend/components/ads/providers/cointraffic/banner.tsx` | `NEXT_PUBLIC_COINTRAFFIC_TAG_SRC` | Provider-generated display script |
 | PropellerAds | `frontend/components/ads/providers/propellerads/tag.tsx` | `NEXT_PUBLIC_PROPELLERADS_TAG_SRC` | Provider-generated display script |
-| Monetag | `frontend/app/offers/layout.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED` | Multitag scripts loaded on `/offers` and publisher-provided `frontend/public/sw.js` service worker |
+| Monetag | `frontend/components/ads/providers/monetag/tag.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED`, `NEXT_PUBLIC_MONETAG_TAG_SRC`, `NEXT_PUBLIC_MONETAG_ZONE_ID` | Fixed display placement in the ad section after the offerwall sections on `/offers` |
 | Bitmedia | `frontend/components/ads/providers/bitmedia/banner.tsx` | `NEXT_PUBLIC_BITMEDIA_PLACEMENT_ID` | Bitmedia JavaScript placement |
 
 The provider-specific `*_API_KEY` and `*_POSTBACK_SECRET` entries in `.env.example` are reserved for a future server-side integration. They are not read by these display adapters and should remain empty until an approved API/postback flow is implemented and tested.
@@ -27,4 +27,4 @@ The A-ADS dashboard should verify `https://workbitbd.com/`. The unit is rendered
 
 Do not turn display impressions or clicks into WorkBit wallet rewards unless the provider explicitly approves that product and supplies a verified server callback. The current adapters only monetize the platform's ad inventory; they never credit users.
 
-For Monetag Multitag, keep the publisher-provided `sw.js` in `frontend/public/` so it is served at `/sw.js` on the deployed website. The Multitag download replaces the earlier site-verification worker and contains the Multitag zone ID; site verification is retained through the Monetag meta tag in the root layout. The frontend registers the worker and loads the Multitag scripts only on `/offers` when `NEXT_PUBLIC_MONETAG_ENABLED=true`. Redeploy after updating the public file or environment variables.
+For Monetag, configure a fixed display/banner placement tag from the approved publisher dashboard in `NEXT_PUBLIC_MONETAG_TAG_SRC` and its zone in `NEXT_PUBLIC_MONETAG_ZONE_ID`. The placement is rendered after the offerwall sections and before the WorkBit offer catalog; only the tag configured for that placement is loaded. Do not load Monetag Multitag or register its `sw.js` service worker for this setup, since those integrations can inject ads outside the designated section. The root layout retains the Monetag site-verification meta tag. The app removes a previously registered root `/sw.js` service worker so it cannot continue injecting ads after this change. Redeploy after updating environment variables.

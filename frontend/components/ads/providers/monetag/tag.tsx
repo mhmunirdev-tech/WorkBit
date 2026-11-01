@@ -9,5 +9,5 @@ export function MonetagPlacement() {
 
   if (!enabled || !scriptSrc) return null;
 
-  return <ScriptPlacement provider="monetag" scriptSrc={scriptSrc} zoneId={zoneId} width={728} height={90} />;
+  return <ScriptPlacement provider="monetag" scriptSrc={scriptSrc} zoneId={zoneId} width={728} height={90} scriptTarget="container" />;
 }

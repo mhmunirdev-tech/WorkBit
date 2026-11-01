@@ -2,16 +2,28 @@
 
 import { useEffect } from "react";
 
-export function MonetagServiceWorker() {
-  const enabled = process.env.NEXT_PUBLIC_MONETAG_ENABLED?.toLowerCase() === "true";
-
+export function MonetagServiceWorkerCleanup() {
   useEffect(() => {
-    if (!enabled || !("serviceWorker" in navigator)) return;
+    if (!("serviceWorker" in navigator)) return;
 
-    void navigator.serviceWorker.register("/sw.js").catch((error: unknown) => {
-      console.error("Monetag service worker could not be registered.", error);
-    });
-  }, [enabled]);
+    const workerUrl = new URL("/sw.js", window.location.origin).href;
+    void navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) =>
+        Promise.all(
+          registrations
+            .filter((registration) =>
+              [registration.active, registration.waiting, registration.installing].some(
+                (worker) => worker?.scriptURL === workerUrl,
+              ),
+            )
+            .map((registration) => registration.unregister()),
+        ),
+      )
+      .catch((error: unknown) => {
+        console.error("Monetag service worker could not be unregistered.", error);
+      });
+  }, []);
 
   return null;
 }
