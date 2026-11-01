@@ -4,6 +4,28 @@ Only `mock` is enabled in development. `POST /api/v1/postbacks/mock` accepts a t
 
 The unique `(network_id, external_transaction_id)` constraint makes conversion creation idempotent even when application processes race. Reversal-like events update the original conversion rather than creating a second record, and reward decisions use a unique conversion reference to prevent duplicate credits.
 
+## CPX Research
+
+The CPX Research wall uses the authenticated WorkBit user's UUID as `ext_user_id`. Keep the CPX App Security Hash in the backend environment as `CPX_RESEARCH_SECURE_HASH`; never put it in a frontend variable or the callback URL. The wall request's `secure_hash` is MD5 of `user_id + "_" + app_security_hash`.
+
+Configure these backend environment variables:
+
+- `CPX_RESEARCH_ENABLED=true` only after CPX publisher approval and callback setup.
+- `CPX_RESEARCH_APP_ID=37861` (the App ID shown in the supplied publisher screenshot).
+- `CPX_RESEARCH_SECURE_HASH`: the current App Security Hash from CPX General Settings.
+
+Set CPX's **Main Postback URL** to the following exact URL, without adding the Security Hash itself:
+
+```text
+https://api.workbitbd.com/api/v1/postbacks/cpx-research?status={status}&trans_id={trans_id}&user_id={user_id}&sub_id={subid_1}&sub_id_2={subid_2}&amount_local={amount_local}&amount_usd={amount_usd}&offer_id={offer_ID}&hash={secure_hash}&ip_click={ip_click}&type={type}
+```
+
+The callback validates CPX's documented MD5 signature `md5(trans_id + "-" + app_security_hash)` using constant-time comparison, rejects duplicate query parameters, requires a valid WorkBit UUID and USD wallet, and processes each `trans_id` once. Status `1` records a positive `amount_usd` through the WorkBit reward policy, including positive bonus callbacks. Status `2` reverses the matching original transaction; an unknown transaction is rejected so CPX can retry. Zero-amount callbacks are acknowledged without a wallet credit. `amount_local` is recorded for audit only; `amount_usd` is the provider payout used for WorkBit accounting.
+
+Security limitation: CPX's documented callback hash covers `trans_id`, not the other callback fields. Restrict requests to this endpoint to CPX's dashboard-listed postback source IPs at the API firewall/WAF (`188.40.3.73`, `2a01:4f8:d0a:30ff::2`, and `157.90.97.92`) before enabling wallet credits. If the deployment proxy prevents reliable source-IP filtering, do not enable the callback for real rewards until CPX supplies a signature that covers the payout and user fields or the ingress can be protected.
+
+The screenshot's Security Hash was visible in the conversation. Rotate it in CPX General Settings, save the new hash, and update `CPX_RESEARCH_SECURE_HASH` in the backend environment before enabling this callback. Do not share the new hash. Keep the CPX Test Mode inactive for live users; test callbacks only with a CPX test user/IP and confirm no real user is credited.
+
 ## BitLabs
 
 The BitLabs integration uses the provider-hosted web offerwall in an iframe and the general Reward & Reconciliation callback. The authenticated `GET /api/v1/offers/providers/bitlabs/wall-url` endpoint requires an approved active WorkBit earning package and returns the documented `https://web.bitlabs.ai/?uid=<workbit-user-id>&token=<app-api-token>` URL. The BitLabs App/API Token is necessarily visible in that iframe URL; do not use it as a secret. The URL is returned with `Cache-Control: no-store`.

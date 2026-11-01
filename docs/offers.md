@@ -14,6 +14,14 @@ Offerwall.GG's placement currency must be `USD` at exactly one unit per USD, mat
 
 Advertising and rewarded/display ads use the separate `ad_networks` registry and adapter boundary. They are not offer inventory and do not create wallet rewards through the offer conversion pipeline.
 
+## CPX Research survey wall
+
+The CPX Research frame is rendered on `/offers` after the BitLabs wall. It uses the publisher App ID `37861` shown in the supplied CPX dashboard guide and the authenticated WorkBit user's UUID as `ext_user_id`. The backend creates CPX's documented `secure_hash` using MD5 of `ext_user_id`, an underscore, and the server-side CPX Security Hash (`md5(user_id + "_" + security_hash)`). The CPX secret must never be exposed in a `NEXT_PUBLIC_*` variable.
+
+Set `CPX_RESEARCH_ENABLED=true`, `CPX_RESEARCH_APP_ID=37861`, and `CPX_RESEARCH_SECURE_HASH` in the backend environment after configuring the CPX publisher dashboard. The route requires an approved earning package and returns a no-store response.
+
+Configure the Main Postback URL as described in [postbacks.md](./postbacks.md). The callback verifies the dashboard's `md5(trans_id + "-" + app_security_hash)` hash, credits positive USD amounts through the WorkBit reward policy, is idempotent by transaction ID, and reverses the original reward when CPX sends status `2`. Only status `1` and `2` callbacks are accepted. The dashboard currency factor must match the WorkBit wallet currency; WorkBit wallets use USD.
+
 Ad display providers are isolated under `frontend/components/ads/providers/<provider>/`, while the provider-neutral page selector lives in `frontend/components/ads/ads-placements.tsx`. Add a provider-specific component there and register it with the selector; do not place provider script or URL details in the offers catalog. Backend adapters for providers that require server integration belong under `backend/app/integrations/ad_providers/`; the shared contract and registry are separate from provider-specific code.
 
 The Explore offers page can display AmanahAds placements when the frontend build has `NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY` configured. `AmanahAd` supports the documented iframe and script-based `div` render modes and the provider's five documented sizes. The page uses iframe mode by default and offers a user-initiated popup; it does not open repeated or unsolicited popups. The optional `useAmanahPopup` hook listens only to `amanah:popup-close` messages from `https://amanahads.com`.

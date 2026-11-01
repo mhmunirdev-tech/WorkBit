@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     offerwall_gg_public_key: str | None = None
     offerwall_gg_secret_key: str | None = None
     offerwall_gg_currency_name: str = "USD"
+    cpx_research_enabled: bool = False
+    cpx_research_app_id: str = "37861"
+    cpx_research_secure_hash: str | None = None
     bitlabs_enabled: bool = False
     bitlabs_api_key: str | None = None
     bitlabs_postback_secret: str | None = None
