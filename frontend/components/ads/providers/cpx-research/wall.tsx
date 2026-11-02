@@ -14,6 +14,7 @@ export function CPXResearchOfferWall() {
   const [wallUrl, setWallUrl] = useState("");
   const [error, setError] = useState("");
   const [hidden, setHidden] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -44,7 +45,10 @@ export function CPXResearchOfferWall() {
   if (hidden) return null;
 
   return (
-    <section className="theoremreach-wall" aria-labelledby="cpx-research-wall-title">
+    <section
+      className={`theoremreach-wall${isOpen ? " is-expanded" : ""}`}
+      aria-labelledby="cpx-research-wall-title"
+    >
       <div className="theoremreach-wall-heading">
         <div>
           <p className="eyebrow">CPX RESEARCH SURVEYS</p>
@@ -66,19 +70,33 @@ export function CPXResearchOfferWall() {
           </AlertDescription>
         </Alert>
       ) : wallUrl ? (
-        <iframe
-          className="theoremreach-wall-frame"
-          loading="lazy"
-          referrerPolicy="strict-origin-when-cross-origin"
-          src={wallUrl}
-          title="CPX Research surveys"
-        />
+        <Button
+          aria-controls="cpx-research-survey-wall"
+          aria-expanded={isOpen}
+          className="theoremreach-wall-toggle"
+          onClick={() => setIsOpen((open) => !open)}
+          type="button"
+          variant="outline"
+        >
+          {isOpen ? "Hide surveys" : "Browse surveys"}
+        </Button>
       ) : (
         <div className="theoremreach-wall-loading" aria-label="Loading CPX Research surveys">
           <Skeleton className="h-8 w-1/3" />
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-10 w-36" />
         </div>
       )}
+      <div id="cpx-research-survey-wall">
+        {wallUrl && isOpen && (
+          <iframe
+            className="theoremreach-wall-frame"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+            src={wallUrl}
+            title="CPX Research surveys"
+          />
+        )}
+      </div>
       <p className="theoremreach-wall-note">
         CPX completion rewards will be credited only after its verified server callback is configured.
       </p>

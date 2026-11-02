@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     bitlabs_postback_secret: str | None = None
     bitlabs_callback_url: str | None = None
     theoremreach_enabled: bool = False
+    theoremreach_surveys_api_enabled: bool = False
     theoremreach_api_key: str | None = None
     theoremreach_secret_key: str | None = None
     theoremreach_partner_id: str | None = None

@@ -6,7 +6,7 @@ import hmac
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit
 from uuid import UUID, uuid4
 
 from app.core.config import settings
@@ -37,6 +37,14 @@ class TheoremReachCallback:
 
 
 class TheoremReachAdapter:
+    def publisher_api_credentials(self) -> tuple[str, str, str, str]:
+        api_key, secret_key, partner_id, placement_id, _ = self._configuration()
+        return api_key, secret_key, partner_id, placement_id
+
+    def sign_publisher_api_request(self, url: str) -> str:
+        _, secret_key, _, _, _ = self._configuration()
+        return self._signature(secret_key, url)
+
     def _configuration(
         self,
         require_enabled: bool = True,
@@ -115,6 +123,62 @@ class TheoremReachAdapter:
         unsigned_url = f"{THEOREMREACH_ENTRY_URL}?{query}"
         signature = self._signature(secret_key, unsigned_url)
         return f"{unsigned_url}&hash={signature}"
+
+    def sign_survey_entry_link(
+        self,
+        entry_link: str,
+        user_id: str,
+        survey_id: int,
+        transaction_id: str,
+    ) -> str:
+        _, secret_key, partner_id, placement_id, _ = self._configuration()
+        if not partner_id:
+            raise TheoremReachConfigurationError(
+                "TheoremReach partner ID is required for survey cards."
+            )
+
+        entry_link = entry_link.strip()
+        try:
+            parsed = urlsplit(entry_link)
+            query = parse_qsl(parsed.query, keep_blank_values=True)
+        except ValueError as error:
+            raise TheoremReachConfigurationError(
+                "TheoremReach returned an invalid survey entry link."
+            ) from error
+        query_values: dict[str, str] = {}
+        for key, value in query:
+            if key in {"api_key", "user_id", "survey_id", "hash"}:
+                if key in query_values:
+                    raise TheoremReachConfigurationError(
+                        "TheoremReach returned an invalid survey entry link."
+                    )
+                query_values[key] = value
+        if (
+            parsed.scheme != "https"
+            or parsed.netloc != "theoremreach.com"
+            or parsed.path != "/respondent_entry/surveys_api"
+            or parsed.fragment
+            or "hash" in query_values
+            or query_values.get("api_key") != (settings.theoremreach_api_key or "").strip()
+            or query_values.get("user_id") != user_id
+            or query_values.get("survey_id") != str(survey_id)
+        ):
+            raise TheoremReachConfigurationError(
+                "TheoremReach returned an invalid survey entry link."
+            )
+
+        parameters = [
+            ("transaction_id", transaction_id),
+            ("external_id", user_id),
+            ("currency_name_plural", settings.theoremreach_currency_name_plural.strip()),
+            ("currency_name_singular", settings.theoremreach_currency_name_singular.strip()),
+            ("exchange_rate", format(settings.theoremreach_exchange_rate, "f")),
+            ("partner_id", partner_id),
+            ("placement_id", placement_id),
+            ("decimals_to_display", str(settings.theoremreach_decimals_to_display)),
+        ]
+        unsigned_url = f"{entry_link}&{urlencode(parameters)}"
+        return f"{unsigned_url}&hash={self._signature(secret_key, unsigned_url)}"
 
     def verify_callback(
         self,

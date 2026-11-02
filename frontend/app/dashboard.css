@@ -4798,11 +4798,14 @@ body {
 }
 
 .theoremreach-wall {
-  margin: 0 0 28px;
+  min-width: 0;
+  margin: 0;
   padding: 22px;
   border: 1px solid #e1e8f2;
   border-radius: 20px;
-  background: #fff;
+  background:
+    radial-gradient(ellipse at 2% 0%, #eff7ff 0, transparent 34%),
+    #fff;
   box-shadow: 0 12px 30px #2035520a;
 }
 

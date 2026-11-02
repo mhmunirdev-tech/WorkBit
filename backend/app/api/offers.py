@@ -32,6 +32,8 @@ from app.services.conversions import conversion_service
 from app.services.offers import offer_service
 from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
 from app.services.packages import has_active_package
+from app.services.theoremreach_surveys import theoremreach_survey_catalog_service
+from app.schemas.theoremreach_surveys import TheoremReachSurveysRead
 
 router = APIRouter(prefix="/offers", tags=["offers"])
 
@@ -66,6 +68,27 @@ def theoremreach_wall_url(
     except TheoremReachConfigurationError as error:
         raise HTTPException(503, str(error)) from error
     return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
+
+
+@router.get(
+    "/providers/theoremreach/surveys",
+    response_model=TheoremReachSurveysRead,
+)
+async def theoremreach_surveys(
+    request: Request,
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> TheoremReachSurveysRead:
+    if not has_active_package(db, user.id):
+        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
+    surveys = await theoremreach_survey_catalog_service.list_surveys(
+        db,
+        user,
+        request.client.host if request.client else "",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return surveys
 
 
 @router.get(

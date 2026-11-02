@@ -7,7 +7,7 @@ import { AdsPlacements } from "./ads/ads-placements";
 import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
 import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
-import { TheoremReachOfferWall } from "./ads/providers/theoremreach/wall";
+import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
@@ -92,9 +92,9 @@ function OffersCatalog() {
   return (
     <>
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
-      <TheoremReachOfferWall />
-      <BitLabsOfferWall />
+      <TheoremReachSurveyCatalog />
       <CPXResearchOfferWall />
+      <BitLabsOfferWall />
       <OfferwallGGCatalog />
       <AdsPlacements />
       {isDevelopment && (
