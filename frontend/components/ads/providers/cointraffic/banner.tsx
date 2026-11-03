@@ -9,5 +9,5 @@ export function CointrafficPlacement() {
 
   if (!enabled || !scriptSrc) return null;
 
-  return <ScriptPlacement provider="cointraffic" scriptSrc={scriptSrc} zoneId={zoneId} width={728} height={90} />;
+  return <ScriptPlacement provider="cointraffic" scriptSrc={scriptSrc} zoneId={zoneId} width={728} height={90} scriptTarget="container" />;
 }
