@@ -3,7 +3,7 @@ import binascii
 from pathlib import Path
 from decimal import Decimal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     session_max_age_seconds: int = 60 * 60 * 24 * 7
     token_ttl_minutes: int = 30
     email_verification_otp_ttl_minutes: int = Field(default=10, gt=0, le=60)
+    fraud_registration_shared_ip_threshold: int = Field(default=2, ge=1, le=100)
+    fraud_registration_window_minutes: int = Field(default=60, gt=0, le=1440)
+    fraud_login_medium_attempt_threshold: int = Field(default=5, ge=2, le=1000)
+    fraud_login_high_attempt_threshold: int = Field(default=20, ge=3, le=10000)
+    fraud_login_window_minutes: int = Field(default=15, gt=0, le=1440)
     email_provider: str | None = None
     resend_api_key: str | None = None
     brevo_api_key: str | None = None
@@ -55,6 +60,15 @@ class Settings(BaseSettings):
     package_nagad_number: str = "01811914794"
     withdrawal_minimum_amount: Decimal = Field(default=Decimal("5.00"), gt=0, max_digits=18, decimal_places=8)
     withdrawal_encryption_key: str | None = None
+
+    @model_validator(mode="after")
+    def validate_fraud_thresholds(self):
+        if self.fraud_login_high_attempt_threshold <= self.fraud_login_medium_attempt_threshold:
+            raise ValueError(
+                "FRAUD_LOGIN_HIGH_ATTEMPT_THRESHOLD must exceed "
+                "FRAUD_LOGIN_MEDIUM_ATTEMPT_THRESHOLD."
+            )
+        return self
 
     @property
     def withdrawal_encryption_configured(self) -> bool:

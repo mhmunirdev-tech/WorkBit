@@ -7,6 +7,7 @@ from app.api.analytics import router as analytics_router
 from app.api.banners import router as banners_router
 from app.api.dashboard import router as dashboard_router
 from app.api.deposits import router as deposits_router
+from app.api.fraud import appeals_router, router as fraud_router
 from app.api.offers import router as offers_router
 from app.api.packages import router as packages_router
 from app.api.postbacks import router as postbacks_router
@@ -50,6 +51,8 @@ app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(banners_router, prefix="/api/v1")
 app.include_router(dashboard_router, prefix="/api/v1")
 app.include_router(deposits_router, prefix="/api/v1")
+app.include_router(fraud_router, prefix="/api/v1")
+app.include_router(appeals_router, prefix="/api/v1")
 app.include_router(offers_router, prefix="/api/v1")
 app.include_router(packages_router, prefix="/api/v1")
 app.include_router(postbacks_router, prefix="/api/v1")

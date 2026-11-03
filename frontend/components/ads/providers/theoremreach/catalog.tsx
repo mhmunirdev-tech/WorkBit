@@ -26,10 +26,15 @@ type TheoremReachSurveysResponse = {
   surveys: TheoremReachSurvey[];
 };
 
+type TheoremReachWallResponse = {
+  wall_url: string;
+};
+
 export function TheoremReachSurveyCatalog() {
   const [surveys, setSurveys] = useState<TheoremReachSurvey[]>([]);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  const [wallUrl, setWallUrl] = useState("");
   const [hidden, setHidden] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -39,10 +44,28 @@ export function TheoremReachSurveyCatalog() {
       .then((result) => {
         if (active) setSurveys(result.surveys);
       })
-      .catch((reason: unknown) => {
+      .catch(async (reason: unknown) => {
         if (!active) return;
         if (reason instanceof ApiError && reason.status === 404) {
-          setHidden(true);
+          try {
+            const result = await api<TheoremReachWallResponse>(
+              "/offers/providers/theoremreach/wall-url",
+            );
+            if (active) setWallUrl(result.wall_url);
+          } catch (fallbackReason: unknown) {
+            if (!active) return;
+            if (fallbackReason instanceof ApiError && fallbackReason.status === 404) {
+              setHidden(true);
+              return;
+            }
+            setError(
+              fallbackReason instanceof ApiError && fallbackReason.status === 402
+                ? "An approved earning package is required to view TheoremReach surveys."
+                : fallbackReason instanceof Error
+                  ? fallbackReason.message
+                  : "TheoremReach surveys could not be loaded.",
+            );
+          }
           return;
         }
         setError(
@@ -70,6 +93,32 @@ export function TheoremReachSurveyCatalog() {
   }, [search, surveys]);
 
   if (hidden) return null;
+
+  if (wallUrl) {
+    return (
+      <section className="theoremreach-wall" aria-labelledby="theoremreach-surveys-title">
+        <div className="theoremreach-wall-heading">
+          <div>
+            <p className="eyebrow">THEOREMREACH SURVEYS</p>
+            <h2 id="theoremreach-surveys-title">Share your opinion and earn</h2>
+            <p className="muted">
+              Survey availability and completion rewards are determined by TheoremReach.
+            </p>
+          </div>
+        </div>
+        <iframe
+          className="theoremreach-wall-frame"
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+          src={wallUrl}
+          title="TheoremReach surveys"
+        />
+        <p className="theoremreach-wall-note">
+          Only verified server callbacks credit survey rewards to your WorkBit wallet.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="offerwall-gg" aria-labelledby="theoremreach-surveys-title">

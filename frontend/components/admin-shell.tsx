@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldCheck, X, ArrowDownToLine, Settings2, Users } from "lucide-react";
+import { Activity, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldAlert, ShieldCheck, X, ArrowDownToLine, Settings2, Users } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -28,6 +28,7 @@ const navigationGroups = [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
       { href: "/admin/analytics", label: "Analysis", icon: Activity },
       { href: "/admin/users", label: "User registry", icon: Users },
+      { href: "/admin/fraud", label: "Fraud management", icon: ShieldAlert },
     ],
   },
   {

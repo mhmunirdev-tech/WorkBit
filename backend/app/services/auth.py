@@ -8,9 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models import AuthToken, Profile, Role, User, Wallet
+from app.schemas.auth import RegisterRequest
 from app.security.passwords import hash_password, verify_password
 from app.security.tokens import generate_token, token_hash
 from app.services.email import EmailDeliveryError, email_service
+from app.services.fraud import fraud_service
 
 TERMS_VERSION = "1"
 
@@ -147,7 +149,11 @@ def verify_email_code(db: Session, email: str, code: str) -> User:
     db.commit()
     return user
 
-def register(db: Session, data) -> User:
+def register(
+    db: Session,
+    data: RegisterRequest,
+    ip_address: str | None = None,
+) -> User:
     if db.scalar(select(User).where(User.email == str(data.email).lower())): raise HTTPException(400, "An account with this email already exists.")
     referrer = db.scalar(select(User).where(User.referral_code == data.referral_code.upper())) if data.referral_code else None
     if data.referral_code and not referrer: raise HTTPException(400, "The referral code is invalid.")
@@ -161,6 +167,7 @@ def register(db: Session, data) -> User:
         )
     user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, phone_number=data.phone_number, referral_code=referral_code(), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
     user.roles.append(role); user.profile = Profile(); user.wallet = Wallet(); db.add(user); db.flush()
+    fraud_service.record_registration(db, user.id, ip_address)
     try:
         email_service.send_verification(user.email, issue_verification_code(db, user))
     except EmailDeliveryError as error:
@@ -174,7 +181,8 @@ def register(db: Session, data) -> User:
 def authenticate(db: Session, email: str, password: str) -> User:
     user = db.scalar(select(User).where(User.email == email.lower()))
     if not user or not verify_password(password, user.password_hash): raise HTTPException(401, "Invalid email or password.")
-    if user.status in {"SUSPENDED", "BANNED"}: raise HTTPException(403, "This account is unavailable.")
+    if user.status in {"PENDING_REVIEW", "SUSPENDED", "BANNED"}:
+        raise HTTPException(403, "This account is unavailable.")
     return user
 def consume_token(db: Session, raw: str, purpose: str) -> User:
     record = db.scalar(select(AuthToken).where(AuthToken.token_hash == token_hash(raw), AuthToken.purpose == purpose, AuthToken.used_at.is_(None)))

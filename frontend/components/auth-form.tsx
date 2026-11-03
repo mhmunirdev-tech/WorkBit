@@ -308,7 +308,7 @@ export function AuthForm({
         {mode === "login" && (
           defaultDestination === "/admin"
             ? <p><Link href="/forgot-password">Forgot password?</Link> · Admin accounts are provisioned by an authorized administrator. <Link href="/login">User sign in</Link></p>
-            : <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link></p>
+            : <p><Link href="/forgot-password">Forgot password?</Link> · <Link href="/register">Create an account</Link> · <Link href="/fraud-appeal">Account review appeal</Link></p>
         )}
         {mode === "register" && <p>Already have an account? <Link href="/login">Sign in</Link></p>}
         </section></Card>

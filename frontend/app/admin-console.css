@@ -319,6 +319,11 @@
 .admin-user-summary-card strong { color: #21324c; font-size: 18px; }
 
 .admin-user-registry-card { padding: 20px 22px; border-radius: 15px; }
+.admin-fraud-reason { display: grid; gap: 7px; max-width: 720px; margin-bottom: 12px; color: #40516a; font-size: 10px; font-weight: 700; }
+.admin-fraud-reason input { min-height: 40px; border: 1px solid #dfe6ef; border-radius: 9px; background: #fbfcfe; color: #283952; font-size: 11px; padding: 10px 12px; }
+.admin-fraud-actions { min-width: 220px; }
+.admin-fraud-actions .ui-button { margin: 0 4px 5px 0; }
+.admin-user-table code { display: block; max-width: 360px; overflow-wrap: anywhere; color: #52617a; font-size: 9px; white-space: normal; }
 .admin-user-filters { display: grid; grid-template-columns: minmax(220px, 1fr) 180px auto; align-items: end; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid #edf1f6; }
 .admin-user-filters label { display: grid; gap: 6px; color: #40516a; font-size: 10px; font-weight: 700; }
 .admin-user-filters input, .admin-user-filters select { min-height: 40px; border: 1px solid #dfe6ef; border-radius: 9px; background: #fbfcfe; color: #283952; font-size: 11px; padding: 10px 12px; }

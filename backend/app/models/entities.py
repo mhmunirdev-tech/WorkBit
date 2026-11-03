@@ -340,6 +340,30 @@ class AnalyticsEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
 
 
+class FraudEvent(Base):
+    __tablename__ = "fraud_events"
+    __table_args__ = (
+        Index("ix_fraud_events_status_created", "status", "created_at"),
+        Index("ix_fraud_events_risk_created", "risk_level", "created_at"),
+        Index("ix_fraud_events_ip_created", "ip_hash", "created_at"),
+        Index("ix_fraud_events_created", "created_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    risk_level: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="OPEN", index=True)
+    reason: Mapped[str] = mapped_column(String(255), nullable=False)
+    evidence_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    ip_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+    review_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
+
+
 class OfferNetwork(Base):
     __tablename__ = "offer_networks"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)

@@ -9,12 +9,16 @@ def current_user(session: str | None = Cookie(default=None, alias=settings.sessi
     user_id = read_session(session) if session else None
     user = db.get(User, user_id) if user_id else None
     if not user: raise HTTPException(401)
+    if user.status in {"SUSPENDED", "BANNED", "PENDING_REVIEW"}:
+        raise HTTPException(403, "This account is unavailable.")
     return user
 
 def current_admin(session: str | None = Cookie(default=None, alias=settings.admin_session_cookie_name), db: Session = Depends(get_db)) -> User:
     user_id = read_session(session) if session else None
     user = db.get(User, user_id) if user_id else None
     if not user: raise HTTPException(401)
+    if user.status in {"SUSPENDED", "BANNED", "PENDING_REVIEW"}:
+        raise HTTPException(403, "This account is unavailable.")
     if not {"ADMIN", "SUPER_ADMIN"}.intersection(role.name for role in user.roles):
         raise HTTPException(403, "Administrator access is required.")
     return user
