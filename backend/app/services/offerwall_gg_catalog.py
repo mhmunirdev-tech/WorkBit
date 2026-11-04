@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from decimal import Decimal
 from urllib.parse import parse_qs, urlsplit
 
@@ -22,6 +23,7 @@ from app.services.rewards import reward_decision_service
 
 API_OFFERS_URL = "https://offerwall.gg/api/v1/offers"
 OFFERWALL_GG_TARGET_COUNTRY = "BD"
+logger = logging.getLogger(__name__)
 
 
 class OfferwallGGCatalogService:
@@ -69,6 +71,10 @@ class OfferwallGGCatalogService:
         except httpx.TimeoutException as error:
             raise HTTPException(503, "Offerwall.GG offers are taking too long to load.") from error
         except httpx.HTTPStatusError as error:
+            logger.warning(
+                "Offerwall.GG catalogue request failed with HTTP status %s.",
+                error.response.status_code,
+            )
             raise HTTPException(
                 503,
                 "Offerwall.GG could not return offers. Check the placement credentials and provider status.",

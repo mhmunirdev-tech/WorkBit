@@ -323,7 +323,7 @@ def test_offerwall_catalog_accepts_empty_inventory(client, monkeypatch):
 
 
 def test_offerwall_catalog_rejects_untrusted_click_url_and_surfaces_upstream_failure(
-    client, monkeypatch
+    client, monkeypatch, caplog
 ):
     configure_offerwall(monkeypatch)
     login(client)
@@ -351,3 +351,24 @@ def test_offerwall_catalog_rejects_untrusted_click_url_and_surfaces_upstream_fai
     unavailable = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
     assert unavailable.status_code == 503
     assert SECRET_KEY not in unavailable.text
+
+    upstream_response = httpx.Response(
+        401,
+        request=httpx.Request("GET", "https://offerwall.gg/api/v1/offers"),
+    )
+    mock_offerwall_catalog(
+        monkeypatch,
+        MockOfferwallClient(
+            payload=None,
+            request_error=httpx.HTTPStatusError(
+                "upstream error",
+                request=upstream_response.request,
+                response=upstream_response,
+            ),
+        ),
+    )
+    upstream_error = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
+
+    assert upstream_error.status_code == 503
+    assert "HTTP status 401" in caplog.text
+    assert SECRET_KEY not in caplog.text
