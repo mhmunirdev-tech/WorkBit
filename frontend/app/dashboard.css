@@ -7427,20 +7427,30 @@ body {
 }
 
 .auth-hero-art {
+  position: relative;
+  z-index: 0;
+  inset: auto;
   display: grid;
   width: 100%;
   min-height: 0;
-  flex: 1 1 auto;
+  height: auto;
+  flex: 1 1 300px;
   place-items: center;
   overflow: hidden;
+  border-radius: 16px;
+  opacity: 1;
+  background: #eaf3ff;
+  mix-blend-mode: normal;
+  mask-image: none;
 }
 
 .auth-hero-art img {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 360px;
+  max-height: 380px;
   object-fit: contain;
+  filter: none;
 }
 
 .auth-page .auth-showcase-copy {
@@ -7629,15 +7639,16 @@ body {
 .auth-form-panel .auth-input-shell > .ui-input,
 .auth-form-panel .auth-input-shell > .relative .ui-input {
   width: 100%;
-  height: 40px;
-  min-height: 40px;
+  height: 48px;
+  min-height: 48px;
   padding: 0 38px;
-  border: 1px solid #dce8f8;
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid #d7e4f4;
+  border-radius: 12px;
+  background: #fbfdff;
   color: #102a56;
   font-size: 13px;
-  box-shadow: none;
+  box-shadow: inset 0 1px 2px #173b5c08;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
 
 .auth-form-panel .auth-input-shell > .relative {
@@ -7656,14 +7667,21 @@ body {
 .auth-form-panel .auth-country-select:focus-visible,
 .auth-form-panel .auth-phone-control:focus-within {
   border-color: #1677f2;
-  outline: 3px solid #1677f21c;
-  outline-offset: 1px;
+  outline: 0;
+  background: #fff;
+  box-shadow: 0 0 0 4px #1677f21c, 0 3px 10px #173b5c0b;
+}
+
+.auth-form-panel .auth-input-shell > .ui-input:hover,
+.auth-form-panel .auth-input-shell > .relative .ui-input:hover {
+  border-color: #b7cde8;
+  background: #fff;
 }
 
 .auth-form-panel .auth-country-select {
   width: 100%;
-  height: 40px;
-  min-height: 40px;
+  height: 48px;
+  min-height: 48px;
   padding: 0 34px 0 12px;
   border: 1px solid #dce8f8;
   border-radius: 10px;
@@ -7675,8 +7693,8 @@ body {
 
 .auth-form-panel .auth-phone-control {
   display: flex;
-  height: 40px;
-  min-height: 40px;
+  height: 48px;
+  min-height: 48px;
   align-items: center;
   gap: 9px;
   overflow: hidden;
