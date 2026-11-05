@@ -3,7 +3,8 @@ export type AdSize =
   | "MEDIUM_RECTANGLE"
   | "MOBILE_BANNER"
   | "LARGE_RECTANGLE"
-  | "HALF_PAGE";
+  | "HALF_PAGE"
+  | "FULLSCREEN";
 
 export type AdType = "BANNER" | "VIDEO" | "INTERSTITIAL" | "REWARDED";
 
@@ -13,4 +14,5 @@ export const amanahAdDimensions: Record<AdSize, { width: number; height: number 
   MOBILE_BANNER: { width: 320, height: 50 },
   LARGE_RECTANGLE: { width: 336, height: 280 },
   HALF_PAGE: { width: 300, height: 600 },
+  FULLSCREEN: { width: 375, height: 667 },
 };

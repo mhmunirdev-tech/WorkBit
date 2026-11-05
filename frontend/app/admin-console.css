@@ -1401,3 +1401,173 @@
   .admin-user-pagination { align-items: flex-start; flex-direction: column; }
   .admin-user-pagination > div { width: 100%; justify-content: space-between; }
 }
+
+.app-shell:not(.admin-app-shell) {
+  --dashboard-ink: #142c4e;
+  --dashboard-muted: #6b7f9a;
+  --dashboard-line: #e2ebf7;
+  --dashboard-blue: #1677f2;
+  background:
+    radial-gradient(ellipse at 92% 0, #e6f2ff 0, transparent 32rem),
+    #f3f8ff;
+}
+
+.app-shell > .app-sidebar {
+  border-right: 1px solid #e1eaf6;
+  background: linear-gradient(180deg, #fff 0%, #f7faff 100%);
+  box-shadow: 8px 0 28px #173b5c08;
+  color: #536783;
+}
+
+.app-shell > .app-sidebar .brand {
+  color: #142c4e;
+}
+
+.app-shell > .app-sidebar .brand i {
+  background: linear-gradient(145deg, #eaf4ff, #d8eaff);
+  color: #1677f2;
+}
+
+.app-shell > .app-sidebar .tagline {
+  color: #8192aa;
+}
+
+.app-shell > .app-sidebar .nav-caption {
+  color: #8295b0;
+}
+
+.app-shell > .app-sidebar .app-nav-link {
+  border: 1px solid transparent;
+  color: #526681;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.app-shell > .app-sidebar .app-nav-link:hover {
+  border-color: #e6effb;
+  background: #f3f8ff;
+  color: #1c4f91;
+}
+
+.app-shell > .app-sidebar .app-nav-link.is-active {
+  border-color: #d7e8ff;
+  background: linear-gradient(100deg, #eaf4ff, #f8fbff);
+  box-shadow: inset 3px 0 #1677f2;
+  color: #145eb9;
+}
+
+.app-shell > .app-sidebar .app-nav-link.is-active .nav-icon,
+.app-shell > .app-sidebar .app-nav-link:hover .nav-icon {
+  color: #1677f2;
+}
+
+.app-shell > .app-sidebar .nav-icon {
+  color: #8297b4;
+}
+
+.app-shell > .app-sidebar .sidebar-account {
+  border-color: #e1eaf6;
+}
+
+.app-shell > .app-sidebar .sidebar-user-copy strong {
+  color: #263f65;
+}
+
+.app-shell > .app-sidebar .sidebar-user-copy small {
+  color: #7588a2;
+}
+
+.app-shell > .app-sidebar .logout-button {
+  color: #7185a0;
+}
+
+.app-shell > .app-sidebar .logout-button:hover {
+  background: #eaf4ff;
+  color: #1677f2;
+}
+
+.app-shell:not(.admin-app-shell) .dashboard-topbar {
+  border-color: #e2ebf7;
+  background: #ffffffed;
+  box-shadow: 0 8px 24px #173b5c08;
+}
+
+.app-shell:not(.admin-app-shell) .dashboard-topbar-title h2 {
+  color: #142c4e;
+}
+
+.app-shell .app-content :is(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea
+) {
+  border-color: #d7e4f4;
+  border-radius: 11px;
+  background-color: #fbfdff;
+  color: #102a56;
+  font: inherit;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+.app-shell .app-content :is(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select
+) {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.app-shell .app-content textarea {
+  min-height: 100px;
+  padding: 11px 12px;
+}
+
+.app-shell .app-content :is(
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea
+):focus-visible {
+  border-color: #1677f2;
+  outline: 0;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px #1677f21c;
+}
+
+.app-shell .app-content .ui-button {
+  border-radius: 11px;
+  font-weight: 700;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.app-shell .app-content .ui-button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.app-shell .app-content .ui-button-default,
+.app-shell .app-content .ui-button.primary,
+.app-shell .app-content .primary {
+  border-color: #1677f2;
+  background: linear-gradient(100deg, #1677f2, #2f9bff);
+  box-shadow: 0 6px 15px #1677f226;
+  color: #fff;
+}
+
+.admin-app-shell {
+  --admin-ink: #142c4e;
+  --admin-muted: #6b7f9a;
+  --admin-line: #e2ebf7;
+  --admin-accent: #1677f2;
+  background:
+    radial-gradient(ellipse at 88% 4%, #e6f2ff 0, transparent 30rem),
+    #f3f8ff;
+}
+
+.admin-app-shell .admin-app-content .admin-console-topbar {
+  border-color: #e2ebf7;
+  background: #ffffffed;
+}
+
+@media (max-width: 800px) {
+  .app-shell > .app-sidebar {
+    box-shadow: 14px 0 35px #173b5c1f;
+  }
+}

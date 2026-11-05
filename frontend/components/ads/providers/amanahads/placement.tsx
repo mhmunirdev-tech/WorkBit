@@ -7,8 +7,8 @@ import { useAmanahPopup } from "./use-amanah-popup";
 import { Button } from "../../../ui/button";
 
 const formats = [
-  { id: "REWARDED", label: "Rewarded", size: "HALF_PAGE" },
-  { id: "INTERSTITIAL", label: "Interstitial", size: "HALF_PAGE" },
+  { id: "REWARDED", label: "Rewarded", size: "FULLSCREEN" },
+  { id: "INTERSTITIAL", label: "Interstitial", size: "FULLSCREEN" },
   { id: "BANNER", label: "Banner", size: "LEADERBOARD" },
   { id: "VIDEO", label: "Video", size: "LEADERBOARD" },
 ] as const;

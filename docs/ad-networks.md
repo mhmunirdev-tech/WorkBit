@@ -1,18 +1,22 @@
 # Display ad network setup
 
-The display providers are intentionally separate from the offer/reward pipeline. Every provider is disabled by default and every frontend adapter returns nothing until its `NEXT_PUBLIC_*_ENABLED` flag and placement configuration are present.
+The display providers are intentionally separate from the offer/reward pipeline. Each placement's activation requirements and page location are listed below: some require an explicit `ENABLED` flag, while others are enabled by a placement key or currently use a configured adapter. Provider inventory and ad fill are controlled by each publisher account, so a rendered placement can still be empty when a provider has no eligible ad to serve.
 
-| Provider | Frontend adapter | Main configuration | Current behavior |
+| Provider | Frontend adapter | Required display configuration | Current behavior |
 | --- | --- | --- | --- |
-| A-ADS | `frontend/components/ads/providers/a-ads/banner.tsx` | `NEXT_PUBLIC_AADS_UNIT_ID` | A-ADS iframe banner |
-| Coinzilla | `frontend/components/ads/providers/coinzilla/native.tsx` | `NEXT_PUBLIC_COINZILLA_ZONE_ID` | Coinzilla native widget |
-| Cointraffic | `frontend/components/ads/providers/cointraffic/banner.tsx` | `NEXT_PUBLIC_COINTRAFFIC_ENABLED`, `NEXT_PUBLIC_COINTRAFFIC_TAG_SRC` | Provider unified code, loaded in the designated placement on `/offers` |
-| PropellerAds | `frontend/components/ads/providers/propellerads/tag.tsx` | `NEXT_PUBLIC_PROPELLERADS_TAG_SRC` | Provider-generated display script |
-| Monetag | `frontend/components/ads/providers/monetag/tag.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED`, `NEXT_PUBLIC_MONETAG_TAG_SRC`, `NEXT_PUBLIC_MONETAG_ZONE_ID` | Fixed display placement in the ad section after the offerwall sections on `/offers` |
-| Bitmedia | `frontend/components/ads/providers/bitmedia/banner.tsx` | `NEXT_PUBLIC_BITMEDIA_PLACEMENT_ID` | Bitmedia JavaScript placement |
+| Adsterra | `frontend/components/ads/providers/adsterra/banner.tsx` | No environment variables; the current placement IDs are configured in the adapter | Social bar, native banner, responsive banners, and desktop side placements on `/offers` |
+| AmanahAds | `frontend/components/ads/providers/amanahads/placement.tsx` | `NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY` | Iframe placements on `/offers`; also offers an explicitly user-opened popup |
+| A-ADS | `frontend/components/ads/providers/a-ads/banner.tsx` | `NEXT_PUBLIC_AADS_ENABLED=true`, `NEXT_PUBLIC_AADS_UNIT_ID`; `NEXT_PUBLIC_AADS_UNIT_SIZE` is optional | Iframe banner on the public homepage and `/offers` |
+| Coinzilla | `frontend/components/ads/providers/coinzilla/native.tsx` | `NEXT_PUBLIC_COINZILLA_ENABLED=true`, `NEXT_PUBLIC_COINZILLA_ZONE_ID` | Coinzilla native widget on `/offers` |
+| Cointraffic | `frontend/components/ads/providers/cointraffic/banner.tsx` | `NEXT_PUBLIC_COINTRAFFIC_ENABLED=true`, `NEXT_PUBLIC_COINTRAFFIC_TAG_SRC`; zone ID is optional | Provider unified code in its placement on `/offers` |
+| PropellerAds | `frontend/components/ads/providers/propellerads/tag.tsx` | `NEXT_PUBLIC_PROPELLERADS_ENABLED=true`, `NEXT_PUBLIC_PROPELLERADS_TAG_SRC`; zone ID is optional | Provider-generated display script in its placement on `/offers` |
+| Monetag | `frontend/components/ads/providers/monetag/tag.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED=true`, `NEXT_PUBLIC_MONETAG_TAG_SRC` | Fixed display placement after the offerwall sections on `/offers`; zone ID is optional metadata |
+| Bitmedia | `frontend/components/ads/providers/bitmedia/banner.tsx` | `NEXT_PUBLIC_BITMEDIA_ENABLED=true`, `NEXT_PUBLIC_BITMEDIA_PLACEMENT_ID`; dimensions are optional | Bitmedia JavaScript placement on `/offers` |
 | ProfitOn | `frontend/app/layout.tsx` | `NEXT_PUBLIC_PROFITON_DOMAIN_VERIFICATION` | Optional domain-verification meta tag only; no ProfitOn ad placement is enabled |
 
 The provider-specific `*_API_KEY` and `*_POSTBACK_SECRET` entries in `.env.example` are reserved for a future server-side integration. They are not read by these display adapters and should remain empty until an approved API/postback flow is implemented and tested.
+
+All display placements are disabled or hidden unless their required values above are present. For Docker Compose, put the public display settings in the repository-root `.env` file and rebuild the frontend image after changing them (for example, `docker compose up --build frontend`). Next.js embeds `NEXT_PUBLIC_*` values during the build, so setting them only on a running container will not enable an ad. For Vercel or another non-Docker deployment, set them in the frontend project's build environment and redeploy.
 
 ## Non-Docker deployment
 
