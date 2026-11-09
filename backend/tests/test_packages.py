@@ -281,7 +281,7 @@ def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
     assert admin.post("/api/v1/offers/mock-game/click").status_code == 202
 
 
-def test_referrer_gets_five_percent_only_after_referred_package_is_approved(client):
+def test_referrer_gets_twenty_percent_first_then_five_percent_after_approval(client):
     from sqlalchemy import select
 
     from app.database.session import SessionLocal
@@ -318,10 +318,10 @@ def test_referrer_gets_five_percent_only_after_referred_package_is_approved(clie
 
     assert login(client).status_code == 200
     wallet = client.get("/api/v1/wallet").json()
-    assert Decimal(wallet["available_balance"]) == Decimal("2.5")
-    assert Decimal(wallet["lifetime_earned"]) == Decimal("2.5")
+    assert Decimal(wallet["available_balance"]) == Decimal("10")
+    assert Decimal(wallet["lifetime_earned"]) == Decimal("10")
     dashboard = client.get("/api/v1/dashboard").json()
-    assert Decimal(dashboard["stats"]["referral_earnings"]) == Decimal("2.5")
+    assert Decimal(dashboard["stats"]["referral_earnings"]) == Decimal("10")
     assert dashboard["stats"]["active_referrals"] == 1
 
     db = SessionLocal()
@@ -336,8 +336,9 @@ def test_referrer_gets_five_percent_only_after_referred_package_is_approved(clie
             )
         ).all()
         assert len(commissions) == 1
-        assert commissions[0].amount == Decimal("2.50000000")
+        assert commissions[0].amount == Decimal("10.00000000")
         assert commissions[0].status == "APPROVED"
+        assert commissions[0].description == "20% referral reward for Standard package"
     finally:
         db.close()
 
@@ -346,7 +347,50 @@ def test_referrer_gets_five_percent_only_after_referred_package_is_approved(clie
         json={"note": "Duplicate attempt."},
     )
     assert duplicate_approval.status_code == 409
-    assert Decimal(client.get("/api/v1/wallet").json()["available_balance"]) == Decimal("2.5")
+    assert Decimal(client.get("/api/v1/wallet").json()["available_balance"]) == Decimal("10")
+
+    assert login(client, "referred-package-user@example.com").status_code == 200
+    second_purchase = client.post(
+        "/api/v1/package-purchases",
+        json={
+            "package_code": "BASIC",
+            "payment_method": "BKASH",
+            "payment_reference": "REFERRED-BASIC-002",
+        },
+    )
+    assert second_purchase.status_code == 201
+    assert login(client, "workbit-admin@example.com").status_code == 200
+    second_approval = client.post(
+        f"/api/v1/admin/package-purchases/{second_purchase.json()['id']}/approve",
+        json={"note": "Second package payment verified."},
+    )
+    assert second_approval.status_code == 200
+
+    assert login(client).status_code == 200
+    assert Decimal(client.get("/api/v1/wallet").json()["available_balance"]) == Decimal("10.5")
+    assert Decimal(client.get("/api/v1/dashboard").json()["stats"]["referral_earnings"]) == Decimal("10.5")
+
+    db = SessionLocal()
+    try:
+        referrer = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        assert referrer is not None
+        commissions = db.scalars(
+            select(WalletTransaction).where(
+                WalletTransaction.user_id == referrer.id,
+                WalletTransaction.type == "REFERRAL_REWARD_APPROVAL",
+            )
+        ).all()
+        assert len(commissions) == 2
+        assert {commission.amount for commission in commissions} == {
+            Decimal("10.00000000"),
+            Decimal("0.50000000"),
+        }
+        assert {commission.description for commission in commissions} == {
+            "20% referral reward for Standard package",
+            "5% referral reward for Basic package",
+        }
+    finally:
+        db.close()
 
 
 def test_rejected_referred_package_does_not_credit_referrer(client):

@@ -15,6 +15,7 @@ class WalletRead(BaseModel):
     lifetime_earned: Decimal
     lifetime_withdrawn: Decimal
     currency: str
+    usd_bdt_rate: Decimal | None = None
 
 
 class WalletTransactionRead(BaseModel):

@@ -32,6 +32,8 @@ The A-ADS dashboard should verify `https://workbitbd.com/`. The unit is rendered
 
 Do not turn display impressions or clicks into WorkBit wallet rewards unless the provider explicitly approves that product and supplies a verified server callback. The current adapters only monetize the platform's ad inventory; they never credit users.
 
+WorkBit displays wallet balances and verified reward amounts as WBC equivalents at `1 WBC = ৳0.50`, using the current admin-configured USD/BDT withdrawal rate. This is a display conversion only: wallet ledger amounts remain USD, and the WBC equivalent can change when that rate changes. Only provider-confirmed survey/offer completions are eligible for wallet credit; ordinary banner impressions and clicks from A-ADS, Adsterra, or Monetag do not earn WBC.
+
 For Monetag, configure a fixed display/banner placement tag from the approved publisher dashboard in `NEXT_PUBLIC_MONETAG_TAG_SRC` and its zone in `NEXT_PUBLIC_MONETAG_ZONE_ID`. The placement is rendered after the offerwall sections and before the WorkBit offer catalog; only the tag configured for that placement is loaded. Do not load Monetag Multitag or register its `sw.js` service worker for this setup, since those integrations can inject ads outside the designated section. The root layout retains the Monetag site-verification meta tag. The app removes a previously registered root `/sw.js` service worker so it cannot continue injecting ads after this change. Redeploy after updating environment variables.
 
 For Cointraffic, add the following frontend Production environment variables in Vercel and redeploy:

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
-import { formatUsd } from "../lib/utils";
+import { formatUsd, formatWbcFromUsd, WBC_VALUE_BDT } from "../lib/utils";
 import { Shell, ShellUser, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -33,6 +33,9 @@ type DashboardData = {
   lifetime_earned: Amount;
   lifetime_withdrawn: Amount;
   currency: string;
+  withdrawal_summary: {
+    usd_bdt_rate: Amount | null;
+  };
   user: ShellUser & {
     referral_url: string;
   };
@@ -55,8 +58,8 @@ const ranges = [
   { label: "90 days", days: 90 },
 ];
 
-function money(value: Amount, currency: string) {
-  return formatUsd(value);
+function money(value: Amount, currency: string, usdBdtRate: Amount | null) {
+  return formatWbcFromUsd(value, usdBdtRate) ?? formatUsd(value);
 }
 
 function dateLabel(value: string) {
@@ -199,7 +202,15 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
   );
 }
 
-function EarningsChart({ points, currency }: { points: DashboardData["earnings_chart"]; currency: string }) {
+function EarningsChart({
+  points,
+  currency,
+  usdBdtRate,
+}: {
+  points: DashboardData["earnings_chart"];
+  currency: string;
+  usdBdtRate: Amount | null;
+}) {
   const [range, setRange] = useState(30);
   const today = new Date().toISOString().slice(0, 10);
   const rangeStart = new Date(`${today}T00:00:00.000Z`);
@@ -227,7 +238,7 @@ function EarningsChart({ points, currency }: { points: DashboardData["earnings_c
           <h2 id="earnings-heading">Earnings overview</h2>
           <p className="panel-subtitle">Approved reward credits from your wallet ledger.</p>
         </div>
-        <strong className="chart-total">{money(total, currency)}</strong>
+        <strong className="chart-total">{money(total, currency, usdBdtRate)}</strong>
       </div>
       <div className="range-tabs" role="group" aria-label="Earnings chart time range">
         {ranges.map((item) => (
@@ -248,7 +259,7 @@ function EarningsChart({ points, currency }: { points: DashboardData["earnings_c
         className="earnings-chart"
         viewBox="0 0 620 180"
         role="img"
-        aria-label={`Approved earnings for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, currency)}.`}
+        aria-label={`Approved earnings for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, currency, usdBdtRate)}.`}
         preserveAspectRatio="none"
       >
         {[24, 68, 112, 160].map((y) => (
@@ -429,25 +440,25 @@ export function Dashboard() {
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
             <p>Earning balance</p>
-            <h2>{money(data.earning_balance, data.currency)}</h2>
-            <small>Available to withdraw or buy packages</small>
+            <h2>{money(data.earning_balance, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
+            <small>{data.withdrawal_summary.usd_bdt_rate ? `1 WBC = ৳${WBC_VALUE_BDT.toFixed(2)} · based on current withdrawal rate` : "WBC estimate unavailable until the USD/BDT rate is configured"}</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
             <p>Earned today</p>
-            <h2>{money(data.stats.today_earnings, data.currency)}</h2>
+            <h2>{money(data.stats.today_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Approved ledger credits</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
             <p>Total earnings</p>
-            <h2>{money(data.lifetime_earned, data.currency)}</h2>
+            <h2>{money(data.lifetime_earned, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Recorded by WorkBit</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
             <p>Total withdrawn</p>
-            <h2>{money(data.lifetime_withdrawn, data.currency)}</h2>
+            <h2>{money(data.lifetime_withdrawn, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Completed wallet movements</small>
           </article></Card>
         </section>
@@ -458,7 +469,7 @@ export function Dashboard() {
               <div><p className="eyebrow">INVITE YOUR NETWORK</p><h2>Your referrals</h2></div>
               <span className="referral-emblem" aria-hidden="true">↗</span>
             </div>
-            <p className="referral-description">Share your WorkBit invite link. Referral rewards are only shown after they are recorded in the wallet ledger.</p>
+            <p className="referral-description">Earn 20% on a referred member’s first package, then 5% on each later package after payment approval. Rewards are added to your wallet and shown in WBC.</p>
             <label className="referral-link-label" htmlFor="referral-link">Your referral link</label>
             <div className="referral-link-row">
               <Input id="referral-link" readOnly value={data.user.referral_url} onFocus={(event) => event.currentTarget.select()} />
@@ -467,12 +478,12 @@ export function Dashboard() {
             <div className="referral-stats">
               <div><strong>{data.stats.referrals}</strong><span>Total referrals</span></div>
               <div><strong>{data.stats.active_referrals}</strong><span>Package members</span></div>
-              <div><strong>{money(data.stats.referral_earnings, data.currency)}</strong><span>Earned</span></div>
+              <div><strong>{money(data.stats.referral_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
             </div>
             <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
             {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
           </article></Card>
-          <EarningsChart points={data.earnings_chart} currency={data.currency} />
+          <EarningsChart points={data.earnings_chart} currency={data.currency} usdBdtRate={data.withdrawal_summary.usd_bdt_rate} />
         </section>
 
         <footer className="dashboard-footer">

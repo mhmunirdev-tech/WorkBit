@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
-import { formatUsd } from "../lib/utils";
+import { ArrowRight, Coins } from "lucide-react";
+import { formatUsd, formatWbcFromUsd } from "../lib/utils";
 import { useLiveRefresh } from "../lib/use-live-refresh";
 import {
   Award,
@@ -42,6 +42,7 @@ export function useShellUser(): ShellUser | null {
 type WalletSnapshot = {
   available_balance: string | number;
   currency: string;
+  usd_bdt_rate: string | number | null;
 };
 
 let cachedWallet: WalletSnapshot | null = null;
@@ -99,7 +100,7 @@ export function Shell({
     pageTitles[pathname] ??
     (pathname.startsWith("/offers/") ? "Offer details" : "WorkBit");
   const availableBalance = wallet
-    ? formatUsd(wallet.available_balance)
+    ? formatWbcFromUsd(wallet.available_balance, wallet.usd_bdt_rate) ?? formatUsd(wallet.available_balance)
     : null;
 
   useEffect(() => {
@@ -253,11 +254,11 @@ export function Shell({
             <Link
               className={`dashboard-wallet-balance${walletLoadError ? " is-unavailable" : ""}`}
               href="/wallet"
-              aria-label={wallet ? `Available balance ${availableBalance}. Open wallet.` : walletLoadError ? "Balance unavailable. Open wallet." : "Loading available balance."}
+              aria-label={wallet ? `Your rewards ${availableBalance}. Open wallet.` : walletLoadError ? "Rewards balance unavailable. Open wallet." : "Loading rewards balance."}
             >
-              <span className="dashboard-wallet-icon"><Wallet size={18} aria-hidden="true" /></span>
+              <span className="dashboard-wallet-icon"><Coins size={18} aria-hidden="true" /></span>
               <span className="dashboard-wallet-copy">
-                <small>Available balance</small>
+                <small>Your Rewards</small>
                 <strong>{availableBalance ?? (walletLoadError ? "Unavailable" : "Loading…")}</strong>
               </span>
               <ArrowRight className="dashboard-wallet-arrow" size={14} aria-hidden="true" />

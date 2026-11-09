@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import current_user, require_permission
 from app.database.session import get_db
-from app.models import RewardDecision, User, UserPayoutAccount
+from app.models import PayoutSettings, RewardDecision, User, UserPayoutAccount
 from app.schemas.wallet import RewardDecisionRead, WalletRead, WalletTransactionRead
 from app.schemas.withdrawals import (
     PayoutAccountCreate,
@@ -44,6 +44,12 @@ def _account_read(account: UserPayoutAccount) -> dict:
 @router.get("/wallet", response_model=WalletRead)
 def wallet(user: User = Depends(current_user), db: Session = Depends(get_db)) -> WalletRead:
     data = wallet_service.wallet_snapshot(db, user)
+    payout_settings = db.get(PayoutSettings, "default")
+    data["usd_bdt_rate"] = (
+        payout_settings.usd_bdt_rate
+        if payout_settings and data["currency"].upper() == "USD"
+        else None
+    )
     return WalletRead(**data)
 
 

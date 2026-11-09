@@ -27,8 +27,8 @@ def test_reward_policy_seed_exists(client):
     try:
         policy = db.scalar(select(RewardPolicy).where(RewardPolicy.name == "default_offer_reward"))
         assert policy is not None
-        assert policy.user_reward_percentage == Decimal("80.00")
-        assert policy.platform_share_percentage == Decimal("20.00")
+        assert policy.user_reward_percentage == Decimal("70.00")
+        assert policy.platform_share_percentage == Decimal("30.00")
         assert policy.minimum_reward == Decimal("0.00")
         assert policy.maximum_reward == Decimal("0.00")
     finally:
@@ -55,9 +55,9 @@ def test_approved_conversion_credits_available_balance_and_is_idempotent(client,
         db.close()
 
     dashboard = client.get("/api/v1/dashboard").json()
-    assert Decimal(dashboard["available_balance"]) == Decimal("1.60")
+    assert Decimal(dashboard["available_balance"]) == Decimal("1.40")
     assert Decimal(dashboard["pending_balance"]) == Decimal("0")
-    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("1.60")
+    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("1.40")
     assert len(dashboard["earnings_chart"]) == 90
     assert client.post(
         "/api/v1/auth/admin/login",
@@ -66,7 +66,7 @@ def test_approved_conversion_credits_available_balance_and_is_idempotent(client,
     admin_dashboard = client.get("/api/v1/admin/dashboard")
     assert admin_dashboard.status_code == 200
     assert Decimal(admin_dashboard.json()["approved_ad_payout"]) == Decimal("2.00")
-    assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == Decimal("0.40")
+    assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == Decimal("0.60")
     assert Decimal(admin_dashboard.json()["registered_user_amount"]) == Decimal("10")
 
 
@@ -103,7 +103,7 @@ def test_provider_approved_reward_is_available_without_admin_approval(client, mo
     assert reward["status"] == "APPROVED"
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
-    assert Decimal(wallet["available_balance"]) == Decimal("1.60")
+    assert Decimal(wallet["available_balance"]) == Decimal("1.40")
     assert client.post(
         "/api/v1/auth/admin/login",
         json={"email": "workbit-admin@example.com", "password": "WorkBitDev123!"},
@@ -111,7 +111,7 @@ def test_provider_approved_reward_is_available_without_admin_approval(client, mo
     dashboard = client.get("/api/v1/admin/dashboard")
     assert dashboard.status_code == 200
     assert Decimal(dashboard.json()["approved_ad_payout"]) == Decimal("2.00")
-    assert Decimal(dashboard.json()["platform_ad_revenue"]) == Decimal("0.40")
+    assert Decimal(dashboard.json()["platform_ad_revenue"]) == Decimal("0.60")
     assert Decimal(dashboard.json()["registered_user_amount"]) == Decimal("10")
 
 
@@ -142,7 +142,7 @@ def test_provider_pending_conversion_credits_available_balance_when_approved(cli
 
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
-    assert Decimal(wallet["available_balance"]) == Decimal("1.60")
+    assert Decimal(wallet["available_balance"]) == Decimal("1.40")
 
     decision = client.get("/api/v1/rewards").json()[0]
     assert decision["status"] == "APPROVED"
@@ -174,7 +174,7 @@ def test_provider_approved_reward_is_available_without_reward_holding_period(cli
     decision = client.get("/api/v1/rewards").json()[0]
     assert decision["status"] == "APPROVED"
     wallet = client.get("/api/v1/wallet").json()
-    assert Decimal(wallet["available_balance"]) == Decimal("0.80")
+    assert Decimal(wallet["available_balance"]) == Decimal("0.70")
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
 
 
@@ -227,7 +227,7 @@ def test_manual_review_approval_credits_wallet_and_rejecting_approved_reward_con
         json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
     ).status_code == 200
     wallet = client.get("/api/v1/wallet").json()
-    assert Decimal(wallet["available_balance"]) == Decimal("1.60")
+    assert Decimal(wallet["available_balance"]) == Decimal("1.40")
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
 
 

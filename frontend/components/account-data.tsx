@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useLiveRefresh } from "../lib/use-live-refresh";
-import { formatUsd } from "../lib/utils";
+import { formatUsd, formatWbcFromUsd, WBC_VALUE_BDT } from "../lib/utils";
 import { Shell, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Badge } from "./ui/badge";
@@ -24,6 +24,7 @@ type Wallet = {
   lifetime_earned: string;
   lifetime_withdrawn: string;
   currency: string;
+  usd_bdt_rate: string | null;
 };
 type Transaction = {
   id: string;
@@ -46,6 +47,10 @@ type Reward = {
 
 function amount(value: string, currency: string) {
   return formatUsd(value);
+}
+
+function balanceAmount(value: string, rate: string | null) {
+  return formatWbcFromUsd(value, rate) ?? formatUsd(value);
 }
 
 function useAccountData<T>(path: string) {
@@ -89,22 +94,30 @@ export function WalletPage() {
         ["Pending", data.pending_balance, "Awaiting provider confirmation"],
         ["Total earned", data.lifetime_earned, "Ledger-recorded"],
         ["Total withdrawn", data.lifetime_withdrawn, "Completed withdrawals"],
-      ].map(([title, value, note]) => <Card className="stat" asChild key={title}><article><p>{title}</p><h2>{amount(value, data.currency)}</h2><small>{note}</small></article></Card>)}
-    </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p>Approved deposits can only be used for earning packages and are not withdrawable. Approved earnings can be withdrawn or used for a package. Each package stays active for the duration shown in the package catalog when you purchase it.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
+      ].map(([title, value, note]) => <Card className="stat" asChild key={title}><article><p>{title}</p><h2>{balanceAmount(value, data.usd_bdt_rate)}</h2><small>{note}</small></article></Card>)}
+    </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p><strong>1 WBC = ৳{WBC_VALUE_BDT.toFixed(2)}.</strong> Your WBC balance is the BDT equivalent of your USD wallet, calculated using the current USD/BDT withdrawal rate and the WBC value above. Your underlying wallet and ledger remain in USD, so the displayed WBC amount can change when the admin exchange rate changes. Approved deposits can only be used for earning packages and are not withdrawable. Approved earnings can be withdrawn or used for a package. Each package stays active for the duration shown in the package catalog when you purchase it.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
     <WithdrawalPage embedded />
   </Shell>;
 }
 
 export function TransactionsPage() {
   const { data, loading, error } = useAccountData<Transaction[]>("/wallet/transactions");
-  return <Shell><header className="top"><div><p className="eyebrow">WALLET LEDGER</p><h1>Transactions</h1><p className="muted">Append-only records of movements that affect your wallet.</p></div></header>
-    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel table-panel"><Table className="ledger-table" aria-label="Wallet transactions"><TableHeader><TableRow className="ledger-heading"><TableHead>Transaction</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead></TableRow></TableHeader><TableBody>{data.map((item) => <TableRow className="ledger-row" key={item.id}><TableCell><strong>{item.description || item.type.replaceAll("_", " ")}</strong><small>{item.type.replaceAll("_", " ")}</small></TableCell><TableCell><strong>{amount(item.amount, item.currency)}</strong></TableCell><TableCell><Badge className="status-badge" variant="outline">{item.status}</Badge></TableCell><TableCell><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></TableCell></TableRow>)}</TableBody></Table></Card>}</PageState>
+  const { data: wallet } = useAccountData<Wallet>("/wallet");
+  return <Shell><header className="top"><div><p className="eyebrow">WALLET LEDGER</p><h1>Earnings history</h1><p className="muted">Append-only records of wallet activity. Referral rewards are shown in WBC using the current exchange rate.</p></div></header>
+    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel table-panel"><Table className="ledger-table" aria-label="Wallet transactions"><TableHeader><TableRow className="ledger-heading"><TableHead>Transaction</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead></TableRow></TableHeader><TableBody>{data.map((item) => {
+      const isReferralReward = item.type === "REFERRAL_REWARD_APPROVAL";
+      const displayedAmount = isReferralReward
+        ? formatWbcFromUsd(item.amount, wallet?.usd_bdt_rate) ?? amount(item.amount, item.currency)
+        : amount(item.amount, item.currency);
+      return <TableRow className="ledger-row" key={item.id}><TableCell><strong>{item.description || item.type.replaceAll("_", " ")}</strong><small>{item.type.replaceAll("_", " ")}</small></TableCell><TableCell><strong>{displayedAmount}</strong></TableCell><TableCell><Badge className="status-badge" variant="outline">{item.status}</Badge></TableCell><TableCell><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></TableCell></TableRow>;
+    })}</TableBody></Table></Card>}</PageState>
   </Shell>;
 }
 
 export function RewardsPage() {
   const { data, loading, error } = useAccountData<Reward[]>("/rewards");
-  return <Shell><header className="top"><div><p className="eyebrow">REWARD HISTORY</p><h1>Your rewards</h1><p className="muted">Reward decisions linked to provider-reported conversions.</p></div></header>
-    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel reward-list">{data.map((item) => <article className="reward-row" key={item.id}><div><strong>{amount(item.user_reward, item.currency)}</strong><small>Provider payout {amount(item.provider_payout, item.currency)} · {new Date(item.created_at).toLocaleString()}</small></div><Badge className="status-badge" variant="outline">{item.status}</Badge></article>)}</Card>}</PageState>
+  const { data: wallet } = useAccountData<Wallet>("/wallet");
+  return <Shell><header className="top"><div><p className="eyebrow">REWARD HISTORY</p><h1>Your rewards</h1><p className="muted">Verified provider rewards are shown as WBC equivalents at the current USD/BDT rate. Provider payout amounts and the underlying wallet ledger remain in USD.</p></div></header>
+    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel reward-list">{data.map((item) => <article className="reward-row" key={item.id}><div><strong>{formatWbcFromUsd(item.user_reward, wallet?.usd_bdt_rate) ?? amount(item.user_reward, item.currency)}</strong><small>Provider payout {amount(item.provider_payout, item.currency)} · {new Date(item.created_at).toLocaleString()}</small></div><Badge className="status-badge" variant="outline">{item.status}</Badge></article>)}</Card>}</PageState>
   </Shell>;
 }

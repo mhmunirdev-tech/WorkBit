@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,8 @@ INITIAL_PACKAGES = (
     ("VIP_PRO", "VIP Pro", "Details", Decimal("1000.00"), 1825, 50),
     ("FOUNDER", "Founder", "Package Duration", Decimal("500.00"), 3650, 60),
 )
-REFERRAL_COMMISSION_RATE = Decimal("0.05")
+FIRST_REFERRAL_COMMISSION_RATE = Decimal("0.20")
+REPEAT_REFERRAL_COMMISSION_RATE = Decimal("0.05")
 REFERRAL_COMMISSION_TYPE = "REFERRAL_REWARD_APPROVAL"
 REFERRAL_COMMISSION_PRECISION = Decimal("0.00000001")
 
@@ -282,7 +283,11 @@ class PackageService:
 
     @staticmethod
     def _credit_referral_commission(db: Session, purchase: PackagePurchase) -> None:
-        referred_user = db.get(User, purchase.user_id)
+        referred_user = db.scalar(
+            select(User)
+            .where(User.id == purchase.user_id)
+            .with_for_update()
+        )
         if referred_user is None or referred_user.referred_by is None:
             return
 
@@ -296,6 +301,19 @@ class PackageService:
         if existing_commission:
             return
 
+        previous_approved_purchases = db.scalar(
+            select(func.count(PackagePurchase.id)).where(
+                PackagePurchase.user_id == purchase.user_id,
+                PackagePurchase.status == "APPROVED",
+                PackagePurchase.id != purchase.id,
+            )
+        ) or 0
+        commission_rate = (
+            REPEAT_REFERRAL_COMMISSION_RATE
+            if previous_approved_purchases
+            else FIRST_REFERRAL_COMMISSION_RATE
+        )
+
         referrer_wallet = db.scalar(
             select(Wallet)
             .where(Wallet.user_id == referred_user.referred_by)
@@ -306,7 +324,7 @@ class PackageService:
         if referrer_wallet.currency.upper() != purchase.currency.upper():
             raise HTTPException(409, "The package currency does not match the referring account wallet.")
 
-        commission = (purchase.amount * REFERRAL_COMMISSION_RATE).quantize(
+        commission = (purchase.amount * commission_rate).quantize(
             REFERRAL_COMMISSION_PRECISION,
             rounding=ROUND_HALF_UP,
         )
@@ -326,13 +344,13 @@ class PackageService:
                 status="APPROVED",
                 reference_type="package_purchase",
                 reference_id=purchase.id,
-                description=f"5% referral commission for {purchase.package_name} package",
+                description=f"{commission_rate:.0%} referral reward for {purchase.package_name} package",
                 metadata_json=json.dumps(
                     {
                         "purchase_id": purchase.id,
                         "referred_user_id": purchase.user_id,
                         "package_amount": str(purchase.amount),
-                        "commission_rate": str(REFERRAL_COMMISSION_RATE),
+                        "commission_rate": str(commission_rate),
                     }
                 ),
                 balance_before=before,
@@ -354,6 +372,8 @@ class PackageService:
             .order_by(PackagePurchase.expires_at.desc())
             .limit(1)
         )
+        if prior_expiry and prior_expiry.tzinfo is None:
+            prior_expiry = prior_expiry.replace(tzinfo=timezone.utc)
         starts_at = prior_expiry if prior_expiry and prior_expiry > now else now
         purchase.starts_at = starts_at
         purchase.expires_at = starts_at + timedelta(days=purchase.duration_days)
