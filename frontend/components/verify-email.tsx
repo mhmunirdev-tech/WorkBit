@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { AuthShowcase } from "./auth-showcase";
 
 export function VerifyEmail({ email: initialEmail }: { email: string }) {
   const [email, setEmail] = useState(initialEmail);
@@ -75,8 +76,9 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
 
   return (
     <main className="auth-page">
-      <Link className="brand auth-brand" href="/"><i>W</i> WorkBit</Link>
-      <Card className="auth-card" asChild><section aria-live="polite">
+      <div className="auth-layout">
+      <AuthShowcase />
+      <Card className="auth-card auth-form-panel" asChild><section aria-live="polite">
         <p className="eyebrow">EMAIL VERIFICATION</p>
         <h1>{state === "success" ? "Email verified" : "Enter your verification code"}</h1>
         <p>
@@ -85,7 +87,7 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
             : "Enter the six-digit code we sent to your email address. The code expires after 10 minutes."}
         </p>
         {state === "pending" && (
-          <form onSubmit={(event) => void verify(event)} noValidate>
+          <form className="auth-form" onSubmit={(event) => void verify(event)} noValidate>
             <Label>
               Email address
               <Input
@@ -132,6 +134,7 @@ export function VerifyEmail({ email: initialEmail }: { email: string }) {
         )}
         <p><Link href="/login">Return to sign in</Link></p>
       </section></Card>
+      </div>
     </main>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { countries, type TCountryCode } from "countries-list";
-import { ArrowRight, ChevronDown, LockKeyhole, Mail, ShieldCheck, Smartphone, UserRound, UsersRound, Zap } from "lucide-react";
+import { ArrowRight, ChevronDown, LockKeyhole, Mail, Smartphone, UserRound } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
+import { AuthShowcase } from "./auth-showcase";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -158,30 +158,7 @@ export function AuthForm({
   return (
     <main className={`auth-page auth-page-${mode}`}>
       <div className="auth-layout">
-        <aside className="auth-showcase" aria-label="WorkBit welcome">
-          <Link className="brand auth-showcase-brand" href="/"><i>W</i> WorkBit</Link>
-          <div className="auth-hero-art">
-            <Image
-              src="/images/auth-background.png"
-              alt="A WorkBit member working at a laptop, with secure account and community symbols"
-              width={1536}
-              height={1024}
-              priority
-              unoptimized
-              sizes="(max-width: 700px) 100vw, 50vw"
-            />
-          </div>
-          <div className="auth-showcase-copy">
-            <span className="auth-showcase-mark">WORK SMARTER</span>
-            <h2>Your journey <span>begins here.</span></h2>
-            <p>Make your ideas a reality with a community built around progress and rewards.</p>
-          </div>
-          <div className="auth-benefits">
-            <div><Zap aria-hidden="true" /><span><strong>Fast &amp; Easy</strong><small>Get started in minutes</small></span></div>
-            <div><ShieldCheck aria-hidden="true" /><span><strong>Secure</strong><small>Your data is safe</small></span></div>
-            <div><UsersRound aria-hidden="true" /><span><strong>Grow Together</strong><small>Build your future</small></span></div>
-          </div>
-        </aside>
+        <AuthShowcase />
         <Card className="auth-card auth-form-panel" asChild><section>
         <Link className="auth-brand-badge" href="/"><i>W</i><span>WorkBit</span></Link>
         <h1>{title}</h1>

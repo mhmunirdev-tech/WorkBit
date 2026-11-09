@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Label } from "./ui/label";
 import { PasswordInput } from "./ui/password-input";
+import { AuthShowcase } from "./auth-showcase";
 
 export function ResetPassword({ token }: { token: string | null }) {
   const [busy, setBusy] = useState(false);
@@ -66,8 +67,9 @@ export function ResetPassword({ token }: { token: string | null }) {
 
   return (
     <main className="auth-page">
-      <Link className="brand auth-brand" href="/"><i>W</i> WorkBit</Link>
-      <Card className="auth-card" asChild><section>
+      <div className="auth-layout">
+      <AuthShowcase />
+      <Card className="auth-card auth-form-panel" asChild><section>
         <p className="eyebrow">ACCOUNT SECURITY</p>
         <h1>Reset your password</h1>
         {success ? (
@@ -78,7 +80,7 @@ export function ResetPassword({ token }: { token: string | null }) {
         ) : (
           <>
             {token ? (
-              <form onSubmit={submit}>
+              <form className="auth-form" onSubmit={submit}>
                 <Label>
                   New password
                   <PasswordInput name="password" minLength={12} maxLength={128} required autoComplete="new-password" />
@@ -99,6 +101,7 @@ export function ResetPassword({ token }: { token: string | null }) {
           </>
         )}
       </section></Card>
+      </div>
     </main>
   );
 }

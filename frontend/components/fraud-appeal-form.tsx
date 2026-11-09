@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { AuthShowcase } from "./auth-showcase";
 
 export function FraudAppealForm() {
   const [email, setEmail] = useState("");
@@ -56,8 +57,9 @@ export function FraudAppealForm() {
 
   return (
     <main className="auth-page auth-page-login">
-      <Card className="auth-card fraud-appeal-card">
-        <Link className="auth-brand-badge" href="/"><i>W</i><span>WorkBit</span></Link>
+      <div className="auth-layout">
+      <AuthShowcase />
+      <Card className="auth-card auth-form-panel fraud-appeal-card" asChild><section>
         <h1>Request an account review</h1>
         <p className="auth-subtitle">If your account is restricted, request a manual review using its verified email address.</p>
         <form className="auth-form" onSubmit={codeSent ? submitAppeal : requestCode}>
@@ -108,7 +110,8 @@ export function FraudAppealForm() {
         {message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}
         {submitted && <p>Your appeal is queued for manual review. Account access is not restored automatically.</p>}
         <p><Link href="/login">Return to sign in</Link></p>
-      </Card>
+      </section></Card>
+      </div>
     </main>
   );
 }
