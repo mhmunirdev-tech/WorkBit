@@ -29,7 +29,7 @@ The screenshot's Security Hash was visible in the conversation. Rotate it in CPX
 
 ## BitLabs
 
-The BitLabs integration uses the provider-hosted web offerwall in an iframe and the general Reward & Reconciliation callback. The authenticated `GET /api/v1/offers/providers/bitlabs/wall-url` endpoint requires an approved active WorkBit earning package and returns the documented `https://web.bitlabs.ai/?uid=<workbit-user-id>&token=<app-api-token>` URL. The BitLabs App/API Token is necessarily visible in that iframe URL; do not use it as a secret. The URL is returned with `Cache-Control: no-store`.
+The BitLabs integration uses the provider-hosted web offerwall in an iframe and the general Reward & Reconciliation callback. The authenticated `GET /api/v1/offers/providers/bitlabs/wall-url` endpoint returns the documented `https://web.bitlabs.ai/?uid=<workbit-user-id>&token=<app-api-token>` URL; package purchase is not required. The BitLabs App/API Token is necessarily visible in that iframe URL; do not use it as a secret. The URL is returned with `Cache-Control: no-store`.
 
 Configure these backend environment variables:
 
@@ -46,7 +46,7 @@ Only completed callbacks with a positive `VALUE:USD` are processed. Screen-outs,
 
 ## TheoremReach
 
-TheoremReach appears in Explore offers as a provider-hosted web survey iframe. The authenticated `GET /api/v1/offers/providers/theoremreach/wall-url` endpoint requires an approved active WorkBit earning package. It builds the direct entry URL server-side with the WorkBit user UUID, a unique entry transaction ID, the configured partner/placement ID, and the app currency settings. The URL is signed with the TheoremReach app secret using HMAC-SHA1 over the complete unsigned URL, then URL-safe Base64 encoding of the raw digest. The API key is required in the iframe URL by TheoremReach; the secret key is never sent to the browser. The URL response is marked `Cache-Control: no-store`.
+TheoremReach appears in Explore offers as a provider-hosted web survey iframe. The authenticated `GET /api/v1/offers/providers/theoremreach/wall-url` endpoint does not require a WorkBit package purchase. It builds the direct entry URL server-side with the WorkBit user UUID, a unique entry transaction ID, the configured partner/placement ID, and the app currency settings. The URL is signed with the TheoremReach app secret using HMAC-SHA1 over the complete unsigned URL, then URL-safe Base64 encoding of the raw digest. The API key is required in the iframe URL by TheoremReach; the secret key is never sent to the browser. The URL response is marked `Cache-Control: no-store`.
 
 Configure these backend environment variables:
 
@@ -66,7 +66,7 @@ The callback verifies the URL-safe Base64 HMAC-SHA1 over the exact HTTPS callbac
 
 ## Offerwall.GG
 
-Explore offers displays a WorkBit-native Offerwall.GG card catalog (not the provider-hosted full-page wall) when `OFFERWALL_GG_ENABLED=true` and the backend public/secret keys are configured. The authenticated `GET /api/v1/offers/providers/offerwall-gg/catalog` endpoint requires an approved active earning package and requests targeted, paginated inventory using the stable WorkBit user UUID and country `BD`, regardless of the account's country. Offerwall.GG therefore returns eligible inventory for Bangladesh across its available categories. The backend sends the secret only in the `X-Api-Key` header, validates the response and user-specific tracked click URLs, and sets `Cache-Control: no-store`. The browser follows only Offerwall.GG's returned click URL, never a direct advertiser URL. The older `GET /api/v1/offers/providers/offerwall-gg/wall-url` endpoint remains available and generates the documented HMAC-SHA256 signature over the sorted `appId` and user UUID; it is not used by the Explore offers UI.
+Explore offers displays a WorkBit-native Offerwall.GG card catalog (not the provider-hosted full-page wall) when `OFFERWALL_GG_ENABLED=true` and the backend public/secret keys are configured. The authenticated `GET /api/v1/offers/providers/offerwall-gg/catalog` endpoint does not require a WorkBit package purchase and requests targeted, paginated inventory using the stable WorkBit user UUID and country `BD`, regardless of the account's country. Offerwall.GG therefore returns eligible inventory for Bangladesh across its available categories. The backend sends the secret only in the `X-Api-Key` header, validates the response and user-specific tracked click URLs, and sets `Cache-Control: no-store`. The browser follows only Offerwall.GG's returned click URL, never a direct advertiser URL. The older `GET /api/v1/offers/providers/offerwall-gg/wall-url` endpoint remains available and generates the documented HMAC-SHA256 signature over the sorted `appId` and user UUID; it is not used by the Explore offers UI.
 
 The catalog supports `page` (1-based), `limit` (1-200), `search`, and `category`. The frontend starts with 50 offers and requests the next page when the user chooses **Load more offers**. Country is fixed to Bangladesh (`BD`) and device targeting comes from the request's browser user-agent. The returned estimate applies WorkBit's currently active reward policy, including its rounding; it is not the provider's gross payout and does not guarantee a credit.
 

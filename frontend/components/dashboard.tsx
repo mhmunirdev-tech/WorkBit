@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Check, PackageCheck, Pause, Play, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd, formatWbcFromUsd, WBC_VALUE_BDT } from "../lib/utils";
@@ -37,11 +37,15 @@ type DashboardData = {
     usd_bdt_rate: Amount | null;
   };
   user: ShellUser & {
+    id: string;
     referral_url: string;
   };
   stats: {
     referrals: number;
     active_referrals: number;
+    daily_offers_completed: number;
+    daily_offers_goal: number;
+    daily_streak_days: number;
     today_earnings: Amount;
     week_earnings: Amount;
     month_earnings: Amount;
@@ -50,6 +54,118 @@ type DashboardData = {
   };
   earnings_chart: Array<{ date: string; amount: Amount }>;
 };
+
+function GettingStarted({ userId }: { userId: string }) {
+  const [visible, setVisible] = useState(true);
+  const [language, setLanguage] = useState<"en" | "bn">("en");
+
+  useEffect(() => {
+    setVisible(localStorage.getItem(`workbit-onboarding:${userId}`) !== "done");
+  }, [userId]);
+
+  if (!visible) return null;
+
+  const copy = language === "bn"
+    ? {
+        eyebrow: "শুরু করার নির্দেশিকা",
+        title: "WorkBit-এ শুরু করুন",
+        steps: [
+          ["১. অফার দেখুন", "আপনার দেশ ও ডিভাইসের জন্য উপলভ্য অফার বেছে নিন।"],
+          ["২. শর্ত মেনে কাজ করুন", "শুরু করার আগে অফারের সব শর্ত পড়ুন।"],
+          ["৩. যাচাইয়ের অপেক্ষা করুন", "প্রোভাইডার নিশ্চিত করলে তবেই রিওয়ার্ড যোগ হবে।"],
+          ["৪. ব্যালেন্স ও উত্তোলন দেখুন", "ওয়ালেটে রিওয়ার্ডের অবস্থা এবং ন্যূনতম উত্তোলন দেখুন।"],
+        ],
+        note: "শুরু করতে কোনো প্যাকেজ কেনা বাধ্যতামূলক নয়। রিওয়ার্ড নিশ্চিত নয়।",
+        language: "English",
+        dismiss: "নির্দেশিকা বন্ধ করুন",
+      }
+    : {
+        eyebrow: "GETTING STARTED",
+        title: "Start earning on WorkBit",
+        steps: [
+          ["1. Browse offers", "Choose offers available for your country and device."],
+          ["2. Follow the requirements", "Read every offer term before you begin."],
+          ["3. Wait for verification", "Rewards are recorded after provider confirmation."],
+          ["4. Track your wallet", "Check reward status and the minimum withdrawal."],
+        ],
+        note: "You do not need to buy a package to get started. Rewards are not guaranteed.",
+        language: "বাংলা",
+        dismiss: "Dismiss guide",
+      };
+
+  const localizedCopy = language === "bn"
+    ? {
+        eyebrow: "শুরু করার নির্দেশিকা",
+        title: "WorkBit-এ শুরু করুন",
+        steps: [
+          ["১. অফার দেখুন", "আপনার দেশ ও ডিভাইসের জন্য উপলভ্য অফার বেছে নিন।"],
+          ["২. শর্ত মেনে কাজ করুন", "শুরু করার আগে অফারের সব শর্ত পড়ে নিন।"],
+          ["৩. যাচাইয়ের অপেক্ষা করুন", "প্রোভাইডার নিশ্চিত করার পরই রিওয়ার্ড যোগ হবে।"],
+          ["৪. ব্যালেন্স ও উত্তোলন দেখুন", "ওয়ালেটে রিওয়ার্ডের অবস্থা এবং ন্যূনতম উত্তোলন দেখুন।"],
+        ],
+        note: "শুরু করতে কোনো প্যাকেজ কেনা বাধ্যতামূলক নয়। রিওয়ার্ড নিশ্চিত নয়।",
+        language: "English",
+        dismiss: "নির্দেশিকা বন্ধ করুন",
+      }
+    : { ...copy, language: "বাংলা" };
+
+  const displayCopy = language === "bn"
+    ? {
+        eyebrow: "\u09b6\u09c1\u09b0\u09c1 \u0995\u09b0\u09be\u09b0 \u09a8\u09bf\u09b0\u09cd\u09a6\u09c7\u09b6\u09bf\u0995\u09be",
+        title: "WorkBit-\u098f \u09b6\u09c1\u09b0\u09c1 \u0995\u09b0\u09c1\u09a8",
+        steps: [
+          ["\u09e7. \u0985\u09ab\u09be\u09b0 \u09a6\u09c7\u0996\u09c1\u09a8", "\u0986\u09aa\u09a8\u09be\u09b0 \u09a6\u09c7\u09b6 \u0993 \u09a1\u09bf\u09ad\u09be\u0987\u09b8\u09c7\u09b0 \u099c\u09a8\u09cd\u09af \u0989\u09aa\u09b2\u09ad\u09cd\u09af \u0985\u09ab\u09be\u09b0 \u09ac\u09c7\u099b\u09c7 \u09a8\u09bf\u09a8।"],
+          ["\u09e8. \u09b6\u09b0\u09cd\u09a4 \u09ae\u09c7\u09a8\u09c7 \u0995\u09be\u099c \u0995\u09b0\u09c1\u09a8", "\u09b6\u09c1\u09b0\u09c1\u09b0 \u0986\u0997\u09c7 \u0985\u09ab\u09be\u09b0\u09c7\u09b0 \u09b8\u09ac \u09b6\u09b0\u09cd\u09a4 \u09aa\u09a1\u09bc\u09c7 \u09a8\u09bf\u09a8।"],
+          ["\u09e9. \u09af\u09be\u099a\u09be\u0987\u09df\u09c7\u09b0 \u0985\u09aa\u09c7\u0995\u09cd\u09b7\u09be \u0995\u09b0\u09c1\u09a8", "\u09aa\u09cd\u09b0\u09cb\u09ad\u09be\u0987\u09a1\u09be\u09b0 \u09a8\u09bf\u09b6\u09cd\u099a\u09bf\u09a4 \u0995\u09b0\u09b2\u09c7\u0987 \u09b0\u09bf\u0993\u09df\u09be\u09b0\u09cd\u09a1 \u09af\u09cb\u0997 \u09b9\u09ac\u09c7।"],
+          ["\u09ea. \u09ac\u09cd\u09af\u09be\u09b2\u09c7\u09a8\u09cd\u09b8 \u0993 \u0989\u09a4\u09cd\u09a4\u09cb\u09b2\u09a8 \u09a6\u09c7\u0996\u09c1\u09a8", "\u0993\u09df\u09be\u09b2\u09c7\u099f\u09c7 \u09b0\u09bf\u0993\u09df\u09be\u09b0\u09cd\u09a1\u09c7\u09b0 \u0985\u09ac\u09b8\u09cd\u09a5\u09be \u098f\u09ac\u0982 \u09a8\u09cd\u09af\u09c2\u09a8\u09a4\u09ae \u0989\u09a4\u09cd\u09a4\u09cb\u09b2\u09a8 \u09a6\u09c7\u0996\u09c1\u09a8।"],
+        ],
+        note: "\u09b6\u09c1\u09b0\u09c1 \u0995\u09b0\u09a4\u09c7 \u0995\u09cb\u09a8\u09cb \u09aa\u09cd\u09af\u09be\u0995\u09c7\u099c \u0995\u09c7\u09a8\u09be \u09ac\u09be\u09a7\u09cd\u09af\u09a4\u09be\u09ae\u09c2\u09b2\u0995 \u09a8\u09df। \u09b0\u09bf\u0993\u09df\u09be\u09b0\u09cd\u09a1 \u09a8\u09bf\u09b6\u09cd\u099a\u09bf\u09a4 \u09a8\u09df।",
+        language: "English",
+        dismiss: "\u09a8\u09bf\u09b0\u09cd\u09a6\u09c7\u09b6\u09bf\u0995\u09be \u09ac\u09a8\u09cd\u09a7 \u0995\u09b0\u09c1\u09a8",
+      }
+    : { ...localizedCopy, language: "\u09ac\u09be\u0982\u09b2\u09be" };
+
+  return (
+    <Card className="getting-started-card">
+      <div className="getting-started-heading">
+        <div><p className="eyebrow">{displayCopy.eyebrow}</p><h2>{displayCopy.title}</h2></div>
+        <div className="getting-started-actions">
+          <Button type="button" variant="outline" size="sm" onClick={() => setLanguage(language === "en" ? "bn" : "en")}>
+            {displayCopy.language}
+          </Button>
+          <Button type="button" variant="ghost" size="icon" aria-label={displayCopy.dismiss} onClick={() => {
+            localStorage.setItem(`workbit-onboarding:${userId}`, "done");
+            setVisible(false);
+          }}>
+            <X size={17} />
+          </Button>
+        </div>
+      </div>
+      <ol className="getting-started-steps">
+        {displayCopy.steps.map(([title, description]) => <li key={title}><span aria-hidden="true"><Check size={15} /></span><div><strong>{title}</strong><p>{description}</p></div></li>)}
+      </ol>
+      <p className="getting-started-note">{displayCopy.note}</p>
+    </Card>
+  );
+}
+
+function DailyChallenge({ completed, goal, streak }: { completed: number; goal: number; streak: number }) {
+  const progress = Math.min(completed, goal);
+  const complete = completed >= goal;
+  return (
+    <Card className="daily-challenge-card">
+      <div className="daily-challenge-heading">
+        <div><p className="eyebrow">DAILY CHALLENGE · UTC</p><h2>Get 3 offers verified today</h2></div>
+        <div className="daily-challenge-summary"><strong>{progress}/{goal}</strong><span>{streak}-day streak</span></div>
+      </div>
+      <div className="daily-challenge-track" role="progressbar" aria-label="Daily verified offer progress" aria-valuemin={0} aria-valuemax={goal} aria-valuenow={progress}>
+        <span style={{ width: `${goal ? (progress / goal) * 100 : 0}%` }} />
+      </div>
+      <p>{complete ? "Challenge complete. Your verified activity badge is earned for today." : `${goal - progress} more provider-approved ${goal - progress === 1 ? "offer" : "offers"} to complete today’s challenge.`}</p>
+      <small>This is a progress badge only; it does not add a cash bonus.</small>
+    </Card>
+  );
+}
 
 const ranges = [
   { label: "Today", days: 1 },
@@ -420,8 +536,8 @@ export function Dashboard() {
               data.package_purchase_status !== "PENDING" && (
               <Button className="dashboard-cta deposit-cta" variant="outline" asChild>
                 <Link href="/packages">
-                  <ArrowDownToLine size={16} aria-hidden="true" />
-                  Deposit
+                  <PackageCheck size={16} aria-hidden="true" />
+                  Optional packages
                 </Link>
               </Button>
             )}
@@ -436,6 +552,21 @@ export function Dashboard() {
 
         {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
 
+        <div className="dashboard-section-heading">
+          <div><p className="eyebrow">START HERE</p><h2>Understand your earning journey</h2></div>
+          <p>Use this guide and today&apos;s progress card to see what to do next. Rewards appear after provider verification.</p>
+        </div>
+        <GettingStarted userId={data.user.id} />
+        <DailyChallenge
+          completed={data.stats.daily_offers_completed}
+          goal={data.stats.daily_offers_goal}
+          streak={data.stats.daily_streak_days}
+        />
+
+        <div className="dashboard-section-heading dashboard-section-heading-compact">
+          <div><p className="eyebrow">YOUR MONEY</p><h2>Balance overview</h2></div>
+          <p>Only approved earning activity is shown as withdrawable.</p>
+        </div>
         <section className="dashboard-metrics" aria-label="Earnings and withdrawals">
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
@@ -463,6 +594,10 @@ export function Dashboard() {
           </article></Card>
         </section>
 
+        <div className="dashboard-section-heading dashboard-section-heading-compact">
+          <div><p className="eyebrow">ACTIVITY & COMMUNITY</p><h2>Keep earning with confidence</h2></div>
+          <p>Share WorkBit with people you trust and review your verified activity over time.</p>
+        </div>
         <section className="dashboard-community-grid" aria-label="Referral and verified earnings">
           <Card className="panel referral-panel" asChild><article>
             <div className="panel-heading">
@@ -481,6 +616,7 @@ export function Dashboard() {
               <div><strong>{money(data.stats.referral_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
             </div>
             <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
+            <Button className="referral-details-button" variant="link" asChild><Link href="/referrals">View referral details</Link></Button>
             {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
           </article></Card>
           <EarningsChart points={data.earnings_chart} currency={data.currency} usdBdtRate={data.withdrawal_summary.usd_bdt_rate} />

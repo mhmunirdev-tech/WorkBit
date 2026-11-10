@@ -130,13 +130,11 @@ def callback_url(**overrides):
     return f"/api/v1/postbacks/theoremreach?{query}&hash={signature}"
 
 
-def test_theoremreach_wall_url_requires_auth_and_active_package(client, monkeypatch):
+def test_theoremreach_wall_url_requires_auth_but_not_package(client, monkeypatch):
     configure_theoremreach(monkeypatch)
     assert client.get("/api/v1/offers/providers/theoremreach/wall-url").status_code == 401
     login_user(client)
-    assert client.get("/api/v1/offers/providers/theoremreach/wall-url").status_code == 402
 
-    activate_package(client, "THEOREMREACH-WALL-001")
     response = client.get("/api/v1/offers/providers/theoremreach/wall-url")
 
     assert response.status_code == 200
@@ -175,8 +173,6 @@ def test_theoremreach_surveys_api_returns_signed_individual_survey_cards(
     configure_theoremreach(monkeypatch)
     assert client.get("/api/v1/offers/providers/theoremreach/surveys").status_code == 401
     login_user(client)
-    assert client.get("/api/v1/offers/providers/theoremreach/surveys").status_code == 402
-    activate_package(client, "THEOREMREACH-SURVEY-CARDS")
 
     mock_client = MockTheoremReachClient(
         {

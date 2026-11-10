@@ -15,6 +15,7 @@ def test_public_stats_are_database_backed_and_require_no_login(client):
     assert stats["registered_users"] > 0
     assert Decimal(stats["total_payouts_bdt"]) == Decimal("0")
     assert stats["active_packages"] == 0
+    assert stats["paid_withdrawal_count"] == 0
     assert stats["offer_approval_rate"] is None
     assert "email" not in stats
 
@@ -62,3 +63,4 @@ def test_public_stats_include_only_paid_bdt_withdrawals(client):
 
     stats = client.get("/api/v1/public/stats").json()
     assert Decimal(stats["total_payouts_bdt"]) == Decimal("600")
+    assert stats["paid_withdrawal_count"] == 1

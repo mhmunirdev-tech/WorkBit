@@ -80,7 +80,7 @@ def test_simulated_ad_completion_credits_available_balance_immediately(client, m
     from app.core.config import settings
 
     monkeypatch.setattr(settings, "enable_mock_rewards", True)
-    activate_package(client, "TESTOFFER-SIMULATED-AD")
+    login(client)
     _hits.clear()
 
     click = client.post("/api/v1/offers/mock-game/click")
@@ -100,6 +100,7 @@ def test_simulated_ad_completion_credits_available_balance_immediately(client, m
     assert "was retained as the platform share" in response.json()["message"]
     assert Decimal(response.json()["pending_balance"]) == Decimal("0")
     assert "available balance" in response.json()["message"]
+    assert client.get("/api/v1/packages").json()["package_active"] is False
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["available_balance"]) == expected_user_reward
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
@@ -170,11 +171,21 @@ def test_duplicate_click_is_rate_limited(client):
     assert limited.json()["error"]["message"] == "Please wait before starting this offer again."
 
 
-def test_click_requires_an_approved_package(client):
+def test_offers_are_available_without_purchasing_a_package(client):
     login(client)
     response = client.post("/api/v1/offers/mock-game/click")
-    assert response.status_code == 402
-    assert response.json()["error"]["code"] == "PAYMENT_REQUIRED"
+    assert response.status_code == 202
+    assert response.json()["status"] == "recorded"
+
+
+def test_offer_filters_support_reward_and_time_limits(client):
+    minimum_reward = client.get("/api/v1/offers?country=US&minimum_reward=0.60").json()
+    assert minimum_reward
+    assert all(Decimal(item["estimated_user_reward"]) >= Decimal("0.60") for item in minimum_reward)
+
+    quick_offers = client.get("/api/v1/offers?country=US&maximum_time=10").json()
+    assert quick_offers
+    assert all(item["estimated_time_minutes"] <= 10 for item in quick_offers)
 
 
 def test_seeded_offer_networks_are_disabled_and_secrets_are_env_references(database):

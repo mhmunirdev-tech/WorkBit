@@ -71,14 +71,12 @@ def callback_url(user_id, transaction_id="cpx-tx-1", **overrides):
     return f"/api/v1/postbacks/cpx-research?{urlencode(values)}"
 
 
-def test_cpx_research_wall_url_requires_package_and_uses_verified_user_id(
+def test_cpx_research_wall_url_is_available_without_package_and_uses_verified_user_id(
     client, monkeypatch
 ):
     configure_cpx_research(monkeypatch)
     login_user(client)
 
-    assert client.get("/api/v1/offers/providers/cpx-research/wall-url").status_code == 402
-    activate_package(client, "CPX-RESEARCH-WALL-001")
     response = client.get("/api/v1/offers/providers/cpx-research/wall-url")
 
     assert response.status_code == 200

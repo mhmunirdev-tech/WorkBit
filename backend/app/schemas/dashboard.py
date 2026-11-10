@@ -19,6 +19,9 @@ class DashboardUser(BaseModel):
 
 class DashboardStats(BaseModel):
     completed_offers: int
+    daily_offers_completed: int
+    daily_offers_goal: int
+    daily_streak_days: int
     referrals: int
     active_referrals: int
     today_earnings: Decimal
@@ -31,6 +34,7 @@ class DashboardStats(BaseModel):
 class PublicStatsRead(BaseModel):
     registered_users: int
     total_payouts_bdt: Decimal
+    paid_withdrawal_count: int
     active_packages: int
     offer_approval_rate: Decimal | None
 

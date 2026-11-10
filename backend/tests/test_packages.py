@@ -236,7 +236,7 @@ def test_admin_can_edit_catalog_and_purchase_keeps_original_terms(client):
     assert hidden_purchase.status_code == 404
 
 
-def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
+def test_offer_access_is_independent_of_pending_package_payment(client):
     assert login(client).status_code == 200
     configure_payout_rate(client)
     dashboard = client.get("/api/v1/dashboard")
@@ -256,7 +256,7 @@ def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
     assert Decimal(purchase.json()["amount"]) == Decimal("50.00")
     assert purchase.json()["duration_days"] == 730
     assert purchase.json()["status"] == "PENDING"
-    assert client.post("/api/v1/offers/mock-game/click").status_code == 402
+    assert client.post("/api/v1/offers/mock-game/click").status_code == 202
     pending_dashboard = client.get("/api/v1/dashboard")
     assert pending_dashboard.json()["package_active"] is False
     assert pending_dashboard.json()["package_purchase_status"] == "PENDING"
@@ -278,6 +278,8 @@ def test_pending_package_does_not_unlock_ads_until_admin_approval(client):
     assert login(admin).status_code == 200
     assert admin.get("/api/v1/packages").json()["package_active"] is True
     assert admin.get("/api/v1/dashboard").json()["package_active"] is True
+    from app.services.rate_limit import _hits
+    _hits.clear()
     assert admin.post("/api/v1/offers/mock-game/click").status_code == 202
 
 
@@ -491,7 +493,7 @@ def test_rejected_package_does_not_count_as_admin_revenue_or_unlock_ads(client):
     assert dashboard.status_code == 200
     assert Decimal(dashboard.json()["registered_user_amount"]) == Decimal("0")
     assert login(client).status_code == 200
-    assert client.post("/api/v1/offers/mock-game/click").status_code == 402
+    assert client.post("/api/v1/offers/mock-game/click").status_code == 202
 
 
 def test_package_routes_require_admin_permissions(client):

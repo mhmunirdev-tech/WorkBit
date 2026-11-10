@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Gamepad2, Search, Smartphone, Sparkles } from "lucide-react";
-import { ApiError, api } from "../../../../lib/api";
+import { api } from "../../../../lib/api";
 import { formatUsd } from "../../../../lib/utils";
 import { Alert, AlertDescription } from "../../../ui/alert";
 import { Badge } from "../../../ui/badge";
@@ -50,6 +50,8 @@ export function OfferwallGGCatalog() {
   const [offers, setOffers] = useState<OfferwallGGOffer[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [minimumReward, setMinimumReward] = useState("");
+  const [device, setDevice] = useState("all");
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -71,13 +73,7 @@ export function OfferwallGGCatalog() {
       setPages(result.pages);
       setTotal(result.total);
     } catch (reason: unknown) {
-      setError(
-        reason instanceof ApiError && reason.status === 402
-          ? "An approved earning package is required to view provider offers."
-          : reason instanceof Error
-            ? reason.message
-            : "Offerwall.GG offers could not be loaded.",
-      );
+      setError(reason instanceof Error ? reason.message : "Offerwall.GG offers could not be loaded.");
       if (!append) setOffers([]);
     } finally {
       setLoading(false);
@@ -93,8 +89,15 @@ export function OfferwallGGCatalog() {
     () => [...new Set(offers.flatMap((offer) => offer.categories))].sort((a, b) => a.localeCompare(b)),
     [offers],
   );
+  const devices = useMemo(
+    () => [...new Set(offers.flatMap((offer) => offer.devices.map((item) => item.toLowerCase())))].sort(),
+    [offers],
+  );
   const visibleOffers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
+    const minReward = Number(minimumReward);
+    const hasMinimumReward =
+      minimumReward !== "" && Number.isFinite(minReward) && minReward > 0;
     return offers.filter((offer) => {
       const matchesCategory =
         category === "all" ||
@@ -104,9 +107,13 @@ export function OfferwallGGCatalog() {
         `${offer.title} ${offer.description} ${offer.requirements} ${offer.provider} ${offer.categories.join(" ")}`
           .toLocaleLowerCase()
           .includes(query);
-      return matchesCategory && matchesSearch;
+      const matchesReward =
+        !hasMinimumReward || Number(offer.user_reward_usd) >= minReward;
+      const matchesDevice =
+        device === "all" || offer.devices.some((item) => item.toLowerCase() === device);
+      return matchesCategory && matchesSearch && matchesReward && matchesDevice;
     });
-  }, [category, offers, search]);
+  }, [category, device, minimumReward, offers, search]);
 
   return (
     <section className="offerwall-gg" aria-labelledby="offerwall-gg-title">
@@ -115,7 +122,7 @@ export function OfferwallGGCatalog() {
           <p className="eyebrow">PARTNER OFFERS</p>
           <h2 id="offerwall-gg-title">More ways to earn</h2>
           <p className="muted">
-            Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer's terms.
+            Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer&apos;s terms.
           </p>
         </div>
         {!error && (
@@ -136,6 +143,19 @@ export function OfferwallGGCatalog() {
             placeholder="Search offers"
           />
         </label>
+        <label className="offerwall-gg-filter">
+          <span>Minimum estimated reward (USD)</span>
+          <Input type="number" min="0" step="0.01" value={minimumReward} onChange={(event) => setMinimumReward(event.target.value)} placeholder="Any amount" />
+        </label>
+        {devices.length > 0 && (
+          <label className="offerwall-gg-filter">
+            <span>Supported device</span>
+            <select value={device} onChange={(event) => setDevice(event.target.value)}>
+              <option value="all">All devices</option>
+              {devices.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+        )}
         {categories.length > 0 && (
           <div className="offerwall-gg-categories" aria-label="Filter partner offers by category">
             {["all", ...categories.map((item) => item.toLocaleLowerCase())].map((item) => (
@@ -157,20 +177,14 @@ export function OfferwallGGCatalog() {
         <Alert className="offerwall-gg-error" variant="destructive">
           <AlertDescription>
             <span>{error}</span>
-            {error === "An approved earning package is required to view provider offers." ? (
-              <Button asChild className="offerwall-gg-retry" type="button" variant="outline">
-                <a href="/packages">View earning packages</a>
-              </Button>
-            ) : (
-              <Button
-                className="offerwall-gg-retry"
-                onClick={() => void loadPage()}
-                type="button"
-                variant="outline"
-              >
-                Retry
-              </Button>
-            )}
+            <Button
+              className="offerwall-gg-retry"
+              onClick={() => void loadPage()}
+              type="button"
+              variant="outline"
+            >
+              Retry
+            </Button>
           </AlertDescription>
         </Alert>
       ) : loading ? (
@@ -256,7 +270,7 @@ export function OfferwallGGCatalog() {
       )}
 
       <p className="offerwall-gg-note">
-        Rewards shown are estimated from WorkBit's active reward policy. Provider verification is required before rewards are credited.
+        Rewards shown are estimated from WorkBit&apos;s active reward policy. Provider verification is required before rewards are credited.
       </p>
     </section>
   );

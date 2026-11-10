@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.models import AdNetwork, Offer, OfferNetwork, PayoutSettings, Permission, RankTier, RewardPolicy, Role, User, Wallet
 from app.services.packages import seed_earning_packages
 from app.security.passwords import hash_password
-PERMISSIONS = ["users.view", "users.edit", "users.suspend", "wallets.view", "withdrawals.view", "withdrawals.review", "offers.view", "offers.manage", "settings.manage", "admins.manage"]
+PERMISSIONS = ["users.view", "users.edit", "users.suspend", "wallets.view", "withdrawals.view", "withdrawals.review", "offers.view", "offers.manage", "support.manage", "settings.manage", "admins.manage"]
 OFFER_PROVIDERS = (
     ("Lootably", "lootably", 10),
     ("AdGem", "adgem", 20),

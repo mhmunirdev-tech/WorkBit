@@ -54,6 +54,9 @@ function OffersCatalog() {
   const [category, setCategory] = useState("All");
   const [device, setDevice] = useState("");
   const [search, setSearch] = useState("");
+  const [minimumReward, setMinimumReward] = useState("");
+  const [maximumTime, setMaximumTime] = useState("");
+  const [sortBy, setSortBy] = useState("featured");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const refreshOffers = useCallback(async (showLoading = false) => {
@@ -90,16 +93,44 @@ function OffersCatalog() {
 
   const visibleOffers = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    return query ? offers.filter((offer) => `${offer.title} ${offer.short_description} ${offer.category}`.toLocaleLowerCase().includes(query)) : offers;
-  }, [offers, search]);
+    const minReward = Number(minimumReward);
+    const maxTime = Number(maximumTime);
+    const hasMinimumReward = minimumReward !== "" && Number.isFinite(minReward) && minReward > 0;
+    const hasMaximumTime = maximumTime !== "" && Number.isFinite(maxTime) && maxTime > 0;
+    const filtered = (query
+      ? offers.filter((offer) => `${offer.title} ${offer.short_description} ${offer.category}`.toLocaleLowerCase().includes(query))
+      : [...offers]).filter((offer) =>
+        (!hasMinimumReward || Number(offer.estimated_user_reward ?? 0) >= minReward) &&
+        (!hasMaximumTime || offer.estimated_time_minutes <= maxTime),
+      );
+    return filtered.sort((left, right) => {
+      if (sortBy === "reward") return Number(right.estimated_user_reward ?? 0) - Number(left.estimated_user_reward ?? 0);
+      if (sortBy === "time") return left.estimated_time_minutes - right.estimated_time_minutes;
+      return Number(right.featured) - Number(left.featured);
+    });
+  }, [offers, search, minimumReward, maximumTime, sortBy]);
 
   return (
     <>
       <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
-      <TheoremReachSurveyCatalog />
-      <CPXResearchOfferWall />
-      <BitLabsOfferWall />
-      <OfferwallGGCatalog />
+      <section className="offers-guide panel" aria-labelledby="offers-guide-title">
+        <div className="offers-guide-heading">
+          <div><p className="eyebrow">HOW TO USE THIS PAGE</p><h2 id="offers-guide-title">Choose a task you can finish</h2></div>
+          <p>Start with the requirements, then compare the estimated reward and time. A provider must confirm completion before WorkBit can credit your wallet.</p>
+        </div>
+        <div className="offers-guide-steps">
+          <div><span>1</span><strong>Filter the list</strong><small>Use category, device, reward, or time.</small></div>
+          <div><span>2</span><strong>Read the terms</strong><small>Check eligibility before starting.</small></div>
+          <div><span>3</span><strong>Track the result</strong><small>Review pending and approved rewards in your wallet.</small></div>
+        </div>
+      </section>
+      <div className="offers-provider-stack" aria-label="Partner offer sections">
+        <div className="offers-provider-heading"><p className="eyebrow">PARTNER INVENTORY</p><h2>Offers from WorkBit providers</h2><p className="muted">Each provider has its own eligibility rules and confirmation process.</p></div>
+        <TheoremReachSurveyCatalog />
+        <CPXResearchOfferWall />
+        <BitLabsOfferWall />
+        <OfferwallGGCatalog />
+      </div>
       <AdsPlacements />
       {isDevelopment && (
         <>
@@ -114,6 +145,9 @@ function OffersCatalog() {
             <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
             <Label>Category<Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item === "All" ? "All categories" : item[0] + item.slice(1).toLowerCase()}</SelectItem>)}</SelectContent></Select></Label>
             <Label>Device<Select value={device || "ANY"} onValueChange={(value) => setDevice(value === "ANY" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ANY">Any device</SelectItem><SelectItem value="WEB">Web</SelectItem><SelectItem value="IOS">iOS</SelectItem><SelectItem value="ANDROID">Android</SelectItem></SelectContent></Select></Label>
+            <Label>Minimum reward<Input type="number" inputMode="decimal" min="0" step="0.01" value={minimumReward} onChange={(event) => setMinimumReward(event.target.value)} placeholder="Any amount" /></Label>
+            <Label>Maximum time (minutes)<Input type="number" inputMode="numeric" min="1" max="1440" step="1" value={maximumTime} onChange={(event) => setMaximumTime(event.target.value)} placeholder="Any duration" /></Label>
+            <Label>Sort by<Select value={sortBy} onValueChange={setSortBy}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="featured">Featured</SelectItem><SelectItem value="reward">Highest reward</SelectItem><SelectItem value="time">Shortest time</SelectItem></SelectContent></Select></Label>
           </section>
           {error && <Alert className="state error-state" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           {loading ? <section className="offer-grid" aria-label="Loading offer catalog">{[1, 2, 3].map((item) => <Card className="offer skeleton" key={item}><CardContent className="offer-body"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></CardContent></Card>)}</section>

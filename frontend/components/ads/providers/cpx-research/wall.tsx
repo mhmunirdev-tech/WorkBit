@@ -28,13 +28,7 @@ export function CPXResearchOfferWall() {
           setHidden(true);
           return;
         }
-        setError(
-          reason instanceof ApiError && reason.status === 402
-            ? "An approved earning package is required to view CPX Research surveys."
-            : reason instanceof Error
-              ? reason.message
-              : "CPX Research surveys could not be loaded.",
-        );
+        setError(reason instanceof Error ? reason.message : "CPX Research surveys could not be loaded.");
       });
 
     return () => {
@@ -62,11 +56,6 @@ export function CPXResearchOfferWall() {
         <Alert className="state error-state" variant="destructive">
           <AlertDescription>
             <span>{error}</span>
-            {error.includes("earning package") && (
-              <Button asChild className="theoremreach-wall-action" type="button" variant="outline">
-                <a href="/packages">View earning packages</a>
-              </Button>
-            )}
           </AlertDescription>
         </Alert>
       ) : wallUrl ? (

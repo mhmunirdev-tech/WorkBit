@@ -33,6 +33,8 @@ type TheoremReachWallResponse = {
 export function TheoremReachSurveyCatalog() {
   const [surveys, setSurveys] = useState<TheoremReachSurvey[]>([]);
   const [search, setSearch] = useState("");
+  const [minimumReward, setMinimumReward] = useState("");
+  const [maximumTime, setMaximumTime] = useState("");
   const [error, setError] = useState("");
   const [wallUrl, setWallUrl] = useState("");
   const [hidden, setHidden] = useState(false);
@@ -58,23 +60,11 @@ export function TheoremReachSurveyCatalog() {
               setHidden(true);
               return;
             }
-            setError(
-              fallbackReason instanceof ApiError && fallbackReason.status === 402
-                ? "An approved earning package is required to view TheoremReach surveys."
-                : fallbackReason instanceof Error
-                  ? fallbackReason.message
-                  : "TheoremReach surveys could not be loaded.",
-            );
+            setError(fallbackReason instanceof Error ? fallbackReason.message : "TheoremReach surveys could not be loaded.");
           }
           return;
         }
-        setError(
-          reason instanceof ApiError && reason.status === 402
-            ? "An approved earning package is required to view TheoremReach surveys."
-            : reason instanceof Error
-              ? reason.message
-              : "TheoremReach surveys could not be loaded.",
-        );
+        setError(reason instanceof Error ? reason.message : "TheoremReach surveys could not be loaded.");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -87,10 +77,24 @@ export function TheoremReachSurveyCatalog() {
 
   const visibleSurveys = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
-    return query
-      ? surveys.filter((survey) => `${survey.title} ${survey.survey_id}`.toLocaleLowerCase().includes(query))
-      : surveys;
-  }, [search, surveys]);
+    const minReward = Number(minimumReward);
+    const maxTime = Number(maximumTime);
+    const hasMinimumReward =
+      minimumReward !== "" && Number.isFinite(minReward) && minReward > 0;
+    const hasMaximumTime =
+      maximumTime !== "" && Number.isFinite(maxTime) && maxTime > 0;
+    return surveys.filter((survey) => {
+      const matchesSearch =
+        !query || `${survey.title} ${survey.survey_id}`.toLocaleLowerCase().includes(query);
+      const matchesReward =
+        !hasMinimumReward || Number(survey.user_reward_usd) >= minReward;
+      const matchesTime =
+        !hasMaximumTime ||
+        (survey.estimated_time_minutes !== null &&
+          survey.estimated_time_minutes <= maxTime);
+      return matchesSearch && matchesReward && matchesTime;
+    });
+  }, [maximumTime, minimumReward, search, surveys]);
 
   if (hidden) return null;
 
@@ -137,26 +141,31 @@ export function TheoremReachSurveyCatalog() {
         )}
       </div>
       {surveys.length > 0 && (
-        <label className="offerwall-gg-search theoremreach-survey-search">
-          <span className="sr-only">Search TheoremReach surveys</span>
-          <Search aria-hidden="true" size={17} />
-          <Input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search surveys"
-          />
-        </label>
+        <div className="offerwall-gg-controls theoremreach-survey-controls">
+          <label className="offerwall-gg-search theoremreach-survey-search">
+            <span className="sr-only">Search TheoremReach surveys</span>
+            <Search aria-hidden="true" size={17} />
+            <Input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search surveys"
+            />
+          </label>
+          <label className="offerwall-gg-filter">
+            <span>Minimum reward (USD)</span>
+            <Input type="number" min="0" step="0.01" value={minimumReward} onChange={(event) => setMinimumReward(event.target.value)} placeholder="Any amount" />
+          </label>
+          <label className="offerwall-gg-filter">
+            <span>Maximum time (minutes)</span>
+            <Input type="number" min="1" max="1440" step="1" value={maximumTime} onChange={(event) => setMaximumTime(event.target.value)} placeholder="Any duration" />
+          </label>
+        </div>
       )}
       {error ? (
         <Alert className="offerwall-gg-error" variant="destructive">
           <AlertDescription>
             <span>{error}</span>
-            {error.includes("earning package") && (
-              <Button asChild className="offerwall-gg-retry" type="button" variant="outline">
-                <a href="/packages">View earning packages</a>
-              </Button>
-            )}
           </AlertDescription>
         </Alert>
       ) : loading ? (

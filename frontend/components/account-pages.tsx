@@ -96,10 +96,9 @@ export function ProfilePage() {
   const [photoMessage, setPhotoMessage] = useState("");
   const [referralMessage, setReferralMessage] = useState("");
   const accountIsActive = Boolean(
-    account?.package_active &&
-    account.user.email_verified &&
-    account.user.status === "ACTIVE",
+    account?.user.email_verified && account.user.status === "ACTIVE",
   );
+  const packageActive = Boolean(account?.package_active);
   const accountStatusLabel = account?.user.status === "SUSPENDED" || account?.user.status === "BANNED"
     ? account.user.status.replaceAll("_", " ")
     : !account?.user.email_verified
@@ -217,16 +216,6 @@ export function ProfilePage() {
                     {account.user.email_verified ? "Email verified" : "Email not verified"}
                   </Badge>
                 </div>
-                {account.user.email_verified && account.user.status === "ACTIVE" && !accountIsActive && (
-                  <p className="profile-activation-note">
-                    {account.package_purchase_status === "PENDING"
-                      ? "Your account is inactive while your package payment is under review. Earning access activates after approval."
-                      : "Your email is verified, but your account is inactive. Buy an earning package to activate your account and start earning."}
-                    {account.package_purchase_status !== "PENDING" && (
-                      <>{" "}<Link href="/packages">View packages <ArrowUpRight size={13} aria-hidden="true" /></Link></>
-                    )}
-                  </p>
-                )}
               </div>
               <Button className="profile-settings-link" variant="outline" asChild>
                 <Link href="/settings">Account settings <ArrowUpRight size={15} /></Link>
@@ -303,26 +292,26 @@ export function ProfilePage() {
 
             <Card className="panel profile-package-card">
               <span className="profile-package-icon"><WalletCards size={19} /></span>
-              <p className="eyebrow">EARNING ACCESS</p>
+              <p className="eyebrow">OPTIONAL PACKAGE</p>
               <h2>
                 {account.user.status !== "ACTIVE"
                   ? "Account access unavailable"
-                  : accountIsActive
-                  ? "Your earning package is active"
+                  : packageActive
+                  ? "Your optional package is active"
                   : account.package_purchase_status === "PENDING"
-                    ? "Package payment under review"
-                    : "Activate your earning package"}
+                    ? "Optional package payment under review"
+                    : "No package required"}
               </h2>
               <p>
                 {account.user.status !== "ACTIVE"
                   ? "Please contact WorkBit support to resolve your account status before using earning features."
-                  : accountIsActive
-                  ? `Your package payment has been approved. Your account is active and earning offers are unlocked${account.package_expires_at ? ` until ${new Date(account.package_expires_at).toLocaleDateString()}` : ""}.`
+                  : packageActive
+                  ? `Your optional package is active${account.package_expires_at ? ` until ${new Date(account.package_expires_at).toLocaleDateString()}` : ""}. You can still use eligible offers without a package.`
                   : account.package_purchase_status === "PENDING"
-                    ? "Your account will become active and earning offers will unlock after an admin verifies your payment."
-                    : "Submit your bKash or Nagad payment reference. Your account becomes active and earning offers unlock after an admin verifies your payment."}
+                    ? "This optional package payment is waiting for admin review. You can still use eligible offers without it."
+                    : "Buying a package is optional. Eligible provider offers are available without package activation."}
               </p>
-              {!accountIsActive && account.package_purchase_status !== "PENDING" && (
+              {!packageActive && account.package_purchase_status !== "PENDING" && (
                 <Button className="profile-settings-link" variant="outline" asChild><Link href="/packages">View packages <ArrowUpRight size={15} /></Link></Button>
               )}
             </Card>

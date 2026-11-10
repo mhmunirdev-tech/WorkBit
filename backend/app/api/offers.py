@@ -1,4 +1,5 @@
 from uuid import uuid4
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
@@ -31,7 +32,6 @@ from app.schemas.offers import OfferRead
 from app.services.conversions import conversion_service
 from app.services.offers import offer_service
 from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
-from app.services.packages import has_active_package
 from app.services.theoremreach_surveys import theoremreach_survey_catalog_service
 from app.schemas.theoremreach_surveys import TheoremReachSurveysRead
 
@@ -45,8 +45,6 @@ def cpx_research_wall_url(
 ) -> JSONResponse:
     if not settings.cpx_research_enabled:
         raise HTTPException(404, "CPX Research is not enabled.")
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
     try:
         wall_url = cpx_research_adapter.build_wall_url(user.id)
     except CPXResearchConfigurationError as error:
@@ -61,8 +59,6 @@ def theoremreach_wall_url(
 ) -> JSONResponse:
     if not settings.theoremreach_enabled:
         raise HTTPException(404, "TheoremReach is not enabled.")
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
     try:
         wall_url = theoremreach_adapter.build_wall_url(user.id)
     except TheoremReachConfigurationError as error:
@@ -80,8 +76,6 @@ async def theoremreach_surveys(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> TheoremReachSurveysRead:
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
     surveys = await theoremreach_survey_catalog_service.list_surveys(
         db,
         user,
@@ -106,9 +100,6 @@ async def offerwall_gg_catalog(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> OfferwallGGOffersRead:
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
-
     user_agent = request.headers.get("user-agent", "").lower()
     if "android" in user_agent:
         device = "android"
@@ -139,8 +130,6 @@ def bitlabs_wall_url(
 ) -> JSONResponse:
     if not settings.bitlabs_enabled:
         raise HTTPException(404, "BitLabs is not enabled.")
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
     try:
         wall_url = bitlabs_adapter.build_wall_url(user.id)
     except BitLabsConfigurationError as error:
@@ -153,8 +142,6 @@ def offerwall_gg_wall_url(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> JSONResponse:
-    if not has_active_package(db, user.id):
-        raise HTTPException(402, "Buy a package and wait for admin approval before earning from ads.")
     try:
         wall_url = offerwall_gg_adapter.build_wall_url(user.id)
     except OfferwallGGConfigurationError as error:
@@ -163,8 +150,19 @@ def offerwall_gg_wall_url(
 
 
 @router.get("", response_model=list[OfferRead])
-async def list_offers(country: str = Query("US", min_length=2, max_length=2), category: str | None = None, device: str | None = None, offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), db: Session = Depends(get_db)) -> list[OfferRead]:
-    return await offer_service.list(db, country.upper(), category, device, offset, limit)
+async def list_offers(
+    country: str = Query("US", min_length=2, max_length=2),
+    category: str | None = Query(None, min_length=1, max_length=32),
+    device: str | None = Query(None, min_length=1, max_length=32),
+    minimum_reward: Decimal | None = Query(None, gt=0),
+    maximum_time: int | None = Query(None, ge=1, le=1440),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+) -> list[OfferRead]:
+    return await offer_service.list(
+        db, country.upper(), category, device, offset, limit, minimum_reward, maximum_time
+    )
 
 
 @router.get("/{offer_id}", response_model=OfferRead)

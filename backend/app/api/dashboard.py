@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import current_user, require_permission
 from app.core.config import settings
 from app.database.session import get_db
-from app.models import PackagePurchase, PayoutSettings, RewardDecision, Role, User, Wallet, WalletTransaction, WithdrawalRequest
+from app.models import OfferConversion, PackagePurchase, PayoutSettings, RewardDecision, Role, User, Wallet, WalletTransaction, WithdrawalRequest
 from app.schemas.dashboard import (
     DashboardEarningDay,
     DashboardRead,
@@ -49,6 +49,12 @@ def public_stats(db: Session = Depends(get_db)) -> PublicStatsRead:
             WithdrawalRequest.payout_currency == "BDT",
         )
     ) or Decimal("0")
+    paid_withdrawal_count = db.scalar(
+        select(func.count(WithdrawalRequest.id)).where(
+            WithdrawalRequest.status.in_(("PAID", "COMPLETED")),
+            WithdrawalRequest.payout_currency == "BDT",
+        )
+    ) or 0
     active_packages = db.scalar(
         select(func.count(PackagePurchase.id)).where(
             PackagePurchase.status == "APPROVED",
@@ -69,6 +75,7 @@ def public_stats(db: Session = Depends(get_db)) -> PublicStatsRead:
     return PublicStatsRead(
         registered_users=registered_users,
         total_payouts_bdt=total_payouts_bdt,
+        paid_withdrawal_count=paid_withdrawal_count,
         active_packages=active_packages,
         offer_approval_rate=(
             Decimal(approved_offers) * Decimal("100") / Decimal(decided_offers)
@@ -187,6 +194,38 @@ def dashboard(
             RewardDecision.status == "APPROVED",
         )
     ) or 0
+    daily_offers_completed = db.scalar(
+        select(func.count(func.distinct(OfferConversion.offer_id)))
+        .select_from(RewardDecision)
+        .join(OfferConversion, OfferConversion.id == RewardDecision.conversion_id)
+        .where(
+            RewardDecision.user_id == user.id,
+            RewardDecision.status == "APPROVED",
+            RewardDecision.updated_at >= datetime.combine(today, time.min, timezone.utc),
+            RewardDecision.updated_at < datetime.combine(
+                today + timedelta(days=1), time.min, timezone.utc
+            ),
+        )
+    ) or 0
+    approved_offer_dates = db.scalars(
+        select(RewardDecision.updated_at)
+        .join(OfferConversion, OfferConversion.id == RewardDecision.conversion_id)
+        .where(
+            RewardDecision.user_id == user.id,
+            RewardDecision.status == "APPROVED",
+        )
+    ).all()
+    active_offer_dates = {
+        created_at.astimezone(timezone.utc).date()
+        if created_at.tzinfo
+        else created_at.replace(tzinfo=timezone.utc).date()
+        for created_at in approved_offer_dates
+    }
+    daily_streak_days = 0
+    streak_date = today
+    while streak_date in active_offer_dates:
+        daily_streak_days += 1
+        streak_date -= timedelta(days=1)
 
     return DashboardRead(
         available_balance=wallet.available_balance,
@@ -220,6 +259,9 @@ def dashboard(
         ),
         stats=DashboardStats(
             completed_offers=completed_offers,
+            daily_offers_completed=daily_offers_completed,
+            daily_offers_goal=3,
+            daily_streak_days=daily_streak_days,
             referrals=referral_count,
             active_referrals=active_referral_count,
             today_earnings=today_earnings,

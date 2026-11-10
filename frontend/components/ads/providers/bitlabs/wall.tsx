@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, api } from "../../../../lib/api";
 import { Alert, AlertDescription } from "../../../ui/alert";
-import { Button } from "../../../ui/button";
 import { Skeleton } from "../../../ui/skeleton";
 
 type BitLabsWallResponse = {
@@ -27,13 +26,7 @@ export function BitLabsOfferWall() {
           setHidden(true);
           return;
         }
-        setError(
-          reason instanceof ApiError && reason.status === 402
-            ? "An approved earning package is required to view BitLabs offers."
-            : reason instanceof Error
-              ? reason.message
-              : "BitLabs offers could not be loaded.",
-        );
+        setError(reason instanceof Error ? reason.message : "BitLabs offers could not be loaded.");
       });
 
     return () => {
@@ -58,11 +51,6 @@ export function BitLabsOfferWall() {
         <Alert className="state error-state" variant="destructive">
           <AlertDescription>
             <span>{error}</span>
-            {error.includes("earning package") && (
-              <Button asChild className="bitlabs-wall-action" type="button" variant="outline">
-                <a href="/packages">View earning packages</a>
-              </Button>
-            )}
           </AlertDescription>
         </Alert>
       ) : wallUrl ? (

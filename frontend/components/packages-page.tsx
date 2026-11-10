@@ -111,8 +111,8 @@ function PackagesContent() {
       <header className="package-page-header package-catalog-heading">
         <div>
           <p className="eyebrow">WORKBIT / EARNING</p>
-          <h1>Choose your package</h1>
-          <p>Select a plan that works for you. Pay by bKash or Nagad, and access starts after admin approval.</p>
+          <h1>Optional packages</h1>
+          <p>You can complete eligible offers without buying a package. Package payments are optional and activate only after admin approval.</p>
         </div>
       </header>
 

@@ -7,7 +7,6 @@ from app.core.config import settings
 from app.models import OfferClick, OfferConversion, RewardDecision, User
 from app.schemas.conversions import MockPostbackRequest
 from app.services.fraud import fraud_service
-from app.services.packages import has_active_package
 from app.services.rewards import reward_decision_service
 
 TERMINAL = {"REJECTED", "REVERSED", "CHARGEBACK", "FRAUD"}
@@ -18,8 +17,6 @@ class ConversionService:
         if click.offer_id != data.offer_id: raise HTTPException(400, "Offer does not match click identifier.")
         user = db.get(User, click.user_id)
         if not user: raise HTTPException(400, "Click user is unavailable.")
-        if not has_active_package(db, user.id):
-            raise HTTPException(402, "An approved package is required before ad rewards can be recorded.")
         if user.wallet is None:
             raise HTTPException(409, "Wallet is unavailable for this conversion.")
         if data.currency.upper() != user.wallet.currency.upper():

@@ -97,7 +97,7 @@ export function AdminUsers() {
         <div>
           <p className="eyebrow">ACCOUNT OPERATIONS</p>
           <h1>User registry</h1>
-          <p>Inspect registered user status, verification, package access and wallet balances from one source of truth.</p>
+          <p>Inspect registered user status, verification, optional package status and wallet balances from one source of truth.</p>
         </div>
         <div className="admin-withdrawals-links">
           <Button className="secondary-button" variant="outline" type="button" onClick={() => void refresh()} disabled={loading}>

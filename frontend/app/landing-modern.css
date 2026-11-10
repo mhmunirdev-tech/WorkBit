@@ -77,6 +77,26 @@ html:has(.landing:not(.policy-page)) {
   border-radius: 11px;
 }
 
+.landing-mobile-menu-toggle {
+  display: none;
+}
+
+.landing-mobile-nav-actions {
+  display: none;
+}
+
+@keyframes landing-mobile-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .landing:not(.policy-page) .faq-section {
   display: grid;
   grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
@@ -457,22 +477,149 @@ html:has(.landing:not(.policy-page)) {
   }
 
   .landing:not(.policy-page) .landing-nav nav {
+    display: none;
     order: 3;
     width: 100%;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 11px;
-    padding-top: 10px;
-    border-top: 1px solid #edf1f6;
-    font-size: 11px;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 13px;
+    padding: 8px;
+    border: 1px solid #e2e9f3;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #ffffff 0%, #f6f9ff 100%);
+    box-shadow: 0 16px 34px #1b355b18, inset 0 1px 0 #ffffff;
+    font-size: 12px;
+  }
+
+  .landing:not(.policy-page) .landing-nav nav.is-open {
+    display: flex;
+    animation: landing-mobile-menu-in .18s ease-out both;
+  }
+
+  .landing:not(.policy-page) .landing-nav nav.is-open::before {
+    padding: 3px 10px 7px;
+    color: #8a97aa;
+    content: "QUICK NAVIGATION";
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
   }
 
   .landing:not(.policy-page) .landing-nav nav a {
-    padding: 5px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: #43536b;
+    transition: background .16s ease, color .16s ease, transform .16s ease;
   }
 
   .landing:not(.policy-page) .landing-nav nav a::after {
-    bottom: 0;
+    display: none;
+  }
+
+  .landing:not(.policy-page) .landing-nav nav a::before {
+    order: 2;
+    color: #9aa8bb;
+    content: "→";
+    font-size: 14px;
+    transition: color .16s ease, transform .16s ease;
+  }
+
+  .landing:not(.policy-page) .landing-nav nav a:hover,
+  .landing:not(.policy-page) .landing-nav nav a:focus-visible {
+    background: #edf2ff;
+    color: #315efb;
+    outline: none;
+    transform: translateX(2px);
+  }
+
+  .landing:not(.policy-page) .landing-nav nav a:hover::before,
+  .landing:not(.policy-page) .landing-nav nav a:focus-visible::before {
+    color: #315efb;
+    transform: translateX(2px);
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid #e7edf5;
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a {
+    min-height: 39px;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid #dfe7f2;
+    border-radius: 10px;
+    background: #fff;
+    color: #43536b;
+    font-size: 11px;
+    font-weight: 750;
+    transform: none;
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a.primary {
+    border-color: #315efb;
+    background: linear-gradient(135deg, #315efb 0%, #5277ff 100%);
+    color: #fff;
+    box-shadow: 0 6px 13px #315efb2b;
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a::before,
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a::after {
+    display: none;
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a:hover,
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a:focus-visible {
+    background: #f2f5ff;
+    color: #315efb;
+    transform: translateY(-1px);
+  }
+
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a.primary:hover,
+  .landing:not(.policy-page) .landing-nav .landing-mobile-nav-actions > a.primary:focus-visible {
+    background: linear-gradient(135deg, #284fe3 0%, #4569ed 100%);
+    color: #fff;
+  }
+
+  .landing:not(.policy-page) .nav-actions {
+    display: none;
+  }
+
+  .landing:not(.policy-page) .landing-mobile-menu-toggle {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    place-items: center;
+    margin-left: 8px;
+    padding: 0;
+    border: 1px solid #dfe6f0;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #ffffff 0%, #edf3ff 100%);
+    color: #263a59;
+    box-shadow: 0 7px 18px #1c376318, inset 0 1px 0 #ffffff;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+  }
+
+  .landing:not(.policy-page) .landing-mobile-menu-toggle:hover,
+  .landing:not(.policy-page) .landing-mobile-menu-toggle[aria-expanded="true"] {
+    background: #eef3ff;
+    color: #315efb;
+    border-color: #cbd8fb;
+    transform: rotate(2deg);
+  }
+
+  .landing:not(.policy-page) .landing-mobile-menu-toggle:focus-visible {
+    outline: 3px solid #315efb3d;
+    outline-offset: 2px;
   }
 
   .landing:not(.policy-page) .nav-actions {
@@ -1560,5 +1707,193 @@ html:has(.landing:not(.policy-page)) {
   .landing:not(.policy-page) *::after {
     scroll-behavior: auto !important;
     transition-duration: .01ms !important;
+  }
+}
+
+.trust-center-page {
+  min-height: 100vh;
+  padding-bottom: 42px;
+  color: #172338;
+  background:
+    radial-gradient(circle at 8% 13%, rgba(119, 161, 255, .13), transparent 28%),
+    #f7f9fc;
+}
+
+.trust-center-page .landing-nav {
+  position: relative;
+}
+
+.trust-center-page .landing-nav nav,
+.trust-center-page .nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.trust-center-page .landing-nav nav a,
+.trust-center-page .nav-actions > a {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.trust-create-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  color: #fff !important;
+  border-radius: 9px;
+  background: #315efb;
+}
+
+.trust-hero,
+.trust-stats,
+.trust-information,
+.trust-footer {
+  width: min(1120px, calc(100% - 48px));
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.trust-hero {
+  padding: 76px 0 42px;
+}
+
+.trust-hero .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trust-hero h1 {
+  max-width: 760px;
+  margin: 16px 0;
+  font-size: clamp(36px, 5vw, 56px);
+  letter-spacing: -2px;
+  line-height: 1.08;
+}
+
+.trust-hero > p {
+  max-width: 720px;
+  color: #64748b;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.trust-stats,
+.trust-information {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.trust-stats .ui-card,
+.trust-information .ui-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 22px;
+  border: 1px solid #e1e8f2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(27, 48, 79, .04);
+}
+
+.trust-stats span,
+.trust-stats small {
+  color: #64748b;
+}
+
+.trust-stats strong {
+  color: #162a48;
+  font-size: 26px;
+}
+
+.trust-stats small {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.trust-information {
+  margin-top: 20px;
+}
+
+.trust-information .ui-card > svg {
+  color: #315efb;
+}
+
+.trust-information h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.trust-information p,
+.trust-footer p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.trust-information a,
+.trust-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #315efb;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.trust-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 26px;
+  padding: 20px 0;
+  border-top: 1px solid #e1e8f2;
+}
+
+@media (max-width: 760px) {
+  .trust-center-page .landing-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 20px;
+  }
+
+  .trust-center-page .landing-nav nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 7px 0;
+  }
+
+  .trust-center-page .nav-actions {
+    margin-left: auto;
+    gap: 10px;
+  }
+
+  .trust-hero,
+  .trust-stats,
+  .trust-information,
+  .trust-footer {
+    width: min(100% - 32px, 620px);
+  }
+
+  .trust-hero {
+    padding-top: 46px;
+  }
+
+  .trust-stats,
+  .trust-information {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trust-footer {
+    flex-direction: column;
   }
 }

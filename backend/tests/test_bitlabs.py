@@ -77,12 +77,10 @@ def bitlabs_callback_url(**overrides):
     return f"/api/v1/postbacks/bitlabs?{raw_query}&hash={signature}"
 
 
-def test_bitlabs_wall_url_requires_active_package_and_uses_account_user_id(client, monkeypatch):
+def test_bitlabs_wall_url_is_available_without_package_and_uses_account_user_id(client, monkeypatch):
     configure_bitlabs(monkeypatch)
     login_user(client)
 
-    assert client.get("/api/v1/offers/providers/bitlabs/wall-url").status_code == 402
-    activate_package(client, "BITLABSWALL001")
     response = client.get("/api/v1/offers/providers/bitlabs/wall-url")
 
     assert response.status_code == 200
@@ -93,7 +91,7 @@ def test_bitlabs_wall_url_requires_active_package_and_uses_account_user_id(clien
 
 def test_bitlabs_completed_callback_credits_once_and_reconciliation_reverses(client, monkeypatch):
     configure_bitlabs(monkeypatch)
-    activate_package(client, "BITLABSCALLBACK001")
+    login_user(client)
     initial_balance = get_wallet_balance()
 
     completion = bitlabs_callback_url()

@@ -68,6 +68,8 @@ export const WALLET_UPDATED_EVENT = "workbit:wallet-updated";
 const pageTitles: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/offers": "Explore offers",
+  "/referrals": "Referrals",
+  "/support": "Support",
   "/packages": "Earning packages",
   "/ranks": "Ranks",
   "/wallet": "Wallet",
@@ -80,6 +82,8 @@ const pageTitles: Record<string, string> = {
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/offers", label: "Explore offers", icon: Sparkles },
+  { href: "/referrals", label: "Referrals", icon: Gift },
+  { href: "/support", label: "Support", icon: UserRound },
   { href: "/packages", label: "Earning packages", icon: PackageCheck },
   { href: "/ranks", label: "Ranks", icon: Award, prefetch: false },
   { href: "/wallet", label: "Wallet", icon: Wallet },

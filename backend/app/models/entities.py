@@ -525,3 +525,37 @@ class RewardNotification(Base):
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    __table_args__ = (Index("ix_support_tickets_user_updated", "user_id", "updated_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    subject: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(24), default="OPEN", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship()
+    messages: Mapped[list[SupportTicketMessage]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="SupportTicketMessage.created_at",
+    )
+
+
+class SupportTicketMessage(Base):
+    __tablename__ = "support_ticket_messages"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    ticket_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True
+    )
+    sender_user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    sender_role: Mapped[str] = mapped_column(String(16))
+    body: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+    sender: Mapped[User] = relationship()

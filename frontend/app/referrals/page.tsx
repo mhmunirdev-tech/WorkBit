@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { ReferralsPage } from "../../components/referrals-page";
 
 export default function ReferralsRoute() {
-  redirect("/dashboard");
+  return <ReferralsPage />;
 }

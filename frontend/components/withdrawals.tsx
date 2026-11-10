@@ -62,7 +62,19 @@ function formatMoney(value: Amount, currency: string) {
 }
 
 function readableStatus(status: string) {
+  if (status === "PENDING") return "Review pending";
+  if (status === "PROCESSING") return "Payout processing";
+  if (status === "PAID" || status === "COMPLETED") return "Paid";
+  if (status === "REJECTED") return "Rejected";
   return status.toLocaleLowerCase().replaceAll("_", " ");
+}
+
+function withdrawalStatusNote(status: string) {
+  if (status === "PENDING") return "Request received; waiting for manual review.";
+  if (status === "PROCESSING") return "Review complete; payout is being processed.";
+  if (status === "PAID" || status === "COMPLETED") return "Payout marked as sent.";
+  if (status === "REJECTED") return "Request declined; reserved funds were returned to your wallet.";
+  return "Check back for a status update.";
 }
 
 function useWithdrawalData() {
@@ -426,7 +438,10 @@ function WithdrawalHistory({ records, currency }: { records: WithdrawalRecord[];
               </TableCell>
               <TableCell>{formatMoney(record.amount, currency)}</TableCell>
               <TableCell>{record.payout_amount != null && record.payout_currency ? formatMoney(record.payout_amount, record.payout_currency) : "—"}</TableCell>
-              <TableCell><Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{readableStatus(record.status)}</Badge></TableCell>
+              <TableCell>
+                <Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{readableStatus(record.status)}</Badge>
+                <small className="withdrawal-status-note">{withdrawalStatusNote(record.status)}</small>
+              </TableCell>
               <TableCell><time dateTime={record.created_at}>{new Date(record.created_at).toLocaleString()}</time></TableCell>
             </TableRow>
           ))}
@@ -592,6 +607,18 @@ export function WithdrawalPage({
           <Link href="/withdrawal-policy">Withdrawal Policy</Link>
         </Card>
       )}
+      {!embedded && historyOnly && (
+        <Card className="panel withdrawal-help">
+          <strong>What each status means</strong>
+          <ul>
+            <li><b>Review pending:</b> the request was received and is waiting for manual review.</li>
+            <li><b>Payout processing:</b> review is complete and the payout is being processed.</li>
+            <li><b>Paid:</b> WorkBit marked the payout as sent to your saved account.</li>
+            <li><b>Rejected:</b> the request was declined and reserved funds were returned to your wallet.</li>
+          </ul>
+          <p>Processing time varies. WorkBit does not promise a fixed payout timeline.</p>
+        </Card>
+      )}
 
       {summaryError && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{summaryError}</AlertDescription></Alert>}
       {summary && (
@@ -682,6 +709,7 @@ export function WithdrawalPage({
           <Card className={`panel withdrawal-history-panel${embedded ? " wallet-withdrawal-history" : ""}`} id={embedded ? "withdrawal-history" : undefined}>
             <div className="panel-heading"><div><p className="eyebrow">REQUEST RECORDS</p><h2>{historyOnly || embedded ? "Withdrawal history" : "Recent requests"}</h2></div>{!historyOnly && !embedded && <Button className="text-link" variant="link" asChild><Link href="/withdrawals">View all →</Link></Button>}</div>
             {historyError ? <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{historyError}</AlertDescription></Alert> : <WithdrawalHistory records={historyOnly || embedded ? records : records.slice(0, 5)} currency={summary.currency} />}
+            <p className="withdrawal-support-link">Need help with an offer reward or payout? <Link href="/support">Contact support</Link>.</p>
           </Card>
         </>
       )}

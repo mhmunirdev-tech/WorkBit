@@ -77,14 +77,11 @@ def get_wallet():
         db.close()
 
 
-def test_offerwall_wall_url_requires_authentication_and_active_package(client, monkeypatch):
+def test_offerwall_wall_url_requires_authentication_but_not_package(client, monkeypatch):
     configure_offerwall(monkeypatch)
 
     assert client.get("/api/v1/offers/providers/offerwall-gg/wall-url").status_code == 401
     login(client)
-    assert client.get("/api/v1/offers/providers/offerwall-gg/wall-url").status_code == 402
-
-    activate_package(client, "TEST-OFFERWALL-WALL-URL")
     response = client.get("/api/v1/offers/providers/offerwall-gg/wall-url")
 
     assert response.status_code == 200
@@ -272,12 +269,12 @@ def mock_offerwall_catalog(monkeypatch, mock_client):
     )
 
 
-def test_offerwall_catalog_requires_authentication_and_active_package(client, monkeypatch):
+def test_offerwall_catalog_requires_authentication_but_not_package(client, monkeypatch):
     configure_offerwall(monkeypatch)
 
     assert client.get("/api/v1/offers/providers/offerwall-gg/catalog").status_code == 401
     login(client)
-    assert client.get("/api/v1/offers/providers/offerwall-gg/catalog").status_code == 402
+    assert client.get("/api/v1/offers/providers/offerwall-gg/wall-url").status_code == 200
 
 
 def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentials(

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowUpRight, BadgeCheck, Check, ClipboardList, Clock3, Gamepad2, PackageCheck, ShieldCheck, Smartphone, Sparkles, UsersRound, WalletCards } from "lucide-react";
+import { ArrowUpRight, BadgeCheck, Check, ClipboardList, Clock3, Gamepad2, Menu, PackageCheck, ShieldCheck, Smartphone, Sparkles, UsersRound, WalletCards, X } from "lucide-react";
 import { AAdsBannerPlacement } from "./ads/providers/a-ads/banner";
 import { api } from "../lib/api";
 import { formatUsd } from "../lib/utils";
@@ -91,6 +91,7 @@ export function LandingPage() {
   const [packages, setPackages] = useState<EarningPackage[]>([]);
   const [packagesLoading, setPackagesLoading] = useState(true);
   const [packagesError, setPackagesError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!showDevelopmentOffers) return;
@@ -135,7 +136,12 @@ export function LandingPage() {
       return formatCompactNumber(publicStats.registered_users);
     }
     if (key === "total_payouts_bdt") {
-      return `$${formatCompactNumber(Number(publicStats.total_payouts_bdt))}`;
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: "BDT",
+        notation: "compact",
+        maximumFractionDigits: 1,
+      }).format(Number(publicStats.total_payouts_bdt));
     }
     if (key === "active_packages") {
       return new Intl.NumberFormat().format(publicStats.active_packages);
@@ -156,17 +162,33 @@ export function LandingPage() {
     <main className="landing">
       <header className="landing-nav">
         <Link className="brand landing-brand" href="/" aria-label="WorkBit home"><i>W</i><span>WorkBit</span></Link>
-        <nav aria-label="Main navigation">
+        <nav id="landing-navigation" className={mobileMenuOpen ? "is-open" : undefined} aria-label="Main navigation" onClick={() => setMobileMenuOpen(false)}>
           <Link href="/">Home</Link><Link href="/offers">Offers</Link><a href="#how-it-works">How it works</a><a href="#faq">FAQ</a>
+          <div className="landing-mobile-nav-actions">
+            <Button variant="ghost" asChild><Link href="/login">Log in</Link></Button>
+            <Button className="primary" asChild><Link href="/register">Get started <ArrowUpRight size={15} /></Link></Button>
+          </div>
         </nav>
         <div className="nav-actions"><Button variant="ghost" asChild><Link href="/login">Log in</Link></Button><Button className="primary" asChild><Link href="/register">Get started <ArrowUpRight size={15} /></Link></Button></div>
+        <Button
+          className="landing-mobile-menu-toggle"
+          variant="ghost"
+          size="icon"
+          type="button"
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={mobileMenuOpen}
+          aria-controls="landing-navigation"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          {mobileMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+        </Button>
       </header>
 
       <section className="hero">
         <div className="hero-copy">
           <span className="eyebrow">A CLEARER WAY TO EARN</span>
           <h1>Make your next task <span>count.</span></h1>
-          <p>Discover offers, complete the requirements, and follow every verified reward in one transparent account.</p>
+          <p>Start without buying a package. Discover eligible offers, follow the requirements, and track provider-verified rewards.</p>
           <div className="hero-actions"><Button className="primary" asChild><Link href="/register">Start earning</Link></Button><Button className="secondary" variant="outline" asChild><Link href="/offers">Explore offers <span aria-hidden="true">→</span></Link></Button></div>
           <p className="hero-footnote">No earnings promises. Rewards depend on offer terms and provider confirmation.</p>
         </div>
@@ -217,8 +239,8 @@ export function LandingPage() {
         <div className="section-heading section-heading-row">
           <div>
             <span className="eyebrow">CHOOSE YOUR ACCESS</span>
-            <h2>Our Earning Packages</h2>
-            <p>Pick the access period that works for you. Offers and earnings are not guaranteed.</p>
+            <h2>Optional Packages</h2>
+            <p>Packages are optional. Offers and earnings depend on eligibility and provider confirmation.</p>
           </div>
           <Link className="text-link" href="/packages">Package details <span aria-hidden="true">→</span></Link>
         </div>
@@ -263,11 +285,11 @@ export function LandingPage() {
                   {item.description || "Time-limited access to eligible WorkBit earning features."}
                 </p>
                 <ul className="package-preview-points">
-                  <li><Check size={15} /> Access active after approval</li>
-                  <li><Clock3 size={15} /> {formatDuration(item.duration_days)} of package access</li>
+                  <li><Check size={15} /> Admin-reviewed payment</li>
+                  <li><Clock3 size={15} /> {formatDuration(item.duration_days)} package term</li>
                 </ul>
                 <Button className={index === 1 ? "primary package-preview-cta featured" : "secondary package-preview-cta"} variant={index === 1 ? "default" : "outline"} asChild>
-                  <Link href="/packages">View package <span aria-hidden="true">→</span></Link>
+                  <Link href="/packages">View optional package <span aria-hidden="true">→</span></Link>
                 </Button>
               </Card>
             ))}
@@ -330,6 +352,7 @@ export function LandingPage() {
             <AccordionItem className="faq-item" value="reward"><AccordionTrigger className="faq-question">When does a reward appear?</AccordionTrigger><AccordionContent className="faq-answer">After a provider reports a conversion and it passes server-side validation, WorkBit records the reward decision. Some rewards may remain pending.</AccordionContent></AccordionItem>
             <AccordionItem className="faq-item" value="eligibility"><AccordionTrigger className="faq-question">Can every offer be completed?</AccordionTrigger><AccordionContent className="faq-answer">Availability and requirements vary by provider, country, and device. Review the offer details before starting.</AccordionContent></AccordionItem>
             <AccordionItem className="faq-item" value="payment"><AccordionTrigger className="faq-question">Does completing a task guarantee payment?</AccordionTrigger><AccordionContent className="faq-answer">No. The provider must confirm the conversion and the reward must satisfy the applicable policy.</AccordionContent></AccordionItem>
+            <AccordionItem className="faq-item" value="package"><AccordionTrigger className="faq-question">Do I need to buy a package to start?</AccordionTrigger><AccordionContent className="faq-answer">No. You can explore and complete eligible provider offers without purchasing a package. Packages are optional.</AccordionContent></AccordionItem>
             <AccordionItem className="faq-item" value="activity"><AccordionTrigger className="faq-question">Where can I see reward activity?</AccordionTrigger><AccordionContent className="faq-answer">Sign in to view wallet balances, reward decisions, and ledger transactions associated with your account.</AccordionContent></AccordionItem>
           </Accordion>
         </div>
@@ -343,7 +366,7 @@ export function LandingPage() {
             <Link className="brand landing-brand" href="/"><i>W</i><span>WorkBit</span></Link>
             <p>Work. Complete. Earn.<br />A clearer way to track provider-verified rewards.</p>
           </div>
-          <div className="landing-footer-column"><strong>Explore</strong><Link href="/offers">Browse offers</Link><Link href="/packages">Earning packages</Link><a href="#how-it-works">How it works</a></div>
+          <div className="landing-footer-column"><strong>Explore</strong><Link href="/offers">Browse offers</Link><Link href="/trust">Trust center</Link><Link href="/packages">Optional packages</Link><a href="#how-it-works">How it works</a></div>
           <div className="landing-footer-column"><strong>Your account</strong><Link href="/register">Create account</Link><Link href="/login">Log in</Link><a href="#faq">FAQs</a></div>
           <div className="landing-footer-column"><strong>Policies</strong><Link href="/terms">Terms of service</Link><Link href="/privacy">Privacy policy</Link><Link href="/reward-policy">Reward policy</Link><Link href="/withdrawal-policy">Withdrawal policy</Link></div>
         </div>
