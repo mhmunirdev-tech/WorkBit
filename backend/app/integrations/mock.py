@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models import Offer, OfferNetwork
 from app.schemas.offers import OfferRead
+from app.services.rewards import reward_decision_service
 
 
 class MockOfferProvider:
@@ -23,10 +24,19 @@ class MockOfferProvider:
                 id=offer.id,
                 title=offer.title,
                 short_description=offer.short_description,
+                description=offer.description,
+                requirements=offer.requirements,
                 category=offer.category,
                 country=country.upper(),
                 device_type=offer.device_type,
                 user_reward=offer.user_reward,
+                estimated_user_reward=reward_decision_service.estimate_user_reward_for_country(
+                    db,
+                    country,
+                    "mock",
+                    offer.id,
+                    offer.user_reward,
+                ),
                 currency=offer.currency,
                 estimated_time_minutes=offer.estimated_time_minutes,
                 difficulty=offer.difficulty,

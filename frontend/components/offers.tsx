@@ -9,6 +9,7 @@ import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
 import { api } from "../lib/api";
+import { useLanguage } from "./language-provider";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, useShellUser, WALLET_UPDATED_EVENT } from "./shell";
@@ -25,10 +26,13 @@ type Offer = {
   id: string;
   title: string;
   short_description: string;
+  description: string;
+  requirements: string;
   category: string;
   country: string;
   device_type: string;
   user_reward: string;
+  estimated_user_reward: string | null;
   currency: string;
   estimated_time_minutes: number;
   difficulty: string;
@@ -39,13 +43,15 @@ type Offer = {
 
 const categories = ["All", "GAME", "SURVEY", "APP", "SIGNUP", "OTHER"];
 
-function reward(value: string, currency: string) {
+function reward(value: string | null, currency: string) {
+  if (value === null) return "—";
   return formatUsd(value);
 }
 
 function OffersCatalog() {
   const isDevelopment = process.env.NODE_ENV === "development";
   const account = useShellUser();
+  const { t } = useLanguage();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [category, setCategory] = useState("All");
   const [device, setDevice] = useState("");
@@ -91,7 +97,7 @@ function OffersCatalog() {
 
   return (
     <>
-      <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
+      <header className="top"><div><p className="eyebrow">{t("OFFER CATALOG")}</p><h1>{t("Find your next task")}</h1><p className="muted">{t("Availability and rewards depend on offer terms and provider verification.")}</p></div></header>
       <TheoremReachSurveyCatalog />
       <CPXResearchOfferWall />
       <BitLabsOfferWall />
@@ -124,7 +130,7 @@ function OffersCatalog() {
                   <CardTitle>{offer.title}</CardTitle>
                   <p>{offer.short_description}</p>
                   <div className="meta"><span>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} min` : "Time varies"}</span><span>{offer.difficulty}</span><span>{offer.country}</span></div>
-                  <div className="offer-foot"><div className="offer-reward"><small>GROSS AD REWARD</small><strong>{reward(offer.user_reward, offer.currency)}</strong></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>View details <ArrowRight size={14} /></Link></Button></div>
+                  <div className="offer-foot"><div className="offer-reward"><small>{t("Estimated user reward")}</small><strong>{reward(offer.estimated_user_reward, offer.currency)}</strong>{offer.estimated_user_reward === null && <small>{t("Reward estimate unavailable until a policy is configured.")}</small>}<small>{t("Provider payout")}: {reward(offer.user_reward, offer.currency)}</small></div><Button className="offer-link-button" variant="outline" asChild><Link href={`/offers/${encodeURIComponent(offer.id)}`}>{t("View details")} <ArrowRight size={14} /></Link></Button></div>
                   {offer.is_demo && <small className="demo-label">Development demo — no provider redirect</small>}
                 </CardContent>
               </Card>)}
@@ -142,6 +148,7 @@ export function OffersPage() {
 
 function OfferDetailContent({ id }: { id: string }) {
   const account = useShellUser();
+  const { t } = useLanguage();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -202,7 +209,7 @@ function OfferDetailContent({ id }: { id: string }) {
     <Button variant="link" asChild><Link href="/offers" className="text-link"><ArrowLeft size={15} /> Back to offers</Link></Button>
     {loading ? <Card className="panel"><Skeleton className="h-5 w-1/2" /><Skeleton className="h-4 w-1/3" /></Card>
       : error || !offer ? <Alert className="state error-state" variant="destructive"><AlertDescription>{error || "Offer not found."}</AlertDescription></Alert>
-      : <Card className="offer-detail panel"><CardContent><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.short_description}</p><div className="detail-reward"><span>Gross ad reward</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><dl><div><dt>Estimated time</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} minutes` : "Varies by task"}</dd></div><div><dt>Difficulty</dt><dd>{offer.difficulty}</dd></div><div><dt>Availability</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl><p className="offer-terms">{offer.is_demo ? "This is a development test offer. 20% of the gross ad reward is retained as platform share; the remaining 80% is credited to your available balance." : "Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation."}</p>{offer.is_demo ? <><p className="demo-label">Development demo only — no external ad is played.</p><Button className="primary" onClick={simulateCompletion} disabled={busy}>{busy ? "Adding test earning…" : "Complete demo ad and add test earning"}</Button></> : <Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}{message.toLowerCase().includes("package") && <Button variant="outline" asChild><Link href="/packages">View earning packages</Link></Button>}</CardContent></Card>}
+      : <Card className="offer-detail panel"><CardContent><Badge className="offer-provider" variant="secondary">{offer.source_name}</Badge><Badge className="offer-type" variant="outline">{offer.category} · {offer.country} · {offer.device_type}</Badge><h1>{offer.title}</h1><p>{offer.description || offer.short_description}</p><div className="detail-reward"><span>{t("Provider payout")}</span><strong>{reward(offer.user_reward, offer.currency)}</strong></div><div className="detail-reward"><span>{t("Estimated user reward")}</span><strong>{reward(offer.estimated_user_reward, offer.currency)}</strong>{offer.estimated_user_reward === null && <small>{t("Reward estimate unavailable until a policy is configured.")}</small>}</div><dl><div><dt>{t("Estimated time")}</dt><dd>{offer.estimated_time_minutes ? `${offer.estimated_time_minutes} ${t("minutes")}` : t("Varies by task")}</dd></div><div><dt>{t("Difficulty")}</dt><dd>{t(offer.difficulty)}</dd></div><div><dt>{t("Availability")}</dt><dd>{offer.country} · {offer.device_type}</dd></div></dl>{offer.requirements && <section className="offer-requirements"><h2>{t("How to qualify")}</h2><p>{offer.requirements}</p></section>}<p className="offer-terms">{offer.is_demo ? t("Development test offer. The estimated user reward applies the active WorkBit reward policy to the displayed provider payout.") : t("Read and follow the provider’s full requirements. Rewards require provider confirmation and WorkBit validation.")}</p><section className="offer-terms"><strong>{t("Reward confirmation")}</strong><p>{t("A displayed reward is an estimate, not a payment guarantee.")} {t("A provider must confirm completion before WorkBit can credit a reward.")}</p></section>{offer.is_demo ? <><p className="demo-label">Development demo only — no external ad is played.</p><Button className="primary" onClick={simulateCompletion} disabled={busy}>{busy ? "Adding test earning…" : "Complete demo ad and add test earning"}</Button></> : <Button className="primary" onClick={trackClick} disabled={busy}>{busy ? "Recording…" : "Record offer click"}</Button>}{message && <Alert className="form-message" role="status"><AlertDescription>{message}</AlertDescription></Alert>}{message.toLowerCase().includes("package") && <Button variant="outline" asChild><Link href="/packages">View earning packages</Link></Button>}</CardContent></Card>}
   </>;
 }
 

@@ -8,7 +8,7 @@ These Terms of Service ("Terms") govern your use of the WorkBit platform operate
 
 2. Services Provided
 
-WorkBit provides a rewards platform where registered users may purchase time-limited earning packages and earn rewards by completing third-party offers. WorkBit is not the provider of those third-party offers — we mediate participation and credit rewards when providers confirm completion.
+WorkBit provides a rewards platform where registered users may purchase time-limited earning packages and earn rewards by completing third-party offers. WorkBit is not the provider of those third-party offers — we mediate participation and credit rewards when providers confirm completion. AyeT Studios is not an active WorkBit partner unless and until its integration is approved, configured, and made available. If enabled, we will identify the provider and make the applicable provider privacy notice and offer terms available before users start its offers.
 
 Third-party providers set their own eligibility, campaign, traffic-quality, and offer-completion requirements. An offer may be changed, paused, or withdrawn by its provider at any time. Display advertisements are separate from incentivized offers; viewing or clicking a display ad does not earn WorkBit wallet rewards unless WorkBit expressly identifies a provider-approved rewarded placement and its terms.
 
@@ -20,7 +20,7 @@ You must be at least 18 years old (or the local age of majority) to use the Serv
 
 - Deposit Balance: funds you deposit (BDT) reserved for purchasing or renewing packages. Deposit Balance is not withdrawable.
 - Earning Balance: rewards earned by completing offers. Earning Balance may be withdrawn subject to admin-configured minimums and verification.
-- Platform fee: by default, WorkBit retains a 20% share of credited offer revenue; the remainder is credited to the user. Specific splits and fees are shown in the user wallet and admin settings.
+- Platform fee: by default, WorkBit retains a 30% share of eligible provider payout, and 70% is allocated to the user. Specific splits, eligibility rules, and fees may vary by offer policy and are shown where available.
 
 5. Offer Completion and Verification
 

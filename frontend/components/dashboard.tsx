@@ -6,6 +6,7 @@ import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Pause, Play } 
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd, formatWbcFromUsd, WBC_VALUE_BDT } from "../lib/utils";
+import { useLanguage } from "./language-provider";
 import { Shell, ShellUser, WALLET_UPDATED_EVENT } from "./shell";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
@@ -91,6 +92,7 @@ function DashboardSkeleton() {
 }
 
 function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
+  const { t } = useLanguage();
   const viewportRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
   const [pageCount, setPageCount] = useState(1);
@@ -148,7 +150,7 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
   return (
     <section className="dashboard-banner-section" aria-label="WorkBit announcements">
       <div className="dashboard-banner-heading">
-        <div><p className="eyebrow">WORKBIT UPDATES</p><h2>Announcements</h2></div>
+        <div><p className="eyebrow">{t("WORKBIT UPDATES")}</p><h2>{t("Announcements")}</h2></div>
         {pageCount > 1 && (
           <div className="dashboard-banner-controls" aria-label="Banner controls">
             <Button variant="ghost" size="icon" type="button" aria-label="Previous banners" onClick={() => showPage((activePage - 1 + pageCount) % pageCount)}>
@@ -283,6 +285,7 @@ function EarningsChart({
 }
 
 export function Dashboard() {
+  const { language, t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -340,8 +343,8 @@ export function Dashboard() {
   }, []);
 
   const displayDate = useMemo(
-    () => new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
-    [],
+    () => new Intl.DateTimeFormat(language === "bn" ? "bn-BD" : "en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
+    [language],
   );
 
   async function copyReferralLink() {
@@ -410,8 +413,8 @@ export function Dashboard() {
         <header className="dashboard-welcome">
           <div className="welcome-copy">
             <p className="eyebrow">{displayDate}</p>
-            <h1>Welcome back, {firstName} <span aria-hidden="true">✦</span></h1>
-            <p>Here’s your verified WorkBit activity at a glance.</p>
+            <h1>{language === "bn" ? `স্বাগতম, ${firstName}` : `Welcome back, ${firstName}`} <span aria-hidden="true">✦</span></h1>
+            <p>{t("Here’s your verified WorkBit activity at a glance.")}</p>
           </div>
           <div className="welcome-actions">
             {!data.package_active &&
@@ -421,14 +424,14 @@ export function Dashboard() {
               <Button className="dashboard-cta deposit-cta" variant="outline" asChild>
                 <Link href="/packages">
                   <ArrowDownToLine size={16} aria-hidden="true" />
-                  Deposit
+                  {t("Deposit")}
                 </Link>
               </Button>
             )}
             <Button className="dashboard-cta withdraw-cta" asChild>
               <Link href="/withdraw">
                 <ArrowUpFromLine size={16} aria-hidden="true" />
-                Withdraw
+                {t("Withdraw")}
               </Link>
             </Button>
           </div>
@@ -439,7 +442,7 @@ export function Dashboard() {
         <section className="dashboard-metrics" aria-label="Earnings and withdrawals">
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
-            <p>Earning balance</p>
+            <p>{t("Earning balance")}</p>
             <h2>{money(data.earning_balance, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>{data.withdrawal_summary.usd_bdt_rate ? `1 WBC = ৳${WBC_VALUE_BDT.toFixed(2)} · based on current withdrawal rate` : "WBC estimate unavailable until the USD/BDT rate is configured"}</small>
           </article></Card>
@@ -447,26 +450,26 @@ export function Dashboard() {
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
             <p>Earned today</p>
             <h2>{money(data.stats.today_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
-            <small>Approved ledger credits</small>
+            <small>{t("Approved ledger credits")}</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
-            <p>Total earnings</p>
+            <p>{t("Total earnings")}</p>
             <h2>{money(data.lifetime_earned, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
-            <small>Recorded by WorkBit</small>
+            <small>{t("Recorded by WorkBit")}</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
-            <p>Total withdrawn</p>
+            <p>{t("Total withdrawn")}</p>
             <h2>{money(data.lifetime_withdrawn, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
-            <small>Completed wallet movements</small>
+            <small>{t("Completed wallet movements")}</small>
           </article></Card>
         </section>
 
         <section className="dashboard-community-grid" aria-label="Referral and verified earnings">
           <Card className="panel referral-panel" asChild><article>
             <div className="panel-heading">
-              <div><p className="eyebrow">INVITE YOUR NETWORK</p><h2>Your referrals</h2></div>
+              <div><p className="eyebrow">{t("INVITE YOUR NETWORK")}</p><h2>{t("Your referrals")}</h2></div>
               <span className="referral-emblem" aria-hidden="true">↗</span>
             </div>
             <p className="referral-description">Earn 20% on a referred member’s first package, then 5% on each later package after payment approval. Rewards are added to your wallet and shown in WBC.</p>

@@ -1,12 +1,12 @@
 from datetime import date, datetime, time, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import distinct, func, select
+from sqlalchemy import case, distinct, func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_permission
 from app.database.session import get_db
-from app.models import AnalyticsEvent, User
+from app.models import AnalyticsEvent, OfferConversion, RewardDecision, User
 from app.schemas.analytics import AdminAnalyticsRead, PageViewCreate
 from app.services.analytics import purge_expired_events, record_page_view
 
@@ -137,3 +137,67 @@ def admin_analytics(
         ],
         daily=daily,
     )
+
+
+@router.get("/admin/provider-performance")
+def admin_provider_performance(
+    _: User = Depends(require_permission("users.view")),
+    db: Session = Depends(get_db),
+) -> list[dict[str, int | float | str]]:
+    approved = RewardDecision.status == "APPROVED"
+    pending = RewardDecision.status.in_(("PENDING", "MANUAL_REVIEW"))
+    reversed_status = RewardDecision.status.in_(("REVERSED", "CHARGEBACK", "FRAUD"))
+    decided = RewardDecision.status.in_(
+        ("APPROVED", "REJECTED", "REVERSED", "CHARGEBACK", "FRAUD")
+    )
+    rows = db.execute(
+        select(
+            OfferConversion.network_id,
+            func.count(OfferConversion.id),
+            func.sum(case((approved, 1), else_=0)),
+            func.sum(case((pending, 1), else_=0)),
+            func.sum(case((reversed_status, 1), else_=0)),
+            func.sum(case((decided, 1), else_=0)),
+            func.sum(case((approved, RewardDecision.provider_payout), else_=0)),
+            func.sum(case((approved, RewardDecision.user_reward), else_=0)),
+            func.sum(case((pending, RewardDecision.user_reward), else_=0)),
+            func.sum(case((reversed_status, RewardDecision.user_reward), else_=0)),
+        )
+        .select_from(OfferConversion)
+        .outerjoin(RewardDecision, RewardDecision.conversion_id == OfferConversion.id)
+        .where(OfferConversion.currency == "USD")
+        .group_by(OfferConversion.network_id)
+        .order_by(OfferConversion.network_id)
+    ).all()
+
+    results: list[dict[str, int | str]] = []
+    for (
+        network_id,
+        conversions,
+        approved_count,
+        pending_count,
+        reversed_count,
+        decided_count,
+        provider_payout,
+        user_rewards,
+        pending_rewards,
+        reversed_rewards,
+    ) in rows:
+        approved_count = approved_count or 0
+        decided_count = decided_count or 0
+        approval_rate = round(approved_count / decided_count * 100, 2) if decided_count else 0
+        results.append(
+            {
+                "provider": network_id,
+                "conversions": conversions,
+                "approved": approved_count,
+                "pending": pending_count or 0,
+                "reversed": reversed_count or 0,
+                "approval_rate": approval_rate,
+                "approved_provider_payout_usd": str(provider_payout or 0),
+                "approved_user_rewards_usd": str(user_rewards or 0),
+                "pending_user_rewards_usd": str(pending_rewards or 0),
+                "reversed_user_rewards_usd": str(reversed_rewards or 0),
+            }
+        )
+    return results

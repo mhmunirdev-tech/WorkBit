@@ -27,6 +27,7 @@ const navigationGroups = [
     items: [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
       { href: "/admin/analytics", label: "Analysis", icon: Activity },
+      { href: "/admin/providers", label: "Provider performance", icon: Activity },
       { href: "/admin/users", label: "User registry", icon: Users },
       { href: "/admin/fraud", label: "Fraud management", icon: ShieldAlert },
     ],

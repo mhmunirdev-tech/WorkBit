@@ -1,6 +1,6 @@
 # Offer and redirect architecture
 
-The catalog is provider-neutral. Providers emit normalized `OfferRead` values; the core service applies country, category, device, pagination, and ranking rules.
+The catalog is provider-neutral. Providers emit normalized `OfferRead` values; the core service applies country, category, device, pagination, and ranking rules. Offer details include provider payout, an estimate of the user's reward under the active country/network/offer reward policy, available completion requirements, and an estimated completion time when supplied. Estimates are not guarantees; only provider-confirmed conversions can be credited.
 
 `POST /api/v1/offers/{id}/click` creates a server-owned click record. No client reward, payout, or destination is accepted. `POST /api/v1/offers/{id}/redirect` is intentionally unavailable for mock/unconfigured providers and returns a controlled 503 rather than fabricating an external URL.
 

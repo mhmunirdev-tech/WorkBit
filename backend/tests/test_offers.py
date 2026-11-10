@@ -24,7 +24,11 @@ def test_offer_listing_and_filters(client):
     assert len(mobile) == 2 and all(item["device_type"] == "MOBILE" for item in mobile)
 
 def test_offer_detail_and_invalid_offer(client):
-    assert client.get("/api/v1/offers/mock-game?country=US").status_code == 200
+    response = client.get("/api/v1/offers/mock-game?country=US")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["requirements"]
+    assert Decimal(data["estimated_user_reward"]) == Decimal(data["user_reward"]) * Decimal("0.70")
     assert client.get("/api/v1/offers/not-real?country=US").status_code == 404
 
 
@@ -86,9 +90,10 @@ def test_simulated_ad_completion_credits_available_balance_immediately(client, m
 
     assert response.status_code == 200
     assert response.json()["reward_status"] == "APPROVED"
-    gross_ad_reward = Decimal(client.get("/api/v1/offers/mock-game?country=US").json()["user_reward"])
-    expected_user_reward = gross_ad_reward * Decimal("0.80")
-    expected_platform_share = gross_ad_reward * Decimal("0.20")
+    offer_details = client.get("/api/v1/offers/mock-game?country=US").json()
+    gross_ad_reward = Decimal(offer_details["user_reward"])
+    expected_user_reward = Decimal(offer_details["estimated_user_reward"])
+    expected_platform_share = gross_ad_reward - expected_user_reward
     assert Decimal(response.json()["reward_amount"]) == expected_user_reward
     assert Decimal(response.json()["platform_share_amount"]) == expected_platform_share
     assert Decimal(response.json()["available_balance"]) == expected_user_reward
@@ -117,12 +122,13 @@ def test_simulated_ad_completion_splits_gross_rewards_and_reports_platform_share
     for offer in offers:
         response = client.post(f"/api/v1/offers/{offer['id']}/simulate-completion")
         gross_ad_reward = Decimal(offer["user_reward"])
+        estimated_user_reward = Decimal(offer["estimated_user_reward"])
 
         assert response.status_code == 200
-        assert Decimal(response.json()["reward_amount"]) == gross_ad_reward * Decimal("0.80")
-        assert Decimal(response.json()["platform_share_amount"]) == gross_ad_reward * Decimal("0.20")
-        expected_user_total += gross_ad_reward * Decimal("0.80")
-        expected_platform_total += gross_ad_reward * Decimal("0.20")
+        assert Decimal(response.json()["reward_amount"]) == estimated_user_reward
+        assert Decimal(response.json()["platform_share_amount"]) == gross_ad_reward - estimated_user_reward
+        expected_user_total += estimated_user_reward
+        expected_platform_total += gross_ad_reward - estimated_user_reward
 
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["available_balance"]) == expected_user_total

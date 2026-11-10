@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "./language-provider";
 
 type PolicySection = {
   heading: string;
@@ -50,7 +53,7 @@ const documents: Record<string, PolicyDocument> = {
         heading: "5. Offers and rewards",
         paragraphs: [
           "Offer availability, eligibility, instructions, and rewards are determined by each offer provider and may vary by country, device, and time. Read the full provider requirements before starting. A displayed amount is not a promise of payment: a provider must report a valid completion and WorkBit must validate it before a reward is recorded.",
-          "The default reward policy allocates 80% of eligible provider payout to the user and 20% to WorkBit. WorkBit may configure different percentages or other policy limits; the applicable reward details are shown where available. Development/demo offers are identified as such and do not create real rewards.",
+          "The default reward policy allocates 70% of eligible provider payout to the user and 30% to WorkBit. WorkBit may configure different percentages or other policy limits; the applicable reward details are shown where available. Development/demo offers are identified as such and do not create real rewards.",
         ],
       },
       {
@@ -74,6 +77,7 @@ const documents: Record<string, PolicyDocument> = {
         heading: "8. Third-party services",
         paragraphs: [
           "Offers and payment services may be provided by third parties and are subject to their own terms and privacy notices. WorkBit cannot guarantee a third party's availability, decision, or processing time. Your use of a third-party service is also governed by its terms.",
+          "AyeT Studios is not represented as an active WorkBit partner unless and until the integration is approved, configured, and made available. If WorkBit later enables ayeT offers, we will identify the provider and make its applicable privacy notice and offer terms available before you start. Provider-specific information may be shared only as needed to attribute and verify offer activity, prevent abuse, process rewards or reversals, and reconcile transactions; the exact data depends on the approved integration.",
         ],
       },
       {
@@ -131,7 +135,8 @@ const documents: Record<string, PolicyDocument> = {
       {
         heading: "3. Offers and third-party sharing",
         paragraphs: [
-          "When third-party offer providers are enabled, information needed to identify and validate an offer interaction may be sent to the relevant provider, and we may receive conversion or reversal information from that provider. Providers handle information under their own privacy notices. WorkBit's current offer catalog is development-only; demo activity does not create real rewards, and production provider availability depends on integrations being configured and approved.",
+          "When a third-party offer provider is approved, configured, and enabled, WorkBit may share a provider-specific account or click identifier, offer or campaign identifiers, country, timestamps, completion status, reward or transaction references, and technical information such as IP address and browser or device details, to the extent required by that integration. We use this information to attribute and verify eligibility and completion, prevent abuse, process rewards or provider reversals, and reconcile transactions. We may receive conversion, validation, or reversal information from the provider. The exact data depends on the provider and integration; the provider may also collect information directly through its offerwall or tracking technologies under its own privacy notice.",
+          "AyeT Studios is not currently represented as an active WorkBit partner. If an ayeT integration is approved and enabled in the future, we will identify ayeT and make its applicable privacy notice and offer terms available before users start its offers. We will update this Policy if the actual integration introduces materially different data sharing. WorkBit's current offer catalog is development-only; demo activity does not create real rewards, and production provider availability depends on integrations being configured and approved.",
           "We may also share limited information with service providers that help operate WorkBit, when needed to process a transaction, or when disclosure is required by law. We do not sell personal information.",
         ],
       },
@@ -211,7 +216,7 @@ const documents: Record<string, PolicyDocument> = {
       {
         heading: "4. Reward share",
         paragraphs: [
-          "The current default policy allocates 80% of eligible provider payout to the user and 20% to WorkBit. The policy applied to a conversion may be configured by WorkBit and can include limits, rounding, or other eligibility rules. Where provided, the offer's displayed user reward is an estimate or catalog value; the validated ledger decision is the record of the amount actually credited.",
+          "The current default policy allocates 70% of eligible provider payout to the user and 30% to WorkBit. The policy applied to a conversion may be configured by WorkBit and can include limits, rounding, or other eligibility rules. Where provided, the offer's displayed user reward is an estimate or catalog value; the validated ledger decision is the record of the amount actually credited.",
         ],
       },
       {
@@ -297,8 +302,47 @@ const documents: Record<string, PolicyDocument> = {
   },
 };
 
+const withdrawalPolicyBn: PolicyDocument = {
+  eyebrow: "পেমেন্ট নির্দেশিকা",
+  title: "উত্তোলন নীতিমালা",
+  intro: "WorkBit-এ উত্তোলনের অনুরোধ, যোগ্যতা এবং পর্যালোচনার প্রক্রিয়া এখানে ব্যাখ্যা করা হয়েছে। উত্তোলন নির্ভর করে যাচাইকৃত অ্যাকাউন্ট, উত্তোলনযোগ্য আয়, payout settings এবং প্রশাসকের পর্যালোচনার ওপর।",
+  sections: [
+    {
+      heading: "১. কোন ব্যালেন্স উত্তোলন করা যাবে",
+      paragraphs: ["শুধু available earning balance উত্তোলনযোগ্য। Deposit balance প্যাকেজ কেনা বা নবায়নের জন্য সংরক্ষিত, তাই তা উত্তোলন করা যাবে না। Pending, rejected, reversed বা অনুমোদন না হওয়া reward উত্তোলনযোগ্য আয়ের অন্তর্ভুক্ত নয়।"],
+    },
+    {
+      heading: "২. ন্যূনতম পরিমাণ ও মুদ্রা",
+      paragraphs: ["Wallet ও withdrawal request USD-তে হিসাব করা হয়। WorkBit ন্যূনতম উত্তোলনের পরিমাণ নির্ধারণ করে; default হলো $5 USD। বর্তমানে প্রযোজ্য পরিমাণ withdrawal screen-এ দেখুন। আপনার available withdrawable balance-এর বেশি অনুরোধ করা যাবে না।"],
+    },
+    {
+      heading: "৩. payout পদ্ধতি ও রূপান্তর",
+      paragraphs: ["বর্তমান manual payout পদ্ধতি হলো bKash অথবা Nagad-এ BDT payout। অনুরোধ করার আগে WorkBit-এর USD/BDT rate সেট করা থাকতে হবে। অনুরোধ জমা দেওয়ার সময়কার rate ও আনুমানিক BDT payout সংরক্ষিত হয়; পরের rate পরিবর্তনে সেই অনুরোধের হিসাব বদলায় না।"],
+    },
+    {
+      heading: "৪. অ্যাকাউন্ট ও অনুরোধের শর্ত",
+      bullets: ["অ্যাকাউন্ট active এবং email verified হতে হবে।", "নিজের সঠিক payout account ব্যবহার করুন।", "এক সময়ে একটি withdrawal pending বা processing থাকতে পারে।", "Secure payout storage বা admin-managed exchange rate সেট না থাকলে উত্তোলনের অনুরোধ করা যাবে না।"],
+    },
+    {
+      heading: "৫. পর্যালোচনা ও প্রক্রিয়াকরণ",
+      paragraphs: ["Withdrawal request ম্যানুয়ালি পর্যালোচনা করা হয়। অনুরোধ জমা দিলে চাওয়া USD পরিমাণ available wallet balance থেকে সাময়িকভাবে সংরক্ষিত হয়। Admin request অনুমোদন করে processing-এ পাঠাতে, বাতিল করে সংরক্ষিত পরিমাণ ফেরত দিতে, অথবা payout সম্পন্ন হলে complete করতে পারেন। Processing-এর সময় ভিন্ন হতে পারে; নির্দিষ্ট payout সময়ের নিশ্চয়তা দেওয়া হয় না।", "যাচাই বা সম্ভাব্য ভুল/অপব্যবহার তদন্তের জন্য WorkBit অতিরিক্ত তথ্য চাইতে পারে। অ্যাকাউন্ট ও payout তথ্য নিরাপদ রাখুন।"],
+    },
+    {
+      heading: "৬. ফি, কর ও ভুল",
+      paragraphs: ["WorkBit আগে থেকে নির্ধারণ করতে পারলে প্রযোজ্য payout fee প্রক্রিয়াকরণের আগে দেখানো হবে; তৃতীয় পক্ষের fee-ও প্রযোজ্য হতে পারে। আপনার এলাকায় reward বা payout করযোগ্য কি না তা যাচাই করা আপনার দায়িত্ব। অনুরোধ বা payout রেকর্ডে ভুল মনে হলে দ্রুত WorkBit support-এ জানান।"],
+    },
+    {
+      heading: "৭. যোগাযোগ ও নীতিমালা পরিবর্তন",
+      paragraphs: ["Withdrawal সংক্রান্ত প্রশ্নে request reference-সহ আপনার account communication-এ দেওয়া support contact ব্যবহার করুন। payout পদ্ধতি বা আইনি শর্ত বদলালে WorkBit Ltd, USA এই নীতিমালা হালনাগাদ করতে পারে; সর্বশেষ সংস্করণ এই পাতায় প্রকাশিত হবে।"],
+    },
+  ],
+};
+
 export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
-  const document = documents[policy];
+  const { language, setLanguage, t } = useLanguage();
+  const document = policy === "withdrawal-policy" && language === "bn"
+    ? withdrawalPolicyBn
+    : documents[policy];
 
   return (
     <main className="landing policy-page">
@@ -313,8 +357,20 @@ export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
           <Link href="/withdrawal-policy">Withdrawal policy</Link>
         </nav>
         <div className="nav-actions">
+          <label className="language-control">
+            <span className="sr-only">{t("Language")}</span>
+            <select
+              aria-label={t("Language")}
+              className="language-selector"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value === "bn" ? "bn" : "en")}
+            >
+              <option value="en">English</option>
+              <option value="bn">বাংলা</option>
+            </select>
+          </label>
           <Link className="text-link" href="/">
-            Back to home
+            {t("Back to home")}
           </Link>
         </div>
       </header>
@@ -324,6 +380,9 @@ export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
         <h1>{document.title}</h1>
         <p>{document.intro}</p>
         <small>WorkBit Ltd, USA · Last updated October 11, 2026</small>
+        {policy === "withdrawal-policy" && language === "bn" && (
+          <small>এই বাংলা অনুবাদটি তথ্য বোঝার সুবিধার জন্য। প্রয়োজনে ইংরেজি নীতিমালাই প্রামাণ্য সংস্করণ।</small>
+        )}
       </section>
 
       <article className="policy-content">

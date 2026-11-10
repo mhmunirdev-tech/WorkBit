@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Banknote, Plus, ShieldCheck, Smartphone, X } from "lucide-react";
 import { api } from "../lib/api";
+import { useLanguage } from "./language-provider";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, ShellUser } from "./shell";
@@ -443,6 +444,7 @@ export function WithdrawalPage({
   historyOnly?: boolean;
   embedded?: boolean;
 }) {
+  const { t } = useLanguage();
   const {
     summary,
     records,
@@ -578,6 +580,20 @@ export function WithdrawalPage({
         </div>
         <Button className="text-link" variant="link" asChild><Link href="/wallet">View wallet →</Link></Button>
       </header>}
+
+      {!embedded && !historyOnly && (
+        <Card className="panel withdrawal-help">
+          <strong>{t("Withdrawal help")}</strong>
+          <ul>
+            <li>{t("Only available earning balance can be withdrawn.")}</li>
+            <li>{t("Deposit balance is reserved for packages and is not withdrawable.")}</li>
+            <li>{t("Pending rewards are not withdrawable.")}</li>
+            <li>{t("Withdrawal requests are manually reviewed; processing time may vary.")}</li>
+            <li>{t("No fixed payout timeline is promised.")}</li>
+          </ul>
+          <Link href="/withdrawal-policy">{t("Withdrawal Policy")}</Link>
+        </Card>
+      )}
 
       {summaryError && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{summaryError}</AlertDescription></Alert>}
       {summary && (

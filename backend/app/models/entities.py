@@ -506,3 +506,22 @@ class RewardDecision(Base):
     conversion: Mapped[OfferConversion] = relationship()
     user: Mapped[User] = relationship()
     policy: Mapped[RewardPolicy | None] = relationship(back_populates="decisions")
+
+
+class RewardNotification(Base):
+    __tablename__ = "reward_notifications"
+    __table_args__ = (
+        UniqueConstraint("reward_decision_id", "status", name="uq_reward_notification_decision_status"),
+        Index("ix_reward_notifications_user_created", "user_id", "created_at"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    reward_decision_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("reward_decisions.id", ondelete="CASCADE"), index=True
+    )
+    status: Mapped[str] = mapped_column(String(32))
+    title: Mapped[str] = mapped_column(String(120))
+    message: Mapped[str] = mapped_column(Text)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

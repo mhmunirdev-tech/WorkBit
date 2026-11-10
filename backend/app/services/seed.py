@@ -48,6 +48,14 @@ DEVELOPMENT_OFFERS = (
     ("workbit-demo-surveys", "mock-survey-feedback", "mock-survey-feedback", "Share Your Shopping Feedback", "Answer a sample product feedback survey from the demo feed.", "SURVEY", "MOBILE", Decimal("0.55"), Decimal("0.45"), 10, "Easy", True),
     ("workbit-demo-apps", "mock-app-fitness", "mock-app-fitness", "Try a Fitness App", "Explore a sample app discovery offer from the demo feed.", "APP", "ANDROID", Decimal("1.20"), Decimal("1.00"), 25, "Medium", True),
 )
+DEVELOPMENT_REQUIREMENTS = {
+    "mock-game": "Install and open the demo game, then complete its introductory puzzle.",
+    "mock-survey": "Answer every sample survey question and submit the final response.",
+    "mock-signup": "Complete the demo registration form with valid test details.",
+    "mock-game-puzzle": "Finish the sample puzzle challenge in the demo game.",
+    "mock-survey-feedback": "Complete the product feedback questions and submit your answers.",
+    "mock-app-fitness": "Open the sample fitness app listing and complete the in-app introduction.",
+}
 
 def seed_demo_offers(db) -> None:
     demo_networks = {}
@@ -109,6 +117,7 @@ def seed_demo_offers(db) -> None:
         offer.currency = "USD"
         offer.estimated_time_minutes = estimated_time
         offer.difficulty = difficulty
+        offer.requirements = DEVELOPMENT_REQUIREMENTS.get(offer_id, "")
         offer.status = "PUBLISHED"
         offer.featured = featured
 

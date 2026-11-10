@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import OfferConversion, PackagePurchase, RewardDecision, RewardPolicy, User, Wallet, WalletTransaction
+from app.models import OfferConversion, PackagePurchase, RewardDecision, RewardNotification, RewardPolicy, User, Wallet, WalletTransaction
 from app.services.fraud import fraud_service
 from app.services.packages import has_active_package
 
@@ -37,15 +37,27 @@ class RewardDecisionService:
 
         provider_payout = conversion.provider_payout
         if provider_payout <= ZERO:
-            return self._persist_decision(db, conversion, user, policy, "REJECTED", "Provider payout is zero or negative.")
+            decision = self._persist_decision(
+                db, conversion, user, policy, "REJECTED", "Provider payout is zero or negative."
+            )
+            db.commit()
+            return decision
 
         user_reward = self._calculate_user_reward(policy, provider_payout)
         platform_share = self._calculate_platform_share(policy, provider_payout, user_reward)
 
         if fraud.action in {"FRAUD", "REJECTED"}:
-            return self._persist_decision(db, conversion, user, policy, "REJECTED", f"Fraud assessment: {fraud.action}")
+            decision = self._persist_decision(
+                db, conversion, user, policy, "REJECTED", f"Fraud assessment: {fraud.action}"
+            )
+            db.commit()
+            return decision
         if fraud.action == "MANUAL_REVIEW":
-            return self._persist_decision(db, conversion, user, policy, "MANUAL_REVIEW", f"Fraud assessment: {fraud.action}")
+            decision = self._persist_decision(
+                db, conversion, user, policy, "MANUAL_REVIEW", f"Fraud assessment: {fraud.action}"
+            )
+            db.commit()
+            return decision
 
         decision_status = self._decision_status(conversion, policy)
         decision = self._persist_decision(
@@ -143,11 +155,40 @@ class RewardDecisionService:
         elif previous_status == "APPROVED" and status in {"REVERSED", "CHARGEBACK", "FRAUD"}:
             self._reverse_available(db, wallet, decision, status)
         decision.status, decision.reason = status, reason
+        self._create_status_notification(db, decision)
         if previous_status == "MANUAL_REVIEW" and status == "APPROVED":
             self._apply_wallet_projection(db, user, decision)
         decision.updated_at = datetime.now(timezone.utc)
         db.commit(); db.refresh(decision)
         return decision
+
+    def _create_status_notification(self, db: Session, decision: RewardDecision) -> None:
+        messages = {
+            "PENDING": ("Reward pending", "Your offer reward is waiting for provider confirmation."),
+            "APPROVED": ("Reward approved", "Your offer reward has been approved and added to your available balance."),
+            "REJECTED": ("Reward not approved", "The provider or review process did not approve this offer reward."),
+            "MANUAL_REVIEW": ("Reward under review", "Your offer reward is waiting for a manual review."),
+            "REVERSED": ("Reward reversed", "This reward was reversed. Check reward history for details."),
+            "CHARGEBACK": ("Reward reversed", "This reward was charged back. Check reward history for details."),
+            "FRAUD": ("Reward not approved", "This reward was not approved after review."),
+        }
+        content = messages.get(decision.status)
+        if content is None:
+            return
+        db.add(
+            RewardNotification(
+                user_id=decision.user_id,
+                reward_decision_id=decision.id,
+                status=decision.status,
+                title=content[0],
+                message=content[1],
+                reason=(
+                    decision.reason[:1000]
+                    if decision.status in {"REVERSED", "CHARGEBACK"} and decision.reason
+                    else None
+                ),
+            )
+        )
 
     def _append_settlement(self, db: Session, wallet: Wallet, decision: RewardDecision, tx_type: str, amount: Decimal, status: str, before: Decimal, after: Decimal) -> None:
         db.add(WalletTransaction(wallet_id=wallet.id, user_id=decision.user_id, type=tx_type, amount=amount,
@@ -213,6 +254,7 @@ class RewardDecisionService:
         )
         db.add(decision)
         db.flush()
+        self._create_status_notification(db, decision)
         return decision
 
     def estimate_user_reward(
@@ -226,6 +268,19 @@ class RewardDecisionService:
         policy = self._select_policy_for_offer(db, user, network_id, offer_id)
         if policy is None:
             raise HTTPException(503, "No reward policy is configured.")
+        return self._calculate_user_reward(policy, provider_payout)
+
+    def estimate_user_reward_for_country(
+        self,
+        db: Session,
+        country_code: str,
+        network_id: str,
+        offer_id: str,
+        provider_payout: Decimal,
+    ) -> Decimal | None:
+        policy = self._select_policy_for_country(db, country_code, network_id, offer_id)
+        if policy is None:
+            return None
         return self._calculate_user_reward(policy, provider_payout)
 
     def _select_policy(
@@ -248,11 +303,22 @@ class RewardDecisionService:
         network_id: str,
         offer_id: str,
     ) -> RewardPolicy | None:
+        return self._select_policy_for_country(
+            db, user.country, network_id, offer_id
+        )
+
+    def _select_policy_for_country(
+        self,
+        db: Session,
+        country_code: str,
+        network_id: str,
+        offer_id: str,
+    ) -> RewardPolicy | None:
         candidates = db.scalars(select(RewardPolicy).where(RewardPolicy.enabled.is_(True))).all()
         candidates = [p for p in candidates if self._policy_active(p)]
         ranked: list[tuple[int, str, str, RewardPolicy]] = []
         for policy in candidates:
-            if policy.country_code and policy.country_code.upper() != user.country.upper():
+            if policy.country_code and policy.country_code.upper() != country_code.upper():
                 continue
             if policy.network_id and policy.network_id != network_id:
                 continue
