@@ -228,7 +228,7 @@ export function AuthForm({
               Password
               <span className="auth-input-shell">
                 <LockKeyhole aria-hidden="true" />
-                <PasswordInput name="password" autoComplete={mode === "register" ? "new-password" : "current-password"} required minLength={12} placeholder="At least 12 characters" />
+                <PasswordInput name="password" autoComplete={mode === "register" ? "new-password" : "current-password"} required minLength={8} placeholder="At least 8 characters" />
               </span>
             </Label>
           )}
@@ -238,7 +238,7 @@ export function AuthForm({
                 Confirm password
                 <span className="auth-input-shell">
                   <LockKeyhole aria-hidden="true" />
-                  <PasswordInput name="confirmPassword" autoComplete="new-password" required minLength={12} placeholder="Re-enter your password" />
+                  <PasswordInput name="confirmPassword" autoComplete="new-password" required minLength={8} placeholder="Re-enter your password" />
                 </span>
               </Label>
               <input type="hidden" name="referral" value={referralCode} />

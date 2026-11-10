@@ -83,11 +83,11 @@ export function ResetPassword({ token }: { token: string | null }) {
               <form className="auth-form" onSubmit={submit}>
                 <Label>
                   New password
-                  <PasswordInput name="password" minLength={12} maxLength={128} required autoComplete="new-password" />
+                  <PasswordInput name="password" minLength={8} maxLength={128} required autoComplete="new-password" />
                 </Label>
                 <Label>
                   Confirm new password
-                  <PasswordInput name="confirmPassword" minLength={12} maxLength={128} required autoComplete="new-password" />
+                  <PasswordInput name="confirmPassword" minLength={8} maxLength={128} required autoComplete="new-password" />
                 </Label>
                 <Button className="primary" type="submit" disabled={busy}>
                   {busy ? "Updating…" : "Update password"}

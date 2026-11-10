@@ -483,7 +483,7 @@ export function SettingsPage() {
               <span className="settings-section-icon"><KeyRound size={19} aria-hidden="true" /></span>
               <div>
                 <h2 id="settings-password-heading">Change password</h2>
-                <p className="panel-subtitle">Use your current password to set a new one. New passwords need at least 12 characters with uppercase, lowercase, and a number.</p>
+                <p className="panel-subtitle">Use your current password to set a new one. New passwords need at least 8 characters with uppercase, lowercase, and a number.</p>
               </div>
             </div>
             <form className="settings-form settings-password-form" onSubmit={updatePassword}>
@@ -502,7 +502,7 @@ export function SettingsPage() {
                 id="settings-new-password"
                 name="new_password"
                 autoComplete="new-password"
-                minLength={12}
+                minLength={8}
                 maxLength={128}
                 required
                 value={newPassword}
@@ -513,7 +513,7 @@ export function SettingsPage() {
                 id="settings-confirm-password"
                 name="confirm_password"
                 autoComplete="new-password"
-                minLength={12}
+                minLength={8}
                 maxLength={128}
                 required
                 value={confirmPassword}
