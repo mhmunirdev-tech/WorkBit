@@ -135,7 +135,7 @@ def test_cpx_research_callback_credits_once_and_reverses_canceled_transaction(
 
     assert first.status_code == duplicate.status_code == 200
     credited = get_wallet_balance()
-    assert credited[0] - before[0] == Decimal("1.00000000")
+    assert credited[0] - before[0] == Decimal("0.88000000")
 
     reversal = client.get(
         callback_url(
@@ -199,7 +199,7 @@ def test_cpx_research_callback_rejects_amount_change_for_existing_transaction(
 
     assert credited.status_code == 200
     assert changed_amount.status_code == 409
-    assert get_wallet_balance()[0] - before[0] == Decimal("1.00000000")
+    assert get_wallet_balance()[0] - before[0] == Decimal("0.88000000")
 
 
 def test_cpx_research_callback_is_disabled_separately_from_wall(client, monkeypatch):

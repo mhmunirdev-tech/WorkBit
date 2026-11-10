@@ -127,7 +127,7 @@ def test_offerwall_callback_is_idempotent_and_reverses_the_same_conversion(clien
     credited = client.get("/api/v1/postbacks/offerwall-gg", params=values)
     repeated_credit = client.get("/api/v1/postbacks/offerwall-gg", params=values)
     assert credited.status_code == repeated_credit.status_code == 200
-    assert get_wallet()[0] == Decimal("0.80000000")
+    assert get_wallet()[0] == Decimal("0.70000000")
 
     reversal = callback_values(
         user_id,
@@ -178,8 +178,8 @@ def test_offerwall_reversal_creates_debt_when_the_reward_was_already_withdrawn(c
     assert reversal.status_code == 200
     dashboard = client.get("/api/v1/dashboard")
     assert dashboard.status_code == 200
-    assert Decimal(dashboard.json()["available_balance"]) == Decimal("-0.80000000")
-    assert Decimal(dashboard.json()["reversal_debt"]) == Decimal("0.80000000")
+    assert Decimal(dashboard.json()["available_balance"]) == Decimal("-0.70000000")
+    assert Decimal(dashboard.json()["reversal_debt"]) == Decimal("0.70000000")
     assert dashboard.json()["withdrawal_summary"]["enabled"] is False
 
 
@@ -296,7 +296,7 @@ def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentia
     result = response.json()
     assert result["total"] == 1
     assert result["offers"][0]["title"] == "World of Sea Battle"
-    assert Decimal(result["offers"][0]["user_reward_usd"]) == Decimal("1.00")
+    assert Decimal(result["offers"][0]["user_reward_usd"]) == Decimal("0.88")
     assert result["offers"][0]["click_url"].endswith(f"?userId={user_id}")
     assert SECRET_KEY not in response.text
     assert mock_client.request["url"] == "https://offerwall.gg/api/v1/offers"

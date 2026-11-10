@@ -340,7 +340,7 @@ def test_withdrawal_otp_is_bound_to_amount_and_does_not_reserve_balance_early(cl
             },
         )
         assert created.status_code == 201
-        assert client.get("/api/v1/wallet").json()["available_balance"] == "3.00000000"
+        assert client.get("/api/v1/wallet").json()["available_balance"] == "2.00000000"
 
 
 def test_withdrawal_reserves_funds_and_admin_approval_marks_paid(client, monkeypatch):
@@ -353,7 +353,7 @@ def test_withdrawal_reserves_funds_and_admin_approval_marks_paid(client, monkeyp
     fund_wallet(client, "withdrawal-complete-test")
 
     before = client.get("/api/v1/wallet").json()
-    assert before["available_balance"] == "8.00000000"
+    assert before["available_balance"] == "7.00000000"
     response = request_withdrawal(client, "5.00")
     assert response.status_code == 201
     request_data = response.json()
@@ -367,7 +367,7 @@ def test_withdrawal_reserves_funds_and_admin_approval_marks_paid(client, monkeyp
     assert "01712345678" not in str(request_data)
 
     wallet = client.get("/api/v1/wallet").json()
-    assert wallet["available_balance"] == "3.00000000"
+    assert wallet["available_balance"] == "2.00000000"
     duplicate = request_withdrawal(client, "5.00")
     assert duplicate.status_code == 409
     history = client.get("/api/v1/withdrawals").json()
@@ -389,7 +389,7 @@ def test_withdrawal_reserves_funds_and_admin_approval_marks_paid(client, monkeyp
         assert paid.json()["paid_at"] is not None
 
     wallet = client.get("/api/v1/wallet").json()
-    assert wallet["available_balance"] == "3.00000000"
+    assert wallet["available_balance"] == "2.00000000"
     assert wallet["lifetime_withdrawn"] == "5.00000000"
     user_history = client.get("/api/v1/withdrawals").json()
     assert user_history[0]["status"] == "PAID"
@@ -445,7 +445,7 @@ def test_rejected_withdrawal_releases_balance_and_enforces_minimum(client, monke
         assert rejected.json()["status"] == "REJECTED"
 
     wallet = client.get("/api/v1/wallet").json()
-    assert wallet["available_balance"] == "8.00000000"
+    assert wallet["available_balance"] == "7.00000000"
     assert wallet["lifetime_withdrawn"] == "0E-8"
     transactions = client.get("/api/v1/wallet/transactions").json()
     reserved = next(
