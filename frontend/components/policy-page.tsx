@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useLanguage } from "./language-provider";
 
 type PolicySection = {
   heading: string;
@@ -302,47 +301,8 @@ const documents: Record<string, PolicyDocument> = {
   },
 };
 
-const withdrawalPolicyBn: PolicyDocument = {
-  eyebrow: "পেমেন্ট নির্দেশিকা",
-  title: "উত্তোলন নীতিমালা",
-  intro: "WorkBit-এ উত্তোলনের অনুরোধ, যোগ্যতা এবং পর্যালোচনার প্রক্রিয়া এখানে ব্যাখ্যা করা হয়েছে। উত্তোলন নির্ভর করে যাচাইকৃত অ্যাকাউন্ট, উত্তোলনযোগ্য আয়, payout settings এবং প্রশাসকের পর্যালোচনার ওপর।",
-  sections: [
-    {
-      heading: "১. কোন ব্যালেন্স উত্তোলন করা যাবে",
-      paragraphs: ["শুধু available earning balance উত্তোলনযোগ্য। Deposit balance প্যাকেজ কেনা বা নবায়নের জন্য সংরক্ষিত, তাই তা উত্তোলন করা যাবে না। Pending, rejected, reversed বা অনুমোদন না হওয়া reward উত্তোলনযোগ্য আয়ের অন্তর্ভুক্ত নয়।"],
-    },
-    {
-      heading: "২. ন্যূনতম পরিমাণ ও মুদ্রা",
-      paragraphs: ["Wallet ও withdrawal request USD-তে হিসাব করা হয়। WorkBit ন্যূনতম উত্তোলনের পরিমাণ নির্ধারণ করে; default হলো $5 USD। বর্তমানে প্রযোজ্য পরিমাণ withdrawal screen-এ দেখুন। আপনার available withdrawable balance-এর বেশি অনুরোধ করা যাবে না।"],
-    },
-    {
-      heading: "৩. payout পদ্ধতি ও রূপান্তর",
-      paragraphs: ["বর্তমান manual payout পদ্ধতি হলো bKash অথবা Nagad-এ BDT payout। অনুরোধ করার আগে WorkBit-এর USD/BDT rate সেট করা থাকতে হবে। অনুরোধ জমা দেওয়ার সময়কার rate ও আনুমানিক BDT payout সংরক্ষিত হয়; পরের rate পরিবর্তনে সেই অনুরোধের হিসাব বদলায় না।"],
-    },
-    {
-      heading: "৪. অ্যাকাউন্ট ও অনুরোধের শর্ত",
-      bullets: ["অ্যাকাউন্ট active এবং email verified হতে হবে।", "নিজের সঠিক payout account ব্যবহার করুন।", "এক সময়ে একটি withdrawal pending বা processing থাকতে পারে।", "Secure payout storage বা admin-managed exchange rate সেট না থাকলে উত্তোলনের অনুরোধ করা যাবে না।"],
-    },
-    {
-      heading: "৫. পর্যালোচনা ও প্রক্রিয়াকরণ",
-      paragraphs: ["Withdrawal request ম্যানুয়ালি পর্যালোচনা করা হয়। অনুরোধ জমা দিলে চাওয়া USD পরিমাণ available wallet balance থেকে সাময়িকভাবে সংরক্ষিত হয়। Admin request অনুমোদন করে processing-এ পাঠাতে, বাতিল করে সংরক্ষিত পরিমাণ ফেরত দিতে, অথবা payout সম্পন্ন হলে complete করতে পারেন। Processing-এর সময় ভিন্ন হতে পারে; নির্দিষ্ট payout সময়ের নিশ্চয়তা দেওয়া হয় না।", "যাচাই বা সম্ভাব্য ভুল/অপব্যবহার তদন্তের জন্য WorkBit অতিরিক্ত তথ্য চাইতে পারে। অ্যাকাউন্ট ও payout তথ্য নিরাপদ রাখুন।"],
-    },
-    {
-      heading: "৬. ফি, কর ও ভুল",
-      paragraphs: ["WorkBit আগে থেকে নির্ধারণ করতে পারলে প্রযোজ্য payout fee প্রক্রিয়াকরণের আগে দেখানো হবে; তৃতীয় পক্ষের fee-ও প্রযোজ্য হতে পারে। আপনার এলাকায় reward বা payout করযোগ্য কি না তা যাচাই করা আপনার দায়িত্ব। অনুরোধ বা payout রেকর্ডে ভুল মনে হলে দ্রুত WorkBit support-এ জানান।"],
-    },
-    {
-      heading: "৭. যোগাযোগ ও নীতিমালা পরিবর্তন",
-      paragraphs: ["Withdrawal সংক্রান্ত প্রশ্নে request reference-সহ আপনার account communication-এ দেওয়া support contact ব্যবহার করুন। payout পদ্ধতি বা আইনি শর্ত বদলালে WorkBit Ltd, USA এই নীতিমালা হালনাগাদ করতে পারে; সর্বশেষ সংস্করণ এই পাতায় প্রকাশিত হবে।"],
-    },
-  ],
-};
-
 export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
-  const { language, setLanguage, t } = useLanguage();
-  const document = policy === "withdrawal-policy" && language === "bn"
-    ? withdrawalPolicyBn
-    : documents[policy];
+  const document = documents[policy];
 
   return (
     <main className="landing policy-page">
@@ -357,21 +317,7 @@ export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
           <Link href="/withdrawal-policy">Withdrawal policy</Link>
         </nav>
         <div className="nav-actions">
-          <label className="language-control">
-            <span className="sr-only">{t("Language")}</span>
-            <select
-              aria-label={t("Language")}
-              className="language-selector"
-              value={language}
-              onChange={(event) => setLanguage(event.target.value === "bn" ? "bn" : "en")}
-            >
-              <option value="en">English</option>
-              <option value="bn">বাংলা</option>
-            </select>
-          </label>
-          <Link className="text-link" href="/">
-            {t("Back to home")}
-          </Link>
+          <Link className="text-link" href="/">Back to home</Link>
         </div>
       </header>
 
@@ -380,9 +326,6 @@ export function PolicyPage({ policy }: { policy: keyof typeof documents }) {
         <h1>{document.title}</h1>
         <p>{document.intro}</p>
         <small>WorkBit Ltd, USA · Last updated October 11, 2026</small>
-        {policy === "withdrawal-policy" && language === "bn" && (
-          <small>এই বাংলা অনুবাদটি তথ্য বোঝার সুবিধার জন্য। প্রয়োজনে ইংরেজি নীতিমালাই প্রামাণ্য সংস্করণ।</small>
-        )}
       </section>
 
       <article className="policy-content">

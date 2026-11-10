@@ -20,7 +20,6 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../lib/api";
-import { useLanguage } from "./language-provider";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Button } from "./ui/button";
@@ -108,7 +107,6 @@ export function Shell({
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [notificationError, setNotificationError] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const { language, setLanguage, t } = useLanguage();
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const walletActive = useRef(false);
   const displayUser = user ?? fetchedUser;
@@ -118,10 +116,9 @@ export function Shell({
     .slice(0, 2)
     .map((part) => part[0].toUpperCase())
     .join("");
-  const pageTitle = t(
+  const pageTitle =
     pageTitles[pathname] ??
-    (pathname.startsWith("/offers/") ? "Offer details" : "WorkBit"),
-  );
+    (pathname.startsWith("/offers/") ? "Offer details" : "WorkBit");
   const availableBalance = wallet
     ? formatWbcFromUsd(wallet.available_balance, wallet.usd_bdt_rate) ?? formatUsd(wallet.available_balance)
     : null;
@@ -259,7 +256,7 @@ export function Shell({
           <i aria-hidden="true">W</i> WorkBit
         </Link>
         <p className="tagline">Work. Complete. Earn.</p>
-        <p className="nav-caption">{t("YOUR SPACE")}</p>
+        <p className="nav-caption">YOUR SPACE</p>
         <nav id="dashboard-navigation" aria-label="Main navigation">
           {navigation.map((item) => {
             const active =
@@ -276,7 +273,7 @@ export function Shell({
                 onClick={() => setMenuOpen(false)}
               >
                 {icon}
-                {t(item.label)}
+                {item.label}
               </Link>
             );
           })}
@@ -307,18 +304,6 @@ export function Shell({
             </Link>
           </div>
           <div className="dashboard-topbar-actions">
-            <label className="language-control">
-              <span className="sr-only">{t("Language")}</span>
-              <select
-                aria-label={t("Language")}
-                className="language-selector"
-                value={language}
-                onChange={(event) => setLanguage(event.target.value === "bn" ? "bn" : "en")}
-              >
-                <option value="en">English</option>
-                <option value="bn">বাংলা</option>
-              </select>
-            </label>
             <Link
               className={`dashboard-wallet-balance${walletLoadError ? " is-unavailable" : ""}`}
               href="/wallet"
@@ -326,14 +311,14 @@ export function Shell({
             >
               <span className="dashboard-wallet-icon"><Coins size={18} aria-hidden="true" /></span>
               <span className="dashboard-wallet-copy">
-                <small>{t("Your Rewards")}</small>
+                <small>Your Rewards</small>
                 <strong>{availableBalance ?? (walletLoadError ? "Unavailable" : "Loading…")}</strong>
               </span>
               <ArrowRight className="dashboard-wallet-arrow" size={14} aria-hidden="true" />
             </Link>
             <div className="notification-menu">
               <button
-                aria-label={`${t("Notifications")}${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`}
+                aria-label={`Notifications${unreadNotifications ? `, ${unreadNotifications} unread` : ""}`}
                 aria-expanded={notificationsOpen}
                 aria-controls="reward-notifications"
                 className="notification-trigger"
@@ -344,10 +329,10 @@ export function Shell({
                 {unreadNotifications > 0 && <span className="notification-count">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
               </button>
               {notificationsOpen && (
-                <div className="notification-dropdown" id="reward-notifications" role="region" aria-label={t("Notifications")}>
-                  <strong>{t("Notifications")}</strong>
+                <div className="notification-dropdown" id="reward-notifications" role="region" aria-label="Notifications">
+                  <strong>Notifications</strong>
                   {notificationError && <p className="notification-error" role="alert">{notificationError}</p>}
-                  {!notificationError && notifications.length === 0 && <p>{t("No reward updates yet.")}</p>}
+                  {!notificationError && notifications.length === 0 && <p>No reward updates yet.</p>}
                   {notifications.map((notification) => (
                     <div
                       className={`notification-item${notification.read_at ? "" : " is-unread"}`}
@@ -358,14 +343,14 @@ export function Shell({
                         onClick={() => void markNotificationRead(notification)}
                         type="button"
                       >
-                        <strong>{t(notification.title)}</strong>
-                        <small>{t(notification.message)}</small>
-                        {notification.reason && <small><b>{t("Reversal reason")}:</b> {notification.reason}</small>}
-                        {!notification.read_at && <small>{t("Mark as read")}</small>}
-                        <time dateTime={notification.created_at}>{new Date(notification.created_at).toLocaleString(language === "bn" ? "bn-BD" : "en-US")}</time>
+                        <strong>{notification.title}</strong>
+                        <small>{notification.message}</small>
+                        {notification.reason && <small><b>Reversal reason:</b> {notification.reason}</small>}
+                        {!notification.read_at && <small>Mark as read</small>}
+                        <time dateTime={notification.created_at}>{new Date(notification.created_at).toLocaleString("en-US")}</time>
                       </button>
                       {(notification.status === "REVERSED" || notification.status === "CHARGEBACK") && (
-                        <Link href="/rewards" onClick={() => setNotificationsOpen(false)}>{t("View reward history")}</Link>
+                        <Link href="/rewards" onClick={() => setNotificationsOpen(false)}>View reward history</Link>
                       )}
                     </div>
                   ))}

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Banknote, Plus, ShieldCheck, Smartphone, X } from "lucide-react";
 import { api } from "../lib/api";
-import { useLanguage } from "./language-provider";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
 import { Shell, ShellUser } from "./shell";
@@ -444,7 +443,6 @@ export function WithdrawalPage({
   historyOnly?: boolean;
   embedded?: boolean;
 }) {
-  const { t } = useLanguage();
   const {
     summary,
     records,
@@ -583,15 +581,15 @@ export function WithdrawalPage({
 
       {!embedded && !historyOnly && (
         <Card className="panel withdrawal-help">
-          <strong>{t("Withdrawal help")}</strong>
+          <strong>Withdrawal help</strong>
           <ul>
-            <li>{t("Only available earning balance can be withdrawn.")}</li>
-            <li>{t("Deposit balance is reserved for packages and is not withdrawable.")}</li>
-            <li>{t("Pending rewards are not withdrawable.")}</li>
-            <li>{t("Withdrawal requests are manually reviewed; processing time may vary.")}</li>
-            <li>{t("No fixed payout timeline is promised.")}</li>
+            <li>Only available earning balance can be withdrawn.</li>
+            <li>Deposit balance is reserved for packages and is not withdrawable.</li>
+            <li>Pending rewards are not withdrawable.</li>
+            <li>Withdrawal requests are manually reviewed; processing time may vary.</li>
+            <li>No fixed payout timeline is promised.</li>
           </ul>
-          <Link href="/withdrawal-policy">{t("Withdrawal Policy")}</Link>
+          <Link href="/withdrawal-policy">Withdrawal Policy</Link>
         </Card>
       )}
 

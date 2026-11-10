@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Gamepad2, Search, Smartphone, Sparkles } from "lucide-react";
 import { ApiError, api } from "../../../../lib/api";
 import { formatUsd } from "../../../../lib/utils";
-import { useLanguage } from "../../../language-provider";
 import { Alert, AlertDescription } from "../../../ui/alert";
 import { Badge } from "../../../ui/badge";
 import { Button } from "../../../ui/button";
@@ -48,7 +47,6 @@ function offerIcon(offer: OfferwallGGOffer) {
 }
 
 export function OfferwallGGCatalog() {
-  const { t } = useLanguage();
   const [offers, setOffers] = useState<OfferwallGGOffer[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -114,10 +112,10 @@ export function OfferwallGGCatalog() {
     <section className="offerwall-gg" aria-labelledby="offerwall-gg-title">
       <div className="offerwall-gg-heading">
         <div>
-          <p className="eyebrow">{t("PARTNER OFFERS")}</p>
-          <h2 id="offerwall-gg-title">{t("More ways to earn")}</h2>
+          <p className="eyebrow">PARTNER OFFERS</p>
+          <h2 id="offerwall-gg-title">More ways to earn</h2>
           <p className="muted">
-            {t("Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer's terms.")}
+            Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer's terms.
           </p>
         </div>
         {!error && (
@@ -210,7 +208,7 @@ export function OfferwallGGCatalog() {
                 </p>
                 {offer.requirements && (
                   <p className="offerwall-gg-requirements">
-                    <strong>{t("How to qualify:")}</strong> {offer.requirements}
+                    <strong>How to qualify:</strong> {offer.requirements}
                   </p>
                 )}
                 <div className="offerwall-gg-card-meta">
@@ -221,11 +219,11 @@ export function OfferwallGGCatalog() {
                   <div className="offerwall-gg-reward">
                     <small>{offer.reward_up_to ? "UP TO YOUR REWARD" : "EST. YOUR REWARD"}</small>
                     <strong>{formatUsd(offer.user_reward_usd)}</strong>
-                    {offer.reward_is_variable && <small>{t("May vary by completion")}</small>}
+                    {offer.reward_is_variable && <small>May vary by completion</small>}
                   </div>
                   <Button asChild className="offerwall-gg-start" size="sm">
                     <a href={offer.click_url} rel="noopener noreferrer" target="_blank">
-                      {t("Start offer")} <ArrowUpRight aria-hidden="true" size={15} />
+                      Start offer <ArrowUpRight aria-hidden="true" size={15} />
                     </a>
                   </Button>
                 </div>
@@ -258,7 +256,7 @@ export function OfferwallGGCatalog() {
       )}
 
       <p className="offerwall-gg-note">
-        {t("Rewards shown are estimated from WorkBit's active reward policy. Provider verification is required before rewards are credited.")}
+        Rewards shown are estimated from WorkBit's active reward policy. Provider verification is required before rewards are credited.
       </p>
     </section>
   );
