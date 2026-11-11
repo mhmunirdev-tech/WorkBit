@@ -2,9 +2,8 @@ import logging
 import hmac
 import secrets
 from datetime import datetime, timedelta, timezone
-from uuid import uuid4
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.models import AuthToken, Profile, Role, User, Wallet
@@ -15,10 +14,26 @@ from app.services.email import EmailDeliveryError, email_service
 from app.services.fraud import fraud_service
 
 TERMS_VERSION = "1"
+_REFERRAL_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
 def user_response(user: User) -> dict:
     return {"id": user.id, "email": user.email, "full_name": user.full_name, "country": user.country, "status": user.status, "email_verified": user.email_verified, "roles": [role.name for role in user.roles], "avatar_url": user.profile.avatar_url if user.profile else None}
-def referral_code() -> str: return "WB" + uuid4().hex[:8].upper()
+def referral_code(db: Session) -> str:
+    for _ in range(100):
+        candidate = "WB" + "".join(secrets.choice(_REFERRAL_ALPHABET) for _ in range(6))
+        existing = db.scalar(
+            select(User.id)
+            .where(
+                or_(
+                    User.referral_code == candidate,
+                    User.legacy_referral_code == candidate,
+                )
+            )
+            .limit(1)
+        )
+        if existing is None:
+            return candidate
+    raise RuntimeError("Unable to generate a unique referral code.")
 def issue_token(db: Session, user: User, purpose: str) -> str:
     raw = generate_token()
     db.add(AuthToken(user_id=user.id, purpose=purpose, token_hash=token_hash(raw), expires_at=datetime.now(timezone.utc)+timedelta(minutes=settings.token_ttl_minutes)))
@@ -155,7 +170,19 @@ def register(
     ip_address: str | None = None,
 ) -> User:
     if db.scalar(select(User).where(User.email == str(data.email).lower())): raise HTTPException(400, "An account with this email already exists.")
-    referrer = db.scalar(select(User).where(User.referral_code == data.referral_code.upper())) if data.referral_code else None
+    normalized_referral_code = data.referral_code.strip().upper() if data.referral_code else None
+    referrer = (
+        db.scalar(
+            select(User).where(
+                or_(
+                    User.referral_code == normalized_referral_code,
+                    User.legacy_referral_code == normalized_referral_code,
+                )
+            )
+        )
+        if normalized_referral_code
+        else None
+    )
     if data.referral_code and not referrer: raise HTTPException(400, "The referral code is invalid.")
     role = db.scalar(select(Role).where(Role.name == "USER"))
     if not role:
@@ -165,7 +192,7 @@ def register(
             "Registration is unavailable because required roles are missing. "
             "Run the seed command against the configured database.",
         )
-    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, phone_number=data.phone_number, referral_code=referral_code(), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
+    user = User(email=str(data.email).lower(), password_hash=hash_password(data.password), full_name=data.full_name.strip(), country=data.country, phone_number=data.phone_number, referral_code=referral_code(db), referred_by=referrer.id if referrer else None, terms_accepted_at=datetime.now(timezone.utc), terms_version=TERMS_VERSION)
     user.roles.append(role); user.profile = Profile(); user.wallet = Wallet(); db.add(user); db.flush()
     fraud_service.record_registration(db, user.id, ip_address)
     try:

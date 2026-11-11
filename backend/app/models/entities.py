@@ -36,6 +36,7 @@ class User(Base):
     country: Mapped[str] = mapped_column(String(2))
     phone_number: Mapped[str | None] = mapped_column(String(16), nullable=True)
     referral_code: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    legacy_referral_code: Mapped[str | None] = mapped_column(String(20), unique=True, index=True, nullable=True)
     referred_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default=UserStatus.PENDING_VERIFICATION.value)
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False)

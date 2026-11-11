@@ -32,6 +32,50 @@ def test_registration_creates_wallet(client):
         db.close()
 
 
+def test_registration_assigns_short_referral_code(client):
+    response = client.post("/api/v1/auth/register", json=registration())
+    assert response.status_code == 201
+
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.email == "taylor@example.com"))
+        assert user is not None
+        assert user.referral_code.startswith("WB")
+        assert len(user.referral_code) == 8
+    finally:
+        db.close()
+
+
+def test_registration_accepts_legacy_referral_code(client):
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        referrer = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        assert referrer is not None
+        referrer.legacy_referral_code = "WBLEGACY9"
+        db.commit()
+        referrer_id = referrer.id
+    finally:
+        db.close()
+
+    payload = {**registration(), "referral_code": "wblegacy9"}
+    response = client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 201
+
+    db = SessionLocal()
+    try:
+        referred_user = db.scalar(
+            select(User).where(User.email == "taylor@example.com")
+        )
+        assert referred_user is not None
+        assert referred_user.referred_by == referrer_id
+    finally:
+        db.close()
+
+
 def test_registration_phone_number_is_optional_for_existing_api_clients(client, monkeypatch):
     monkeypatch.setattr(auth_service.email_service, "send_verification", lambda *_args: None)
     payload = registration()
