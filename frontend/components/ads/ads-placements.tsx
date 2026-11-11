@@ -7,6 +7,7 @@ import { CoinzillaNativePlacement } from "./providers/coinzilla/native";
 import { MonetagPlacement } from "./providers/monetag/tag";
 import { PropellerAdsPlacement } from "./providers/propellerads/tag";
 import { EzoicPlacement } from "./providers/ezoic/placement";
+import { HilltopAdsVastVideoPlacement } from "./providers/hilltopads/vast-video";
 
 const adProviders = [
   { id: "adsterra", Placement: AdsterraBannerPlacement },
@@ -17,6 +18,7 @@ const adProviders = [
   { id: "propellerads", Placement: PropellerAdsPlacement },
   { id: "monetag", Placement: MonetagPlacement },
   { id: "bitmedia", Placement: BitmediaPlacement },
+  { id: "hilltopads-vast-video", Placement: HilltopAdsVastVideoPlacement },
 ] as const;
 
 export function AdsPlacements() {

@@ -9513,6 +9513,70 @@ body {
   margin-bottom: 0;
 }
 
+.hilltop-vast-placement {
+  display: grid;
+  gap: 14px;
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.hilltop-vast-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hilltop-vast-heading h2 {
+  margin: 0;
+  color: var(--dashboard-ink);
+  font-size: 18px;
+}
+
+.hilltop-vast-heading > p,
+.hilltop-vast-controls > p {
+  margin: 0;
+  color: var(--dashboard-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.hilltop-vast-player {
+  position: relative;
+  width: min(100%, 720px);
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #101725;
+}
+
+.hilltop-vast-player > video,
+.hilltop-vast-ad-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hilltop-vast-player > video {
+  display: block;
+  object-fit: contain;
+}
+
+.hilltop-vast-ad-container {
+  z-index: 1;
+}
+
+.hilltop-vast-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 700px) {
   .dashboard-section-heading,
   .offers-guide-heading,
@@ -9535,5 +9599,11 @@ body {
 
   .offers-guide-steps {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hilltop-vast-heading,
+  .hilltop-vast-controls {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
