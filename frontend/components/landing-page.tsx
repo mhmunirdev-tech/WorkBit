@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, BadgeCheck, Check, ClipboardList, Clock3, Gamepad2, Menu, PackageCheck, ShieldCheck, Smartphone, Sparkles, UsersRound, WalletCards, X } from "lucide-react";
 import { AAdsBannerPlacement } from "./ads/providers/a-ads/banner";
+import { EzoicPlacement } from "./ads/providers/ezoic/placement";
 import { api } from "../lib/api";
 import { formatUsd } from "../lib/utils";
 import { Alert, AlertDescription } from "./ui/alert";
@@ -83,6 +84,7 @@ const steps = [
 
 export function LandingPage() {
   const showDevelopmentOffers = process.env.NODE_ENV === "development";
+  const ezoicEnabled = process.env.NEXT_PUBLIC_EZOIC_ENABLED?.toLowerCase() === "true";
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [offerError, setOfferError] = useState("");
@@ -315,7 +317,7 @@ export function LandingPage() {
       </section>
 
       <div className="section-wrap">
-        <AAdsBannerPlacement />
+        {ezoicEnabled ? <EzoicPlacement /> : <AAdsBannerPlacement />}
       </div>
 
       {showDevelopmentOffers && (

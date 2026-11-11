@@ -12,11 +12,20 @@ The display providers are intentionally separate from the offer/reward pipeline.
 | PropellerAds | `frontend/components/ads/providers/propellerads/tag.tsx` | `NEXT_PUBLIC_PROPELLERADS_ENABLED=true`, `NEXT_PUBLIC_PROPELLERADS_TAG_SRC`; zone ID is optional | Provider-generated display script in its placement on `/offers` |
 | Monetag | `frontend/components/ads/providers/monetag/tag.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED=true`, `NEXT_PUBLIC_MONETAG_TAG_SRC` | Fixed display placement after the offerwall sections on `/offers`; zone ID is optional metadata |
 | Bitmedia | `frontend/components/ads/providers/bitmedia/banner.tsx` | `NEXT_PUBLIC_BITMEDIA_ENABLED=true`, `NEXT_PUBLIC_BITMEDIA_PLACEMENT_ID`; dimensions are optional | Bitmedia JavaScript placement on `/offers` |
+| EzoicAds | `frontend/components/ads/providers/ezoic/placement.tsx` and `frontend/app/layout.tsx` | `NEXT_PUBLIC_EZOIC_ENABLED=true` and `EZOIC_ADSTXT_DOMAIN` | Ezoic privacy/header scripts load after opt-in; one id-less Ezoic placement appears on the public homepage and `/offers`; `/ads.txt` redirects to Ezoic's ads.txt manager |
 | ProfitOn | `frontend/app/layout.tsx` | `NEXT_PUBLIC_PROFITON_DOMAIN_VERIFICATION` | Optional domain-verification meta tag only; no ProfitOn ad placement is enabled |
 
 The provider-specific `*_API_KEY` and `*_POSTBACK_SECRET` entries in `.env.example` are reserved for a future server-side integration. They are not read by these display adapters and should remain empty until an approved API/postback flow is implemented and tested.
 
 All display placements are disabled or hidden unless their required values above are present. For Docker Compose, put the public display settings in the repository-root `.env` file and rebuild the frontend image after changing them (for example, `docker compose up --build frontend`). Next.js embeds `NEXT_PUBLIC_*` values during the build, so setting them only on a running container will not enable an ad. For Vercel or another non-Docker deployment, set them in the frontend project's build environment and redeploy.
+
+## EzoicAds setup
+
+Follow Ezoic's [getting-started guide](https://docs.ezoic.com/docs/ezoicads/getting-started/): first complete [ads.txt setup](https://docs.ezoic.com/docs/ezoicads/adstxt/), then add the [site integration scripts](https://docs.ezoic.com/docs/ezoicads/integration/) and [ad placements](https://docs.ezoic.com/docs/ezoicads/implementation/). WorkBit implements those scripts and a single id-less `showAds({})` placement in the public homepage and `/offers`.
+
+Set `EZOIC_ADSTXT_DOMAIN` to the approved site's domain (for example, `workbitbd.com`). WorkBit serves `/ads.txt` as a permanent redirect to `https://srv.adstxtmanager.com/19390/<domain>`. Confirm that `https://<domain>/ads.txt` displays the manager's seller list before enabling ads. Set `NEXT_PUBLIC_EZOIC_ENABLED=true`, then rebuild and redeploy the frontend. For Docker Compose, configure both variables in the root `.env` file; the domain is read at runtime while the public enable flag is embedded at build time. For Vercel, configure `NEXT_PUBLIC_EZOIC_ENABLED` as a Production build variable and `EZOIC_ADSTXT_DOMAIN` as a server environment variable, then redeploy.
+
+Ezoic must approve the site and provide its publisher configuration before ads can fill. Enabling Ezoic suppresses WorkBit's other display-ad tags on the homepage and `/offers`; Ezoic advises removing other ad-network tags when using this integration. Keep `NEXT_PUBLIC_EZOIC_ENABLED=false` until setup and approval are complete. Ezoic ad views and clicks never credit WorkBit wallet rewards.
 
 ## Non-Docker deployment
 

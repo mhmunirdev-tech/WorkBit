@@ -6,6 +6,7 @@ import { CointrafficPlacement } from "./providers/cointraffic/banner";
 import { CoinzillaNativePlacement } from "./providers/coinzilla/native";
 import { MonetagPlacement } from "./providers/monetag/tag";
 import { PropellerAdsPlacement } from "./providers/propellerads/tag";
+import { EzoicPlacement } from "./providers/ezoic/placement";
 
 const adProviders = [
   { id: "adsterra", Placement: AdsterraBannerPlacement },
@@ -19,6 +20,10 @@ const adProviders = [
 ] as const;
 
 export function AdsPlacements() {
+  if (process.env.NEXT_PUBLIC_EZOIC_ENABLED?.toLowerCase() === "true") {
+    return <EzoicPlacement />;
+  }
+
   return (
     <>
       {adProviders.map(({ id, Placement }) => (

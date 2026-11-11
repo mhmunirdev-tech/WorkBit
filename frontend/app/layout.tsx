@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Toaster } from "@/components/ui/toaster";
 import { AnalyticsTracker } from "@/components/analytics-tracker";
 import { MonetagServiceWorkerCleanup } from "@/components/ads/providers/monetag/service-worker";
+import { EzoicScripts } from "@/components/ads/providers/ezoic/scripts";
 import "./styles.css";
 import "./dashboard.css";
 import "./admin-console.css";
@@ -23,6 +24,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        <EzoicScripts />
+      </head>
       <body>
         <Toaster />
         <AnalyticsTracker />
