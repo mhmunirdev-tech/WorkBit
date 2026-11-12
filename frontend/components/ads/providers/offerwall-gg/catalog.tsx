@@ -34,6 +34,7 @@ type OfferwallGGCatalogResponse = {
   page: number;
   pages: number;
   total: number;
+  support_url: string;
 };
 
 const pageSize = 50;
@@ -56,6 +57,7 @@ export function OfferwallGGCatalog() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [supportUrl, setSupportUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
@@ -73,6 +75,7 @@ export function OfferwallGGCatalog() {
       setPage(result.page);
       setPages(result.pages);
       setTotal(result.total);
+      setSupportUrl(result.support_url);
     } catch (reason: unknown) {
       setError(reason instanceof Error ? reason.message : "Offerwall.GG offers could not be loaded.");
       if (!append) setOffers([]);
@@ -272,6 +275,12 @@ export function OfferwallGGCatalog() {
 
       <p className="offerwall-gg-note">
         Rewards shown are estimated from WorkBit&apos;s active reward policy. Provider verification is required before rewards are credited.
+        {" "}
+        {supportUrl && (
+          <a href={supportUrl} rel="noopener noreferrer" target="_blank">
+            Missing a reward? Contact Offerwall.GG support.
+          </a>
+        )}
       </p>
     </section>
   );

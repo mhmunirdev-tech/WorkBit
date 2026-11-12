@@ -295,11 +295,17 @@ def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentia
     assert result["offers"][0]["title"] == "World of Sea Battle"
     assert Decimal(result["offers"][0]["user_reward_usd"]) == Decimal("0.88")
     assert result["offers"][0]["click_url"].endswith(f"?userId={user_id}")
+    assert result["support_url"] == (
+        f"https://offerwall.gg/wall/{PUBLIC_KEY}/support?userId={user_id}"
+    )
     assert SECRET_KEY not in response.text
     assert mock_client.request["url"] == "https://offerwall.gg/api/v1/offers"
     assert mock_client.request["headers"] == {"X-Api-Key": SECRET_KEY}
     assert mock_client.request["params"]["userId"] == user_id
-    assert mock_client.request["params"]["country"] == "BD"
+    assert "ip" in mock_client.request["params"]
+    assert mock_client.request["params"]["userAgent"]
+    assert "country" not in mock_client.request["params"]
+    assert "device" not in mock_client.request["params"]
     assert response.headers["cache-control"] == "no-store"
 
 
@@ -317,6 +323,7 @@ def test_offerwall_catalog_accepts_empty_inventory(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["offers"] == []
     assert response.json()["pages"] == 0
+    assert response.json()["support_url"].endswith(f"?userId={get_user_id()}")
 
 
 def test_offerwall_catalog_rejects_untrusted_click_url_and_surfaces_upstream_failure(

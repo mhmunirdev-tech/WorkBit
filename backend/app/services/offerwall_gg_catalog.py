@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
 from fastapi import HTTPException
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.integrations.offer_providers.offerwall_gg import (
     OFFERWALL_GG_SLUG,
+    WALL_ORIGIN,
 )
 from app.models import User
 from app.schemas.offerwall_gg import (
@@ -22,7 +23,6 @@ from app.schemas.offerwall_gg import (
 from app.services.rewards import reward_decision_service
 
 API_OFFERS_URL = "https://offerwall.gg/api/v1/offers"
-OFFERWALL_GG_TARGET_COUNTRY = "BD"
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +31,8 @@ class OfferwallGGCatalogService:
         self,
         db: Session,
         user: User,
-        device: str,
+        user_ip: str | None,
+        user_agent: str,
         page: int,
         limit: int,
         search: str | None,
@@ -48,12 +49,14 @@ class OfferwallGGCatalogService:
         params: dict[str, str | int] = {
             "appId": public_key,
             "userId": user.id,
-            "country": OFFERWALL_GG_TARGET_COUNTRY,
-            "device": device,
             "page": page,
             "limit": limit,
             "sort": "payout",
         }
+        if user_ip:
+            params["ip"] = user_ip
+        if user_agent:
+            params["userAgent"] = user_agent[:512]
         if search:
             params["search"] = search
         if category:
@@ -139,6 +142,10 @@ class OfferwallGGCatalogService:
             page=data.pagination.page,
             pages=data.pagination.pages,
             total=data.pagination.total,
+            support_url=(
+                f"{WALL_ORIGIN}/wall/{public_key}/support?"
+                f"{urlencode({'userId': user.id})}"
+            ),
         )
 
     def _validated_click_url(

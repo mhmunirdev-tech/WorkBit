@@ -73,3 +73,4 @@ class OfferwallGGOffersRead(BaseModel):
     page: int
     pages: int
     total: int
+    support_url: str

@@ -100,20 +100,11 @@ async def offerwall_gg_catalog(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> OfferwallGGOffersRead:
-    user_agent = request.headers.get("user-agent", "").lower()
-    if "android" in user_agent:
-        device = "android"
-    elif "iphone" in user_agent or "ipad" in user_agent:
-        device = "ios"
-    elif "mobile" in user_agent:
-        device = "mobile"
-    else:
-        device = "desktop"
-
     result = await offerwall_gg_catalog_service.list_offers(
         db=db,
         user=user,
-        device=device,
+        user_ip=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", ""),
         page=page,
         limit=limit,
         search=search.strip() if search else None,
