@@ -293,7 +293,7 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
         )}
       </div>
       <div className="dashboard-banner-viewport" ref={viewportRef} onScroll={syncActivePage}>
-        <div className="dashboard-banner-track">
+        <div className={`dashboard-banner-track dashboard-banner-track--${Math.min(banners.length, 4)}-items`}>
           {banners.map((banner) => {
             const cardContent = (
               <>

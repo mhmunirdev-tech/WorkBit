@@ -881,6 +881,21 @@ body {
   width: 100%;
 }
 
+.dashboard-banner-track--1-items .dashboard-banner-card {
+  flex-basis: 100%;
+  width: 100%;
+}
+
+.dashboard-banner-track--2-items .dashboard-banner-card {
+  flex-basis: calc((100% - 14px) / 2);
+  width: calc((100% - 14px) / 2);
+}
+
+.dashboard-banner-track--3-items .dashboard-banner-card {
+  flex-basis: calc((100% - 28px) / 3);
+  width: calc((100% - 28px) / 3);
+}
+
 .dashboard-banner-card {
   display: flex;
   flex: 0 0 calc((100% - 42px) / 4);
@@ -5773,6 +5788,11 @@ body {
   }
 
   .dashboard-banner-card {
+    flex-basis: 100%;
+    width: 100%;
+  }
+
+  .dashboard-banner-track .dashboard-banner-card {
     flex-basis: 100%;
     width: 100%;
   }
