@@ -299,11 +299,14 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
           {banners.map((banner) => {
             const cardContent = (
               <>
-                <Image className="dashboard-banner-image" src={banner.image_url} alt="" width={1600} height={900} unoptimized />
+                <div className="dashboard-banner-art">
+                  <Image className="dashboard-banner-image" src={banner.image_url} alt="" width={1600} height={900} unoptimized />
+                </div>
                 <div className="dashboard-banner-copy">
+                  <span className="dashboard-banner-brand">WORKBIT UPDATE</span>
                   <h3>{banner.title}</h3>
                   {banner.content && <p>{banner.content}</p>}
-                  {banner.link_url && <span className="dashboard-banner-card-link">Learn more <ArrowRight size={14} /></span>}
+                  {banner.link_url && <span className="dashboard-banner-card-link">View announcement <ArrowRight size={14} /></span>}
                 </div>
               </>
             );

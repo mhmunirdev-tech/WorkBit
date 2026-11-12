@@ -887,8 +887,9 @@ body {
   flex-direction: column;
   width: calc((100% - 56px) / 5);
   overflow: hidden;
+  padding: 12px;
   border: 1px solid #e4eaf3;
-  border-radius: 18px;
+  border-radius: 22px;
   background: #fff;
   box-shadow: 0 10px 26px #1e35520a, 0 2px 6px #1e355208, inset 0 1px #fff;
   color: #172b49;
@@ -906,9 +907,17 @@ body {
 .dashboard-banner-image {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  background: #e9eef7;
+  height: 100%;
+  padding: 10px;
+  object-fit: contain;
+}
+
+.dashboard-banner-art {
+  height: 180px;
+  flex: 0 0 180px;
+  overflow: hidden;
+  border-radius: 17px;
+  background: #f0f1f1;
 }
 
 .dashboard-banner-copy {
@@ -916,7 +925,17 @@ body {
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  padding: 14px;
+  min-height: 132px;
+  padding: 13px 4px 3px;
+}
+
+.dashboard-banner-brand {
+  margin-bottom: 7px;
+  color: #34866b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .45px;
+  text-transform: uppercase;
 }
 
 .dashboard-banner-copy h3 {
@@ -924,7 +943,7 @@ body {
   overflow: hidden;
   margin: 0;
   color: #172b49;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 750;
   line-height: 1.35;
   -webkit-box-orient: vertical;
@@ -936,21 +955,31 @@ body {
   overflow: hidden;
   margin: 8px 0 0;
   color: #718096;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 
 .dashboard-banner-card-link {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   margin-top: auto;
-  padding-top: 13px;
-  color: #315efb;
-  font-size: 10px;
-  font-weight: 750;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: #252525;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.dashboard-banner-card:hover .dashboard-banner-card-link {
+  transform: translateY(-1px);
+  background: #3a3a3a;
 }
 
 .welcome-copy .eyebrow,
@@ -5784,7 +5813,13 @@ body {
   }
 
   .dashboard-banner-copy {
-    padding: 13px 14px 14px;
+    min-height: 132px;
+    padding: 13px 4px 3px;
+  }
+
+  .dashboard-banner-art {
+    height: 180px;
+    flex-basis: 180px;
   }
 }
 
