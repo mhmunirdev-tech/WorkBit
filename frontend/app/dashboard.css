@@ -9523,6 +9523,56 @@ body {
   background: #fff;
 }
 
+.ads-agency-list {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.ads-agency-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e5eaf2;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.ads-agency-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ads-agency-card-heading h2 {
+  margin: 0;
+  color: var(--dashboard-ink);
+  font-size: 16px;
+}
+
+.ads-agency-status {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fff5e8;
+  color: #966019;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ads-agency-status.is-enabled {
+  background: #e9f8ef;
+  color: #237342;
+}
+
+.ads-agency-card-note {
+  margin: 0;
+  color: var(--dashboard-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .hilltop-vast-heading {
   display: flex;
   align-items: flex-end;
@@ -9603,6 +9653,15 @@ body {
 
   .hilltop-vast-heading,
   .hilltop-vast-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ads-agency-card {
+    padding: 14px;
+  }
+
+  .ads-agency-card-heading {
     align-items: flex-start;
     flex-direction: column;
   }
