@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { ArrowRight, Bell, Coins } from "lucide-react";
 import { formatUsd, formatWbcFromUsd } from "../lib/utils";
@@ -100,6 +100,7 @@ export function Shell({
   user?: ShellUser | null;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -225,7 +226,7 @@ export function Shell({
     try {
       await api<void>("/auth/logout", { method: "POST" });
       showToast({ title: "Signed out", description: "You have been signed out.", variant: "success" });
-      window.location.assign("/login");
+      router.push("/login");
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "Unable to sign out.");
       setLoggingOut(false);

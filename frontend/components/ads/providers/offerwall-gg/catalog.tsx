@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Gamepad2, Search, Smartphone, Sparkles } from "lucide-react";
 import { api } from "../../../../lib/api";
@@ -206,7 +207,7 @@ export function OfferwallGGCatalog() {
             <Card className="offerwall-gg-card" key={offer.id}>
               <div className="offerwall-gg-art">
                 {offer.image_url ? (
-                  <img alt="" loading="lazy" referrerPolicy="no-referrer" src={offer.image_url} />
+                  <Image alt="" loading="lazy" referrerPolicy="no-referrer" src={offer.image_url} width={300} height={200} unoptimized />
                 ) : (
                   <span className="offerwall-gg-art-icon">{offerIcon(offer)}</span>
                 )}

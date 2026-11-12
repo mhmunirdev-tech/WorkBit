@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 import { Activity, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldAlert, ShieldCheck, X, ArrowDownToLine, Settings2, Users, MessageCircle } from "lucide-react";
 import { api } from "../lib/api";
@@ -52,6 +52,7 @@ const navigationGroups = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname().replace(/\/+$/, "") || "/";
+  const router = useRouter();
   const [identity, setIdentity] = useState<AdminIdentity | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -72,7 +73,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     try {
       await api<void>("/auth/admin/logout", { method: "POST" });
       showToast({ title: "Signed out", description: "You have been signed out.", variant: "success" });
-      window.location.assign("/admin/login");
+      router.push("/admin/login");
     } catch (error) {
       setLogoutError(error instanceof Error ? error.message : "Unable to sign out.");
       setLoggingOut(false);

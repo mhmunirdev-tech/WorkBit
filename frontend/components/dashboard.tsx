@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Check, PackageCheck, Pause, Play, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
@@ -229,17 +230,7 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
     return () => observer.disconnect();
   }, [banners.length]);
 
-  useEffect(() => {
-    if (pageCount < 2 || paused) return;
-    const timer = window.setInterval(() => {
-      showPage((activePage + 1) % pageCount);
-    }, 6000);
-    return () => window.clearInterval(timer);
-  }, [activePage, pageCount, paused]);
-
-  if (banners.length === 0) return null;
-
-  function showPage(page: number) {
+  const showPage = useCallback((page: number) => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     const maxScroll = viewport.scrollWidth - viewport.clientWidth;
@@ -248,7 +239,17 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
       behavior: "smooth",
     });
     setActivePage(page);
-  }
+  }, [pageCount]);
+
+  useEffect(() => {
+    if (pageCount < 2 || paused) return;
+    const timer = window.setInterval(() => {
+      showPage((activePage + 1) % pageCount);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [activePage, pageCount, paused, showPage]);
+
+  if (banners.length === 0) return null;
 
   function syncActivePage() {
     const viewport = viewportRef.current;
@@ -296,7 +297,7 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
           {banners.map((banner) => {
             const cardContent = (
               <>
-                <img className="dashboard-banner-image" src={banner.image_url} alt="" />
+                <Image className="dashboard-banner-image" src={banner.image_url} alt="" width={1600} height={900} unoptimized />
                 <div className="dashboard-banner-copy">
                   <h3>{banner.title}</h3>
                   {banner.content && <p>{banner.content}</p>}

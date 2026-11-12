@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { countries, type TCountryCode } from "countries-list";
 import { ArrowRight, ChevronDown, LockKeyhole, Mail, Smartphone, UserRound } from "lucide-react";
@@ -26,6 +27,7 @@ export function AuthForm({
   mode: "login" | "register" | "forgot";
   defaultDestination?: string;
 }) {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [referralCode, setReferralCode] = useState("");
@@ -96,7 +98,7 @@ export function AuthForm({
           variant: "success",
           kind: "login-success",
         });
-        window.location.assign(destination);
+        router.push(destination);
         return;
       }
 
@@ -131,7 +133,7 @@ export function AuthForm({
         variant: "success",
         kind: "otp-sent",
       });
-      window.location.assign(`/verify-email?email=${encodeURIComponent(email)}`);
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "The request could not be completed.";
       setMessage(message);

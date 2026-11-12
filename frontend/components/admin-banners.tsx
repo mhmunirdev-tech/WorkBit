@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ImagePlus, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { api } from "../lib/api";
@@ -196,7 +197,7 @@ export function AdminBanners() {
               </label>
               {form.image_url ? (
                 <div className="admin-banner-image-preview">
-                  <img src={form.image_url} alt="Selected banner preview" />
+                  <Image src={form.image_url} alt="Selected banner preview" width={800} height={450} unoptimized />
                 </div>
               ) : (
                 <p className="admin-banner-hint">Upload an image before publishing this banner.</p>
@@ -240,7 +241,7 @@ export function AdminBanners() {
             <div className="admin-banner-items">
               {banners.map((banner) => (
                 <Card className="admin-banner-item" key={banner.id}>
-                  <img src={banner.image_url} alt="" />
+                  <Image src={banner.image_url} alt="" width={260} height={150} unoptimized />
                   <div className="admin-banner-item-copy">
                     <div className="admin-banner-item-title">
                       <strong>{banner.title}</strong>
