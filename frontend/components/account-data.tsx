@@ -85,17 +85,62 @@ function PageState({ loading, error, empty, children }: { loading: boolean; erro
 
 export function WalletPage() {
   const { data, loading, error } = useAccountData<Wallet>("/wallet");
+  const {
+    data: transactions,
+    loading: transactionsLoading,
+    error: transactionsError,
+  } = useAccountData<Transaction[]>("/wallet/transactions");
+  const recentRewards = (transactions ?? [])
+    .filter((item) => item.type.startsWith("OFFER_REWARD"))
+    .slice(0, 5);
+
   return <Shell><header className="top"><div><p className="eyebrow">YOUR WALLET</p><h1>Balances and ledger</h1><p className="muted">Earning balance can be withdrawn. To buy a package, choose it first and pay its listed price by bKash or Nagad.</p></div><div className="welcome-actions">{data?.can_deposit && <Button className="dashboard-cta deposit-cta" variant="outline" asChild><Link href="/packages">Choose a package</Link></Button>}<Button className="dashboard-cta withdraw-cta" asChild><Link href="/withdraw">Withdraw</Link></Button><Button className="primary dashboard-cta" asChild><Link href="/transactions">View transactions</Link></Button></div></header>
     <PageState loading={loading} error={error} empty={!data}>{data && <><section className="stats">
       {[
-        ["Available", data.available_balance, "Available balance"],
+        ["Available balance", data.available_balance, "Ready to use or withdraw"],
         ["Deposit balance", data.deposit_balance, "Package purchases only"],
         ["Earning balance", data.earning_balance, "Withdrawable or usable for packages"],
-        ["Pending", data.pending_balance, "Awaiting provider confirmation"],
+        ["Pending rewards", data.pending_balance, "Awaiting provider confirmation"],
         ["Total earned", data.lifetime_earned, "Ledger-recorded"],
         ["Total withdrawn", data.lifetime_withdrawn, "Completed withdrawals"],
       ].map(([title, value, note]) => <Card className="stat" asChild key={title}><article><p>{title}</p><h2>{balanceAmount(value, data.usd_bdt_rate)}</h2><small>{note}</small></article></Card>)}
-    </section>    <Card className="panel wallet-note"><h2>How your wallet works</h2><p><strong>1 WBC = ৳{WBC_VALUE_BDT.toFixed(2)}.</strong> Your WBC balance is the BDT equivalent of your USD wallet, calculated using the current USD/BDT withdrawal rate and the WBC value above. Your underlying wallet and ledger remain in USD, so the displayed WBC amount can change when the admin exchange rate changes. Approved deposits can only be used for earning packages and are not withdrawable. Approved earnings can be withdrawn or used for a package. Each package stays active for the duration shown in the package catalog when you purchase it.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
+    </section>
+    <Card className="panel reward-list wallet-recent-rewards">
+      <div className="panel-head">
+        <div>
+          <h2>Recent rewards</h2>
+          <p>See each offer reward, its status, and both USD and WBC amounts.</p>
+        </div>
+        <Link href="/transactions">View all</Link>
+      </div>
+      {transactionsError ? (
+        <Alert className="state error-state" variant="destructive" role="alert">
+          <AlertDescription>{transactionsError}</AlertDescription>
+        </Alert>
+      ) : transactionsLoading ? (
+        <div aria-live="polite"><Skeleton className="mt-4 h-14 w-full" /></div>
+      ) : recentRewards.length ? (
+        <div className="mt-3">
+          {recentRewards.map((item) => (
+            <article className="reward-row flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" key={item.id}>
+              <div>
+                <strong>{item.description || "Offer reward"}</strong>
+                <small className="block">
+                  {formatUsd(item.amount, { minimumFractionDigits: 2 })}
+                  {" · "}
+                  {formatWbcFromUsd(item.amount, data.usd_bdt_rate) ?? "WBC estimate unavailable"}
+                </small>
+                <small className="block">{new Date(item.created_at).toLocaleString()}</small>
+              </div>
+              <Badge className="status-badge self-start sm:self-auto" variant="outline">{item.status}</Badge>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-4 text-sm text-muted-foreground">Your offer reward activity will appear here.</p>
+      )}
+    </Card>
+    <Card className="panel wallet-note"><h2>How your wallet works</h2><p><strong>1 WBC = ৳{WBC_VALUE_BDT.toFixed(2)}.</strong> Your WBC balance is the BDT equivalent of your USD wallet, calculated using the current USD/BDT withdrawal rate and the WBC value above. Your underlying wallet and ledger remain in USD, so the displayed WBC amount can change when the admin exchange rate changes. Approved deposits can only be used for earning packages and are not withdrawable. Approved earnings can be withdrawn or used for a package. Each package stays active for the duration shown in the package catalog when you purchase it.</p><Link href="/rewards">Review reward decisions →</Link></Card></>}</PageState>
     <WithdrawalPage embedded />
   </Shell>;
 }
