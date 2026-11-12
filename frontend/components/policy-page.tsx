@@ -109,77 +109,92 @@ const documents: Record<string, PolicyDocument> = {
     eyebrow: "WORKBIT POLICIES",
     title: "Privacy Policy",
     intro:
-      "This Privacy Policy describes how WorkBit Ltd, USA handles information when you create an account, use the wallet, or interact with offer features.",
+      "Effective November 13, 2026. This Policy describes how WorkBit Ltd, USA handles information when you use WorkBit.",
     sections: [
       {
-        heading: "1. Information we collect",
+        heading: "1. Who we are",
+        paragraphs: [
+          "WorkBit Ltd, USA (\"WorkBit\", \"we\", \"us\", or \"our\") operates the WorkBit website and rewards service. WorkBit determines how information collected through its Service is used. Privacy contact / Data Protection Officer: workbitbd@gmail.com. You may also submit a request through WorkBit Support.",
+          "This Policy covers information WorkBit handles. Offer providers, survey companies, advertising partners, and other third parties may handle information under their own privacy notices when you use their services.",
+        ],
+      },
+      {
+        heading: "2. Information we collect and its sources",
         bullets: [
-          "Account details: your name, email address, country, mobile number, referral details, and account status.",
-          "Profile details you choose to provide, such as an avatar or time zone.",
-          "Wallet and transaction records: balances, deposits, package purchases, rewards, withdrawals, payment methods, references, statuses, and review notes.",
-          "Offer activity and security records: offer identifiers, click and conversion references, timestamps, IP address, browser or device information, and relevant request logs.",
-          "Messages or information you send to WorkBit support.",
+          "Account identifiers and contact details: name, email, country, optional phone number, account ID, referral details, account status, verification records, and password hash.",
+          "Optional profile details, such as avatar and time zone.",
+          "Wallet and transaction records: package and payment references, deposits, rewards, balances, withdrawal requests, payout method and destination, transaction history, and review notes. Saved mobile-banking payout destinations are encrypted for storage and masked in user-facing records.",
+          "Offer and provider information: provider, offer, campaign, click, and transaction identifiers; timestamps; completion, reward, validation, and reversal status; and provider callback data.",
+          "Technical and usage data: IP address and browser/device details in requests and offer activity, pages visited, and timestamps. First-party analytics uses a random browser identifier stored in local storage; the server records keyed hashes of that identifier and request IP, plus page and event data. Failed sign-in records use a masked email and keyed IP hash.",
+          "Support and appeal information: support tickets, messages, and account-appeal statements.",
+        ],
+        paragraphs: [
+          "We receive account and profile information mainly from you, technical data from your browser and use of the Service, and conversion or validation information from enabled offer and survey providers. WorkBit does not request date of birth or identity documents as part of ordinary account registration.",
         ],
       },
       {
-        heading: "2. How we use information",
+        heading: "3. How and why we use information",
         bullets: [
-          "Create and secure accounts, verify email addresses, and provide the service.",
-          "Record package, deposit, wallet, reward, and withdrawal activity and support administrator review.",
-          "Validate offer activity, apply reward rules, investigate suspected abuse, and maintain accurate transaction records.",
-          "Communicate account, security, transaction, and policy updates.",
-          "Meet applicable legal obligations and protect WorkBit, users, and service providers.",
+          "Create and secure accounts; provide wallet, package, offer, support, and withdrawal features; and communicate service updates.",
+          "Verify email and transactions, attribute and validate provider activity, calculate and record rewards, and process provider reversals.",
+          "Prevent abuse, maintain service analytics, resolve disputes, and comply with legal obligations.",
+          "Where European data-protection law applies, rely on contract to provide requested services; legitimate interests for security, abuse prevention, reliability, and aggregate usage analytics; legal obligations where applicable; and consent where the law requires it. Consent may be withdrawn for future processing based on that consent.",
         ],
       },
       {
-        heading: "3. Offers and third-party sharing",
+        heading: "4. Offer providers, TheoremReach, and other disclosures",
         paragraphs: [
-          "When a third-party offer provider is approved, configured, and enabled, WorkBit may share a provider-specific account or click identifier, offer or campaign identifiers, country, timestamps, completion status, reward or transaction references, and technical information such as IP address and browser or device details, to the extent required by that integration. We use this information to attribute and verify eligibility and completion, prevent abuse, process rewards or provider reversals, and reconcile transactions. We may receive conversion, validation, or reversal information from the provider. The exact data depends on the provider and integration; the provider may also collect information directly through its offerwall or tracking technologies under its own privacy notice.",
-          "AyeT Studios is not currently represented as an active WorkBit partner. If an ayeT integration is approved and enabled in the future, we will identify ayeT and make its applicable privacy notice and offer terms available before users start its offers. We will update this Policy if the actual integration introduces materially different data sharing. WorkBit's current offer catalog is development-only; demo activity does not create real rewards, and production provider availability depends on integrations being configured and approved.",
-          "We may also share limited information with service providers that help operate WorkBit, when needed to process a transaction, or when disclosure is required by law. We do not sell personal information.",
+          "When an offer provider is enabled, WorkBit shares provider-specific information needed to open or attribute an offer and verify completion. This can include your WorkBit account ID or provider identifier, offer or campaign ID, country, click or transaction ID, timestamps, completion or reward status, and technical information such as IP address or browser/device details. Providers may also collect information directly through their own offerwalls, surveys, cookies, or tracking technologies.",
+          "For TheoremReach, WorkBit sends a WorkBit user identifier and transaction, placement, and reward-currency configuration in the survey entry link. When loading its survey catalog, WorkBit also sends the account identifier, country, and request IP address. WorkBit receives provider callback and reward-related metadata; survey answers are collected by TheoremReach and handled under its own privacy policy. TheoremReach says surveys may collect device and usage information and responses that can include demographic or sensitive topics, and that responses may be shared with its survey customers. Participation is optional. Review TheoremReach's Privacy Policy before starting; requests about information it controls should also be sent to TheoremReach.",
+          "WorkBit may disclose information to service providers that host or secure the Service, deliver transactional email, store profile images, support payments or payouts, or provide advertising and analytics tools. We may also disclose information when required by law, to protect users and the Service, or as part of a business reorganization or transfer.",
+          "WorkBit does not sell personal information for money. Some advertising partners may receive or collect online identifiers, device/browser information, IP address, or ad interaction data when ad placements load. Depending on the use, an ad-related disclosure for cross-context behavioral advertising may be considered \"sharing\" under California law. You may request an opt-out where applicable using the rights process below and may also use controls offered by the advertising provider.",
         ],
       },
       {
-        heading: "4. Payments and sensitive details",
+        heading: "5. Cookies, local storage, and advertising",
         paragraphs: [
-          "Payment references and transaction details are used to match and review deposits and package payments. Mobile-banking payout destinations are encrypted for storage and shown in masked form in user-facing records. Authorized administrators may access a destination when needed to review or process a withdrawal.",
-        ],
-      },
-      {
-        heading: "5. Cookies and technical data",
-        paragraphs: [
-          "WorkBit uses an essential session cookie to keep you signed in and may process technical request data, such as IP address and browser information, to operate the service and protect accounts. Your browser can provide controls for cookies, but disabling essential cookies may prevent sign-in features from working.",
+          "WorkBit uses an essential session cookie to keep you signed in. WorkBit also stores a random identifier in browser local storage for first-party page-usage analytics; the server stores a keyed hash rather than the raw visitor identifier. Offer providers and advertising partners may use their own cookies, local storage, device identifiers, or similar technologies when you use their services or view their placements. Browser controls can limit some storage, but this may affect sign-in, offer attribution, or provider features. Where consent is legally required for a non-essential technology, it must be obtained before that technology is used.",
         ],
       },
       {
         heading: "6. Retention and security",
         paragraphs: [
-          "We keep account, security, and transaction records for as long as reasonably needed to provide the service, resolve disputes, prevent abuse, and meet applicable legal or accounting obligations. Retention periods can differ by record type.",
-          "We use safeguards intended to protect information. No online service or storage method can be guaranteed completely secure.",
+          "We keep information only as long as reasonably necessary to provide the Service, maintain financial and transaction records, resolve disputes, prevent abuse, and meet legal obligations. First-party analytics and selected sign-in/fraud signals are retained for up to 90 days under applicable event-processing jobs. Wallet, payment, withdrawal, and audit records may be kept longer where needed for accounting, legal, security, or dispute-resolution purposes.",
+          "WorkBit uses safeguards intended to protect information, including password hashing, keyed one-way identifiers for selected security and analytics records, and encryption for saved payout destinations. No internet transmission or storage method can be guaranteed completely secure.",
         ],
       },
       {
-        heading: "7. Your choices and privacy rights",
+        heading: "7. International processing",
         paragraphs: [
-          "Depending on where you live, you may have rights to request access to, correction of, deletion of, or a copy of certain personal information, or to object to or limit certain processing. We may need to verify your identity and retain some records where law or legitimate transaction needs require it. Use the support contact provided in your account communications to submit a privacy request.",
+          "WorkBit is identified as a USA-based operator. Information may be processed in the United States and other countries where WorkBit or its service providers operate. Where data-protection law restricts an international transfer, WorkBit will use a transfer mechanism required by that law. You may contact WorkBit for information about safeguards applicable to a particular transfer.",
         ],
       },
       {
-        heading: "8. Children",
+        heading: "8. EEA, UK, and similar privacy rights",
         paragraphs: [
-          "WorkBit is not intended for anyone under 18 or below the applicable age of majority. We do not knowingly invite children to use earning features. If you believe a child has created an account, contact WorkBit using the support contact provided in account communications.",
+          "Where GDPR or similar law applies, you may have the right to receive information about processing and access your data; correct inaccurate data; request erasure or restriction in certain circumstances; receive certain data in a portable format; object to processing based on legitimate interests, including direct marketing; withdraw consent where processing is based on consent; and complain to your local data-protection supervisory authority.",
+          "WorkBit may use rules and risk signals to identify activity for review. A shared IP address alone does not automatically ban an account; account restrictions require an authorized review decision. Where a decision with significant effects is made solely by automated means, you may have rights to request human involvement or challenge it under applicable law.",
         ],
       },
       {
-        heading: "9. International processing",
+        heading: "9. California privacy rights",
         paragraphs: [
-          "WorkBit is operated under the name WorkBit Ltd, USA. Depending on the services in use, information may be processed in the United States or other countries where WorkBit or its service providers operate. Privacy protections can differ by location; applicable legal safeguards will apply where required.",
+          "If the California Consumer Privacy Act, as amended, applies to WorkBit and to you, you may have the right to know/access personal information collected, disclosed, or sold; request deletion or correction; opt out of sale or sharing for cross-context behavioral advertising; limit certain uses or disclosures of sensitive personal information; and receive equal treatment for exercising your rights. Exceptions may apply.",
+          "Categories WorkBit may collect include identifiers and contact details; account and financial records; commercial and transaction information; internet or device activity; country or other location-related information; and inferences or risk signals used for account security. Sources include you, your browser/device and use of the Service, and enabled providers. We use and disclose these categories for the purposes and recipient categories described above. WorkBit does not sell personal information for money; certain ad-related disclosures may constitute \"sharing\" under California law as described above.",
         ],
       },
       {
-        heading: "10. Changes and contact",
+        heading: "10. Submitting a privacy request",
         paragraphs: [
-          "We may update this Policy and publish the new version and effective date on this page. WorkBit Ltd, USA is the named operator. For privacy questions or requests, use the support contact provided by WorkBit in your account communications.",
+          "Submit an access, correction, deletion, restriction, portability, objection, or California opt-out request through WorkBit Support or workbitbd@gmail.com. We may request information reasonably needed to verify your identity and protect your account. An authorized agent may submit a request where the law permits, subject to verification. We will respond within the period required by applicable law, explain a denial where required, and will not discriminate against you for exercising a privacy right.",
+          "WorkBit does not currently provide self-service account deletion. You may request deletion through the process above. Some transaction, payment, security, or audit records may need to be retained or restricted rather than erased. Requests concerning information collected directly by an offer, survey, or advertising provider should also be sent to that provider.",
+        ],
+      },
+      {
+        heading: "11. Children, changes, and contact",
+        paragraphs: [
+          "The Service is intended for people aged 18 or older (or the higher age of majority where required). WorkBit does not knowingly allow minors to register or participate in offers. Contact WorkBit if you believe a minor has provided information.",
+          "We may update this Policy and publish the revised version and effective date. WorkBit Ltd, USA is the named operator. Privacy contact / Data Protection Officer: workbitbd@gmail.com.",
         ],
       },
     ],
