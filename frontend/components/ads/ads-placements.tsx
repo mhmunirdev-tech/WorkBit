@@ -6,7 +6,6 @@ import { CointrafficPlacement } from "./providers/cointraffic/banner";
 import { CoinzillaNativePlacement } from "./providers/coinzilla/native";
 import { MonetagPlacement } from "./providers/monetag/tag";
 import { PropellerAdsPlacement } from "./providers/propellerads/tag";
-import { EzoicPlacement } from "./providers/ezoic/placement";
 import { HilltopAdsVastVideoPlacement } from "./providers/hilltopads/vast-video";
 
 const adProviders = [
@@ -71,27 +70,14 @@ const adProviders = [
     configured: true,
     Placement: HilltopAdsVastVideoPlacement,
   },
-  {
-    id: "ezoic",
-    name: "Ezoic",
-    configured: process.env.NEXT_PUBLIC_EZOIC_ENABLED?.toLowerCase() === "true",
-    Placement: EzoicPlacement,
-  },
 ] as const;
 
 export function AdsPlacements() {
-  const ezoicEnabled = process.env.NEXT_PUBLIC_EZOIC_ENABLED?.toLowerCase() === "true";
-
   return (
     <div className="ads-agency-list" aria-label="Advertising partners">
       {adProviders.map(({ id, name, configured, Placement }) => {
-        const pausedForEzoic = ezoicEnabled && id !== "ezoic";
-        const isActive = configured && !pausedForEzoic;
-        const status = pausedForEzoic
-          ? "Paused while Ezoic is enabled"
-          : configured
-            ? "Integration enabled"
-            : "Setup required";
+        const isActive = configured;
+        const status = configured ? "Integration enabled" : "Setup required";
 
         return (
           <section className="ads-agency-card" key={id} aria-labelledby={`${id}-agency-title`}>
@@ -105,11 +91,7 @@ export function AdsPlacements() {
               <Placement />
             ) : (
               <p className="ads-agency-card-note">
-                {pausedForEzoic
-                  ? "Ezoic recommends removing other ad-network tags while its integration is active."
-                  : id === "ezoic"
-                    ? "Enable Ezoic only after site approval and ads.txt setup, then rebuild and redeploy."
-                    : `Add the approved ${name} placement settings to the frontend environment to show its ads.`}
+                {`Add the approved ${name} placement settings to the frontend environment to show its ads.`}
               </p>
             )}
           </section>
