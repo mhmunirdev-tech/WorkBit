@@ -881,31 +881,16 @@ body {
   width: 100%;
 }
 
-.dashboard-banner-track--1-items .dashboard-banner-card {
-  flex-basis: 100%;
-  width: 100%;
-}
-
-.dashboard-banner-track--2-items .dashboard-banner-card {
-  flex-basis: calc((100% - 14px) / 2);
-  width: calc((100% - 14px) / 2);
-}
-
-.dashboard-banner-track--3-items .dashboard-banner-card {
-  flex-basis: calc((100% - 28px) / 3);
-  width: calc((100% - 28px) / 3);
-}
-
 .dashboard-banner-card {
   display: flex;
-  flex: 0 0 calc((100% - 42px) / 4);
+  flex: 0 0 calc((100% - 56px) / 5);
   flex-direction: column;
-  width: calc((100% - 42px) / 4);
+  width: calc((100% - 56px) / 5);
   overflow: hidden;
   border: 1px solid #e4eaf3;
-  border-radius: 15px;
+  border-radius: 18px;
   background: #fff;
-  box-shadow: 0 8px 24px #15294d0b;
+  box-shadow: 0 10px 26px #1e35520a, 0 2px 6px #1e355208, inset 0 1px #fff;
   color: #172b49;
   scroll-snap-align: start;
   text-decoration: none;
@@ -913,8 +898,9 @@ body {
 }
 
 .dashboard-banner-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 13px 28px #15294d18;
+  transform: translateY(-5px);
+  border-color: #cbd9ee;
+  box-shadow: 0 20px 38px #20355217, 0 5px 12px #2035520a, inset 0 1px #fff;
 }
 
 .dashboard-banner-image {
@@ -930,7 +916,7 @@ body {
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  padding: 15px 16px 16px;
+  padding: 14px;
 }
 
 .dashboard-banner-copy h3 {

@@ -235,11 +235,11 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
     if (!viewport) return;
     const maxScroll = viewport.scrollWidth - viewport.clientWidth;
     viewport.scrollTo({
-      left: pageCount > 1 ? (maxScroll * page) / (pageCount - 1) : 0,
+      left: Math.min(maxScroll, page * viewport.clientWidth),
       behavior: "smooth",
     });
     setActivePage(page);
-  }, [pageCount]);
+  }, []);
 
   useEffect(() => {
     if (pageCount < 2 || paused) return;
@@ -259,7 +259,9 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
       setActivePage(0);
       return;
     }
-    setActivePage(Math.round((viewport.scrollLeft / maxScroll) * (pageCount - 1)));
+    const isLastPage = maxScroll - viewport.scrollLeft <= 1;
+    const visiblePage = Math.floor(viewport.scrollLeft / viewport.clientWidth);
+    setActivePage(isLastPage ? pageCount - 1 : Math.min(visiblePage, pageCount - 1));
   }
 
   return (
@@ -293,7 +295,7 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
         )}
       </div>
       <div className="dashboard-banner-viewport" ref={viewportRef} onScroll={syncActivePage}>
-        <div className={`dashboard-banner-track dashboard-banner-track--${Math.min(banners.length, 4)}-items`}>
+        <div className="dashboard-banner-track">
           {banners.map((banner) => {
             const cardContent = (
               <>
