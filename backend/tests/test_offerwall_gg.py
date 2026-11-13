@@ -216,6 +216,7 @@ def offerwall_catalog_payload(user_id, click_url=None, offers=None, pages=1):
                     "image": "https://cdn.example/offers/4021.png",
                     "categories": ["games"],
                     "devices": ["desktop"],
+                    "countries": ["BD"],
                     "reward": "1.25",
                     "rewardIsVariable": False,
                     "rewardUpTo": False,
@@ -227,7 +228,7 @@ def offerwall_catalog_payload(user_id, click_url=None, offers=None, pages=1):
             ],
             "pagination": {"page": 1, "pages": pages, "total": 1, "perPage": 50},
             "currency": {"name": "USD", "perUsd": 1},
-            "targeting": {"country": "US", "device": "desktop"},
+            "targeting": {"country": "BD", "device": "desktop"},
         },
     }
 
@@ -287,7 +288,14 @@ def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentia
     mock_client = MockOfferwallClient(offerwall_catalog_payload(user_id))
     mock_offerwall_catalog(monkeypatch, mock_client)
 
-    response = client.get("/api/v1/offers/providers/offerwall-gg/catalog?page=1&limit=50")
+    response = client.get(
+        "/api/v1/offers/providers/offerwall-gg/catalog?page=1&limit=50",
+        headers={
+            "user-agent": "WorkBit test browser",
+            "x-forwarded-for": "1.1.1.1",
+            "x-vercel-ip-country": "BD",
+        },
+    )
 
     assert response.status_code == 200
     result = response.json()
@@ -302,11 +310,86 @@ def test_offerwall_catalog_returns_safe_tracked_offers_and_uses_server_credentia
     assert mock_client.request["url"] == "https://offerwall.gg/api/v1/offers"
     assert mock_client.request["headers"] == {"X-Api-Key": SECRET_KEY}
     assert mock_client.request["params"]["userId"] == user_id
-    assert "ip" in mock_client.request["params"]
-    assert mock_client.request["params"]["userAgent"]
-    assert "country" not in mock_client.request["params"]
+    assert mock_client.request["params"]["ip"] == "1.1.1.1"
+    assert mock_client.request["params"]["country"] == "BD"
+    assert mock_client.request["params"]["userAgent"] == "WorkBit test browser"
     assert "device" not in mock_client.request["params"]
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_offerwall_catalog_does_not_forward_a_private_client_ip(client, monkeypatch):
+    configure_offerwall(monkeypatch)
+    login(client)
+    activate_package(client, "TEST-OFFERWALL-CATALOG-PRIVATE-IP")
+    mock_client = MockOfferwallClient(offerwall_catalog_payload(get_user_id()))
+    mock_offerwall_catalog(monkeypatch, mock_client)
+
+    response = client.get(
+        "/api/v1/offers/providers/offerwall-gg/catalog",
+        headers={
+            "user-agent": "WorkBit test browser",
+            "x-forwarded-for": "127.0.0.1",
+            "x-vercel-ip-country": "BD",
+        },
+    )
+
+    assert response.status_code == 200
+    assert "ip" not in mock_client.request["params"]
+    assert mock_client.request["params"]["country"] == "BD"
+
+
+def test_offerwall_catalog_only_returns_offers_available_in_the_user_country(
+    client, monkeypatch
+):
+    configure_offerwall(monkeypatch)
+    login(client)
+    activate_package(client, "TEST-OFFERWALL-CATALOG-COUNTRIES")
+    user_id = get_user_id()
+    bd_offer = {
+        "id": 4021,
+        "externalId": "network-offer-bd",
+        "provider": "lootably",
+        "name": "Bangladesh offer",
+        "reward": "1.25",
+        "countries": ["BD"],
+        "clickUrl": f"https://offerwall.gg/wall/{PUBLIC_KEY}/click/4021?userId={user_id}",
+    }
+    us_offer = {
+        "id": 4022,
+        "externalId": "network-offer-us",
+        "provider": "lootably",
+        "name": "US-only offer",
+        "reward": "9.99",
+        "countries": ["US"],
+        "clickUrl": f"https://offerwall.gg/wall/{PUBLIC_KEY}/click/4022?userId={user_id}",
+    }
+    worldwide_offer = {
+        "id": 4023,
+        "externalId": "network-offer-global",
+        "provider": "lootably",
+        "name": "Worldwide offer",
+        "reward": "2.50",
+        "countries": ["*"],
+        "clickUrl": f"https://offerwall.gg/wall/{PUBLIC_KEY}/click/4023?userId={user_id}",
+    }
+    mock_client = MockOfferwallClient(
+        offerwall_catalog_payload(
+            user_id,
+            offers=[bd_offer, us_offer, worldwide_offer],
+        )
+    )
+    mock_offerwall_catalog(monkeypatch, mock_client)
+
+    response = client.get(
+        "/api/v1/offers/providers/offerwall-gg/catalog",
+        headers={"x-vercel-ip-country": "BD", "x-forwarded-for": "1.1.1.1"},
+    )
+
+    assert response.status_code == 200
+    assert [offer["title"] for offer in response.json()["offers"]] == [
+        "Bangladesh offer",
+        "Worldwide offer",
+    ]
 
 
 def test_offerwall_catalog_accepts_empty_inventory(client, monkeypatch):
@@ -342,7 +425,10 @@ def test_offerwall_catalog_rejects_untrusted_click_url_and_surfaces_upstream_fai
             )
         ),
     )
-    invalid_link = client.get("/api/v1/offers/providers/offerwall-gg/catalog")
+    invalid_link = client.get(
+        "/api/v1/offers/providers/offerwall-gg/catalog",
+        headers={"x-vercel-ip-country": "BD"},
+    )
     assert invalid_link.status_code == 502
 
     mock_offerwall_catalog(

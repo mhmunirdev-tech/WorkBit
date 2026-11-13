@@ -1,3 +1,4 @@
+import ipaddress
 from uuid import uuid4
 from decimal import Decimal
 
@@ -36,6 +37,26 @@ from app.services.theoremreach_surveys import theoremreach_survey_catalog_servic
 from app.schemas.theoremreach_surveys import TheoremReachSurveysRead
 
 router = APIRouter(prefix="/offers", tags=["offers"])
+
+
+def _offerwall_user_ip(request: Request) -> str | None:
+    # Vercel overwrites X-Forwarded-For with the public client address.
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    candidate = forwarded_for.split(",", 1)[0].strip()
+    if not candidate:
+        return None
+    try:
+        address = ipaddress.ip_address(candidate)
+    except ValueError:
+        return None
+    return str(address) if address.is_global else None
+
+
+def _offerwall_user_country(request: Request, user: User) -> str:
+    country = request.headers.get("x-vercel-ip-country", "").strip().upper()
+    if len(country) == 2 and country.isalpha() and country != "XX":
+        return country
+    return user.country.strip().upper()
 
 
 @router.get("/providers/cpx-research/wall-url")
@@ -103,7 +124,8 @@ async def offerwall_gg_catalog(
     result = await offerwall_gg_catalog_service.list_offers(
         db=db,
         user=user,
-        user_ip=request.client.host if request.client else None,
+        user_ip=_offerwall_user_ip(request),
+        user_country=_offerwall_user_country(request, user),
         user_agent=request.headers.get("user-agent", ""),
         page=page,
         limit=limit,

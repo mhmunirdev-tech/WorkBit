@@ -22,6 +22,7 @@ class OfferwallGGApiOffer(BaseModel):
     image: str | None = None
     categories: list[str] = Field(default_factory=list)
     devices: list[str] = Field(default_factory=list)
+    countries: list[str] = Field(default_factory=list)
     reward: Decimal = Field(ge=0)
     reward_is_variable: bool = Field(alias="rewardIsVariable", default=False)
     reward_up_to: bool = Field(alias="rewardUpTo", default=False)

@@ -32,6 +32,7 @@ class OfferwallGGCatalogService:
         db: Session,
         user: User,
         user_ip: str | None,
+        user_country: str,
         user_agent: str,
         page: int,
         limit: int,
@@ -49,6 +50,7 @@ class OfferwallGGCatalogService:
         params: dict[str, str | int] = {
             "appId": public_key,
             "userId": user.id,
+            "country": user_country,
             "page": page,
             "limit": limit,
             "sort": "payout",
@@ -101,7 +103,12 @@ class OfferwallGGCatalogService:
             )
 
         offers: list[OfferwallGGOfferRead] = []
+        target_country = user_country.strip().upper()
         for offer in data.offers:
+            eligible_countries = {country.strip().upper() for country in offer.countries}
+            if target_country not in eligible_countries and "*" not in eligible_countries:
+                continue
+
             click_url = self._validated_click_url(
                 offer.click_url,
                 public_key,
