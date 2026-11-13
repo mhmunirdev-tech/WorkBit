@@ -340,17 +340,21 @@ function EarningsChart({
   const firstDate = rangeStart.toISOString().slice(0, 10);
   const visible = points.filter((point) => point.date >= firstDate && point.date <= today);
   const values = visible.map((point) => Number(point.amount));
+  const minimum = Math.min(...values, 0);
   const maximum = Math.max(...values, 0);
+  const spread = maximum - minimum;
+  const zeroY = spread > 0 ? 22 + (maximum / spread) * 136 : 158;
   const coordinates = values.map((value, index) => ({
     x: visible.length < 2 ? 310 : 12 + (index / (visible.length - 1)) * 596,
-    y: 158 - (maximum > 0 ? (value / maximum) * 136 : 0),
+    y: spread > 0 ? zeroY - (value / spread) * 136 : 158,
   }));
   const line = coordinates.map((point) => `${point.x},${point.y}`).join(" ");
   const area =
     coordinates.length > 0
-      ? `M ${coordinates[0].x},160 L ${coordinates.map((point) => `${point.x},${point.y}`).join(" L ")} L ${coordinates.at(-1)?.x},160 Z`
+      ? `M ${coordinates[0].x},${zeroY} L ${coordinates.map((point) => `${point.x},${point.y}`).join(" L ")} L ${coordinates.at(-1)?.x},${zeroY} Z`
       : "";
   const total = visible.reduce((sum, point) => sum + Number(point.amount), 0);
+  const hasActivity = values.some((value) => value !== 0);
 
   return (
     <Card className="panel earnings-panel" asChild><section aria-labelledby="earnings-heading">
@@ -358,7 +362,7 @@ function EarningsChart({
         <div>
           <p className="eyebrow">VERIFIED ACTIVITY</p>
           <h2 id="earnings-heading">Earnings overview</h2>
-          <p className="panel-subtitle">Approved reward credits from your wallet ledger.</p>
+          <p className="panel-subtitle">Net reward activity from your wallet ledger, including reversals.</p>
         </div>
         <strong className="chart-total">{money(total, currency, usdBdtRate)}</strong>
       </div>
@@ -381,12 +385,13 @@ function EarningsChart({
         className="earnings-chart"
         viewBox="0 0 620 180"
         role="img"
-        aria-label={`Approved earnings for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, currency, usdBdtRate)}.`}
+        aria-label={`Net reward activity for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, currency, usdBdtRate)}.`}
         preserveAspectRatio="none"
       >
         {[24, 68, 112, 160].map((y) => (
           <line key={y} x1="0" x2="620" y1={y} y2={y} className="chart-gridline" />
         ))}
+        <line x1="0" x2="620" y1={zeroY} y2={zeroY} className="chart-gridline" />
         {area && <path d={area} className="chart-area-fill" />}
         {coordinates.length > 1 && <polyline points={line} className="chart-line" />}
         {coordinates.length === 1 && (
@@ -397,8 +402,8 @@ function EarningsChart({
         <span>{visible[0] ? dateLabel(visible[0].date) : ""}</span>
         <span>{visible.at(-1) ? dateLabel(visible.at(-1)!.date) : ""}</span>
       </div>
-      {total === 0 && (
-        <p className="chart-empty-note">No approved rewards in this period. Pending rewards are shown separately.</p>
+      {!hasActivity && (
+        <p className="chart-empty-note">No approved reward activity in this period. Pending rewards are shown separately.</p>
       )}
     </section></Card>
   );

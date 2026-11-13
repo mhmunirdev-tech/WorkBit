@@ -100,6 +100,12 @@ def test_approved_subcent_conversion_preserves_fractional_user_reward(client, mo
     finally:
         db.close()
 
+    dashboard = client.get("/api/v1/dashboard").json()
+    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("0.0035")
+    today = datetime.now(timezone.utc).date().isoformat()
+    today_entry = next(item for item in dashboard["earnings_chart"] if item["date"] == today)
+    assert Decimal(today_entry["amount"]) == Decimal("0.0035")
+
 
 def test_mock_conversion_does_not_reward_without_explicit_opt_in(client, monkeypatch):
     from app.core.config import settings
@@ -175,6 +181,12 @@ def test_provider_pending_conversion_credits_available_balance_when_approved(cli
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
     assert Decimal(wallet["available_balance"]) == Decimal("1.40")
 
+    dashboard = client.get("/api/v1/dashboard").json()
+    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("1.40")
+    today = datetime.now(timezone.utc).date().isoformat()
+    today_entry = next(item for item in dashboard["earnings_chart"] if item["date"] == today)
+    assert Decimal(today_entry["amount"]) == Decimal("1.40")
+
     decision = client.get("/api/v1/rewards").json()[0]
     assert decision["status"] == "APPROVED"
 
@@ -218,6 +230,31 @@ def test_provider_reversal_cancels_pending_reward(client, monkeypatch):
     wallet = client.get("/api/v1/wallet").json()
     assert Decimal(wallet["pending_balance"]) == Decimal("0")
     assert Decimal(wallet["lifetime_earned"]) == Decimal("0")
+
+
+def test_approved_reward_reversal_is_removed_from_net_dashboard_earnings(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    click_id = create_click(client)
+    reward_payload = payload(
+        click_id,
+        transaction="mock-tx-approved-reversal",
+        payout="2.00",
+        status="APPROVED",
+    )
+    assert client.post("/api/v1/postbacks/mock", json=reward_payload).status_code == 202
+    reversed_reward = client.post(
+        "/api/v1/postbacks/mock",
+        json={**reward_payload, "status": "REVERSED"},
+    )
+    assert reversed_reward.status_code == 202
+
+    dashboard = client.get("/api/v1/dashboard").json()
+    assert Decimal(dashboard["stats"]["today_earnings"]) == Decimal("0")
+    today = datetime.now(timezone.utc).date().isoformat()
+    today_entry = next(item for item in dashboard["earnings_chart"] if item["date"] == today)
+    assert Decimal(today_entry["amount"]) == Decimal("0")
 
 
 def test_manual_review_approval_credits_wallet_and_rejecting_approved_reward_conflicts(client, monkeypatch):

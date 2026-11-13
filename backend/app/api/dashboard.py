@@ -25,6 +25,8 @@ router = APIRouter(tags=["dashboards"])
 
 _EARNING_TYPES = {
     "OFFER_REWARD_APPROVAL",
+    "OFFER_REWARD_RELEASE",
+    "OFFER_REWARD_REVERSAL",
     "REFERRAL_REWARD_APPROVAL",
     "DAILY_BONUS_APPROVAL",
     "DAILY_BONUS_REWARD",
@@ -33,6 +35,7 @@ _EARNING_TYPES = {
 }
 _REFERRAL_TYPES = {"REFERRAL_REWARD_APPROVAL", "REFERRAL_REWARD_PENDING"}
 _APPROVED_STATUSES = {"APPROVED", "COMPLETED"}
+_EARNING_STATUSES = _APPROVED_STATUSES | {"REVERSED", "CHARGEBACK", "FRAUD"}
 
 
 @router.get("/public/stats", response_model=PublicStatsRead)
@@ -102,8 +105,7 @@ def dashboard(
             WalletTransaction.currency == wallet.currency,
             WalletTransaction.created_at >= cutoff,
             WalletTransaction.type.in_(_EARNING_TYPES),
-            WalletTransaction.status.in_(_APPROVED_STATUSES),
-            WalletTransaction.amount > 0,
+            WalletTransaction.status.in_(_EARNING_STATUSES),
         )
         .order_by(WalletTransaction.created_at.desc())
     ).all()
