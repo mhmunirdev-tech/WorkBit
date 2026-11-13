@@ -14,7 +14,7 @@ export function CPXResearchOfferWall() {
   const [wallUrl, setWallUrl] = useState("");
   const [error, setError] = useState("");
   const [hidden, setHidden] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   useEffect(() => {
     let active = true;
