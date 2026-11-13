@@ -46,7 +46,10 @@ type Reward = {
 };
 
 function amount(value: string, currency: string) {
-  return formatUsd(value);
+  const numericValue = Number(value);
+  const maximumFractionDigits =
+    Math.abs(numericValue) > 0 && Math.abs(numericValue) < 0.01 ? 8 : 2;
+  return formatUsd(value, { maximumFractionDigits });
 }
 
 function balanceAmount(value: string, rate: string | null) {

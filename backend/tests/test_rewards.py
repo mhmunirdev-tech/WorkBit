@@ -31,6 +31,7 @@ def test_reward_policy_seed_exists(client):
         assert policy.platform_share_percentage == Decimal("30.00")
         assert policy.minimum_reward == Decimal("0.00")
         assert policy.maximum_reward == Decimal("0.00")
+        assert policy.rounding_precision == 8
     finally:
         db.close()
 
@@ -68,6 +69,36 @@ def test_approved_conversion_credits_available_balance_and_is_idempotent(client,
     assert Decimal(admin_dashboard.json()["approved_ad_payout"]) == Decimal("2.00")
     assert Decimal(admin_dashboard.json()["platform_ad_revenue"]) == Decimal("0.60")
     assert Decimal(admin_dashboard.json()["registered_user_amount"]) == Decimal("10")
+
+
+def test_approved_subcent_conversion_preserves_fractional_user_reward(client, monkeypatch):
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "enable_mock_rewards", True)
+    click_id = create_click(client)
+    response = client.post(
+        "/api/v1/postbacks/mock",
+        json=payload(click_id, transaction="mock-tx-subcent-reward", payout="0.005", status="APPROVED"),
+    )
+    assert response.status_code == 202
+
+    from app.database.session import SessionLocal
+
+    db = SessionLocal()
+    try:
+        decision = db.scalar(
+            select(RewardDecision).where(RewardDecision.conversion_id == response.json()["id"])
+        )
+        user = db.scalar(select(User).where(User.email == "workbit-user@example.com"))
+        assert decision is not None
+        assert decision.user_reward == Decimal("0.0035")
+        assert decision.platform_share == Decimal("0.0015")
+        assert user is not None
+        wallet = user.wallet
+        assert wallet is not None
+        assert wallet.available_balance == Decimal("0.0035")
+    finally:
+        db.close()
 
 
 def test_mock_conversion_does_not_reward_without_explicit_opt_in(client, monkeypatch):

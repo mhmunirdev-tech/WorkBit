@@ -13,6 +13,7 @@ from app.services.fraud import fraud_service
 from app.services.packages import has_active_package
 
 ZERO = Decimal("0")
+REWARD_PRECISION = 8
 
 
 class RewardDecisionService:
@@ -361,8 +362,7 @@ class RewardDecisionService:
             reward = policy.minimum_reward
         if policy.maximum_reward and reward > policy.maximum_reward:
             reward = policy.maximum_reward
-        precision = max(policy.rounding_precision, 2)
-        quantum = Decimal("1").scaleb(-precision)
+        quantum = Decimal("1").scaleb(-REWARD_PRECISION)
         return reward.quantize(quantum, rounding=ROUND_HALF_UP)
 
     def _calculate_platform_share(self, policy: RewardPolicy, provider_payout: Decimal, user_reward: Decimal | None = None) -> Decimal:
@@ -375,8 +375,7 @@ class RewardDecisionService:
             share = provider_payout * percent
         if share < ZERO:
             share = ZERO
-        precision = max(policy.rounding_precision, 2)
-        quantum = Decimal("1").scaleb(-precision)
+        quantum = Decimal("1").scaleb(-REWARD_PRECISION)
         return share.quantize(quantum, rounding=ROUND_HALF_UP)
 
     def _normalize_percentage(self, value: Decimal) -> Decimal:

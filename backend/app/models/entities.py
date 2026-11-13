@@ -477,7 +477,7 @@ class RewardPolicy(Base):
     minimum_reward: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0.00"))
     maximum_reward: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0.00"))
     pending_period_days: Mapped[int] = mapped_column(default=0)
-    rounding_precision: Mapped[int] = mapped_column(default=2)
+    rounding_precision: Mapped[int] = mapped_column(default=8)
     country_code: Mapped[str | None] = mapped_column(String(2), nullable=True, index=True)
     network_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     offer_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)

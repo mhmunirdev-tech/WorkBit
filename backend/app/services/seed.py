@@ -189,7 +189,7 @@ def seed() -> None:
             )
         existing_policy = db.scalar(select(RewardPolicy).where(RewardPolicy.name == "default_offer_reward"))
         if not existing_policy:
-            db.add(RewardPolicy(name="default_offer_reward", description="Default offer reward policy", enabled=True, user_reward_percentage=Decimal("70.00"), platform_share_percentage=Decimal("30.00"), minimum_reward=Decimal("0.00"), maximum_reward=Decimal("0.00"), pending_period_days=0, rounding_precision=2, country_code=None, network_id=None, offer_id=None))
+            db.add(RewardPolicy(name="default_offer_reward", description="Default offer reward policy", enabled=True, user_reward_percentage=Decimal("70.00"), platform_share_percentage=Decimal("30.00"), minimum_reward=Decimal("0.00"), maximum_reward=Decimal("0.00"), pending_period_days=0, rounding_precision=8, country_code=None, network_id=None, offer_id=None))
         if not db.scalar(select(RankTier.id).limit(1)):
             db.add_all(
                 RankTier(name=name, threshold=threshold, sort_order=sort_order)
