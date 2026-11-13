@@ -26,7 +26,7 @@ Advertising and rewarded/display ads use the separate `ad_networks` registry and
 
 ## CPX Research survey wall
 
-The CPX Research frame is rendered on `/offers` after the BitLabs wall. It uses the publisher App ID `37861` shown in the supplied CPX dashboard guide and the authenticated WorkBit user's UUID as `ext_user_id`. The backend creates CPX's documented `secure_hash` using MD5 of `ext_user_id`, an underscore, and the server-side CPX Security Hash (`md5(user_id + "_" + security_hash)`). The CPX secret must never be exposed in a `NEXT_PUBLIC_*` variable.
+The CPX Research frame is rendered on `/offers` after the BitLabs wall. It uses the publisher App ID `37861` shown in the supplied CPX dashboard guide and the authenticated WorkBit user's UUID as `ext_user_id`. When CPX Security Check is enabled, the backend creates `secure_hash` as MD5 of `ext_user_id`, a hyphen, and the server-side CPX Security Hash (`md5(user_id + "-" + security_hash)`). The CPX secret must never be exposed in a `NEXT_PUBLIC_*` variable.
 
 Set `CPX_RESEARCH_ENABLED=true`, `CPX_RESEARCH_APP_ID=37861`, and `CPX_RESEARCH_SECURE_HASH` in the backend environment after configuring the CPX publisher dashboard. The authenticated route does not require a package purchase and returns a no-store response. `CPX_RESEARCH_POSTBACK_ENABLED` is separate and defaults to `false`, so the wall can be displayed without accepting reward callbacks.
 

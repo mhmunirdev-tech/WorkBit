@@ -55,7 +55,7 @@ class CPXResearchAdapter:
             raise CPXResearchConfigurationError("WorkBit user ID must be a UUID.") from error
 
         secure_hash = hashlib.md5(
-            f"{user_id}_{app_secure_hash}".encode("utf-8"),
+            f"{user_id}-{app_secure_hash}".encode("utf-8"),
             usedforsecurity=False,
         ).hexdigest()
         return f"{CPX_RESEARCH_WALL_URL}?{urlencode({

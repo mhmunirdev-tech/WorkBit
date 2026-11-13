@@ -6,7 +6,7 @@ The unique `(network_id, external_transaction_id)` constraint makes conversion c
 
 ## CPX Research
 
-The CPX Research wall uses the authenticated WorkBit user's UUID as `ext_user_id`. Keep the CPX App Security Hash in the backend environment as `CPX_RESEARCH_SECURE_HASH`; never put it in a frontend variable or the callback URL. The wall request's `secure_hash` is MD5 of `user_id + "_" + app_security_hash`.
+The CPX Research wall uses the authenticated WorkBit user's UUID as `ext_user_id`. Keep the CPX App Security Hash in the backend environment as `CPX_RESEARCH_SECURE_HASH`; never put it in a frontend variable or the callback URL. When CPX Security Check is enabled, the wall request's `secure_hash` is MD5 of `user_id + "-" + app_security_hash`.
 
 Configure these backend environment variables:
 

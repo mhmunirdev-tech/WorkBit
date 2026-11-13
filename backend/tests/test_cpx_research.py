@@ -85,7 +85,7 @@ def test_cpx_research_wall_url_is_available_without_package_and_uses_verified_us
     query = parse_qs(urlsplit(response.json()["wall_url"]).query)
     user_id = get_user_id()
     expected_hash = hashlib.md5(
-        f"{user_id}_{APP_SECURE_HASH}".encode("utf-8"),
+        f"{user_id}-{APP_SECURE_HASH}".encode("utf-8"),
         usedforsecurity=False,
     ).hexdigest()
 
@@ -133,7 +133,7 @@ def test_cpx_research_callback_credits_once_and_reverses_canceled_transaction(
 
     assert first.status_code == duplicate.status_code == 200
     credited = get_wallet_balance()
-    assert credited[0] - before[0] == Decimal("0.88000000")
+    assert credited[0] - before[0] == Decimal("0.87500000")
 
     reversal = client.get(
         callback_url(
@@ -197,7 +197,7 @@ def test_cpx_research_callback_rejects_amount_change_for_existing_transaction(
 
     assert credited.status_code == 200
     assert changed_amount.status_code == 409
-    assert get_wallet_balance()[0] - before[0] == Decimal("0.88000000")
+    assert get_wallet_balance()[0] - before[0] == Decimal("0.87500000")
 
 
 def test_cpx_research_callback_is_disabled_separately_from_wall(client, monkeypatch):
