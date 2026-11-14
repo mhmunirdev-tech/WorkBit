@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -114,12 +114,13 @@ class OfferwallMeCatalogService:
                 or offer.reward <= 0
             ):
                 continue
-            expected_payout = (
-                offer.reward / settings.offerwall_me_exchange_rate
-            ).quantize(Decimal("0.00000001"))
-            if payout_usd.quantize(Decimal("0.00000001")) != expected_payout:
+            expected_reward = (payout_usd * settings.offerwall_me_exchange_rate).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            if offer.reward.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) != expected_reward:
                 raise HTTPException(
-                    502, "Offerwall.me returned a reward that does not match its saved currency rate."
+                    502,
+                    "Offerwall.me reward does not match the configured currency rate at 2-decimal precision.",
                 )
 
             user_reward = reward_decision_service.estimate_user_reward(

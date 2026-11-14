@@ -86,7 +86,7 @@ Configure these backend environment variables:
 - `OFFERWALL_ME_API_TOKEN`: the private bearer token used by Offerwall.me's server-side offer API.
 - `OFFERWALL_ME_SECRET_KEY`: the private placement secret.
 - `OFFERWALL_ME_CURRENCY_NAME=Points`.
-- `OFFERWALL_ME_EXCHANGE_RATE=1000`: configure the placement for 1000 Points per $1 payout. The WorkBit wallet remains USD; the callback converts provider Points to the signed USD payout before applying WorkBit's reward policy.
+- `OFFERWALL_ME_EXCHANGE_RATE=1000`: configure the placement for 1000 Points per $1 payout, rounded to 2 decimal places. The catalog checks rewards at that precision and uses the provider's USD payout for WorkBit reward estimates. The WorkBit wallet remains USD; the callback converts provider Points to the signed USD payout before applying WorkBit's reward policy.
 - `OFFERWALL_ME_ENABLED=false` while configuring; set to `true` after testing the signed catalog request.
 - `OFFERWALL_ME_POSTBACK_ENABLED=false` until the Vercel firewall is configured and the callback is tested; then set to `true`.
 

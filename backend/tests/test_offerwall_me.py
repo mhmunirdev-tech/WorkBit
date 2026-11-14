@@ -327,6 +327,30 @@ def test_offerwall_me_catalog_returns_filtered_offers_and_server_signed_api_requ
     assert params["identitySignature"] == expected_signature
 
 
+def test_offerwall_me_catalog_accepts_rewards_rounded_to_configured_currency_precision(
+    client, monkeypatch
+):
+    configure_offerwall_me(monkeypatch)
+    login(client)
+    user_id = get_user_id()
+    payload = offer_payload(user_id)
+    payload["data"][0]["reward"] = "123.46"
+    payload["data"][0]["payout"] = "0.123456"
+    MockOfferwallMeClient.payload = payload
+    monkeypatch.setattr(httpx, "AsyncClient", MockOfferwallMeClient)
+
+    response = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["total"] == 2
+    offer = next(item for item in response.json()["offers"] if item["id"] == "offer-1")
+    assert offer["provider_reward"] == "123.46"
+    assert Decimal(offer["provider_payout_usd"]) == Decimal("0.123456")
+
+
 def test_offerwall_me_catalog_handles_empty_data_and_rejects_unsafe_urls(
     client, monkeypatch
 ):
