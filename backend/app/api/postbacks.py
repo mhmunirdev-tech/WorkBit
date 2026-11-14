@@ -1,3 +1,5 @@
+import ipaddress
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
@@ -18,6 +20,11 @@ from app.integrations.offer_providers.offerwall_gg import (
     OfferwallGGConfigurationError,
     offerwall_gg_adapter,
 )
+from app.integrations.offer_providers.offerwall_me import (
+    OfferwallMeCallbackError,
+    OfferwallMeConfigurationError,
+    offerwall_me_adapter,
+)
 from app.integrations.offer_providers.theoremreach import (
     TheoremReachCallbackError,
     TheoremReachConfigurationError,
@@ -28,8 +35,25 @@ from app.services.conversions import conversion_service
 from app.services.bitlabs import bitlabs_conversion_service
 from app.services.cpx_research import cpx_research_conversion_service
 from app.services.offerwall_gg import offerwall_gg_conversion_service
+from app.services.offerwall_me import offerwall_me_conversion_service
 from app.services.theoremreach import theoremreach_conversion_service
 router = APIRouter(prefix="/postbacks", tags=["postbacks"])
+OFFERWALL_ME_POSTBACK_SOURCE_IPS = frozenset(
+    {"95.216.65.163", "2a01:4f9:2b:1dc::2"}
+)
+
+
+def _is_offerwall_me_source_allowed(request: Request) -> bool:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    source = forwarded_for.split(",", 1)[0].strip()
+    try:
+        source_ip = ipaddress.ip_address(source)
+    except ValueError:
+        return False
+    return any(
+        source_ip == ipaddress.ip_address(value)
+        for value in OFFERWALL_ME_POSTBACK_SOURCE_IPS
+    )
 
 
 @router.post("/mock", response_model=ConversionRead, status_code=202)
@@ -188,6 +212,39 @@ async def receive_theoremreach_postback(
             return PlainTextResponse("RETRY", status_code=503)
         return PlainTextResponse("REJECTED", status_code=error.status_code)
     return PlainTextResponse("OK")
+
+
+@router.post("/offerwall-me", response_class=PlainTextResponse)
+async def receive_offerwall_me_postback(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    if not settings.offerwall_me_postback_enabled:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    if not _is_offerwall_me_source_allowed(request):
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    form = await request.form()
+    callback_values: dict[str, str] = {}
+    for key, value in form.multi_items():
+        if key in callback_values or not isinstance(value, str):
+            return PlainTextResponse("FORBIDDEN", status_code=400)
+        callback_values[key] = value
+
+    try:
+        callback = offerwall_me_adapter.verify_callback(callback_values)
+    except OfferwallMeConfigurationError:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    except OfferwallMeCallbackError:
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    try:
+        offerwall_me_conversion_service.process_callback(db, callback)
+    except HTTPException as error:
+        if error.status_code >= 500:
+            return PlainTextResponse("RETRY", status_code=503)
+        return PlainTextResponse("REJECTED", status_code=error.status_code)
+    return PlainTextResponse("ok")
 
 
 @router.post("/{provider}", status_code=503)

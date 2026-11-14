@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     offerwall_gg_public_key: str | None = None
     offerwall_gg_secret_key: str | None = None
     offerwall_gg_currency_name: str = "USD"
+    offerwall_me_enabled: bool = False
+    offerwall_me_postback_enabled: bool = False
+    offerwall_me_public_api_key: str | None = None
+    offerwall_me_secret_key: str | None = None
+    offerwall_me_currency_name: str = "USD"
+    offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1"), gt=0)
     cpx_research_enabled: bool = False
     cpx_research_postback_enabled: bool = False
     cpx_research_app_id: str = "37861"

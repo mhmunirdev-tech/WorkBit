@@ -76,4 +76,29 @@ Offerwall.GG does not include `status` in its signature. The signed amount's sig
 
 WorkBit wallet currency is USD, so configure the Offerwall.GG placement currency name as `USD` with one placement unit per USD. WorkBit then applies its configured reward policy (seeded default: 70% user reward / 30% platform share) only after provider-confirmed completion. Do not enable the wall if the placement uses a different currency or exchange rate. Offerwall.GG publisher payout is separate from user withdrawals: it publicly lists a $30 minimum and NET30 terms and does not list bKash/Nagad as publisher payout options; WorkBit's own user payouts remain the existing manual bKash/Nagad workflow.
 
+## Offerwall.me
+
+Offerwall.me is displayed as an authenticated iframe in Explore offers. WorkBit builds the placement URL using the signed-in user's UUID and a one-hour HMAC-SHA256 identity signature. The public API key and private placement secret are required in the backend environment; the private secret is never sent to the browser. Enable `OFFERWALL_ME_ENABLED=true` only after configuring the placement and its callback.
+
+Configure these backend environment variables:
+
+- `OFFERWALL_ME_PUBLIC_API_KEY`: the placement's public API key.
+- `OFFERWALL_ME_SECRET_KEY`: the private placement secret.
+- `OFFERWALL_ME_CURRENCY_NAME=USD`.
+- `OFFERWALL_ME_EXCHANGE_RATE=1`: configure the placement for one USD unit per $1 payout. If using another rate, set the matching positive decimal value here.
+- `OFFERWALL_ME_ENABLED=false` while configuring; set to `true` after testing the signed wall URL.
+- `OFFERWALL_ME_POSTBACK_ENABLED=false` until the Vercel firewall is configured and the callback is tested; then set to `true`.
+
+In Offerwall.me, choose **Single Postback** and enter this exact URL:
+
+```text
+https://api.workbitbd.com/api/v1/postbacks/offerwall-me
+```
+
+The endpoint accepts the provider's POST form callback, rejects duplicate fields, verifies `md5(subId + transId + reward + secretKey)`, validates the configured exchange rate and payout, requires a valid WorkBit UUID, and processes credits and status `2` reversals idempotently. WorkBit derives the USD amount from the signed `reward` and configured exchange rate, then applies its reward policy. Configure the placement currency as `USD` with an exchange rate of exactly one unit per USD; do not enable callbacks with another setting unless the matching backend exchange rate is configured.
+
+The provider signature does not cover status, payout, or all other callback fields. Before enabling rewards, create a Vercel Firewall rule to allow the callback path only from Offerwall.me's documented postback IPs (`95.216.65.163` and `2a01:4f9:2b:1dc::2`) and deny all other source IPs. WorkBit also checks the trusted `X-Forwarded-For` source IP against this list. Do not enable `OFFERWALL_ME_POSTBACK_ENABLED` if the deployed proxy does not provide a trustworthy client IP. The callback returns `ok` with HTTP 200 after durable processing; failures return non-2xx so Offerwall.me can retry.
+
+Offerwall.me requires signed user IDs from 1 October 2026. WorkBit generates the required expiring HMAC-SHA256 identity signature server-side. Do not expose the private placement secret or share generated signed wall URLs.
+
 Other offer providers remain disabled. Their adapters, request formats, and callback signature implementations must be added only after reviewing each provider's official documentation and testing with its sandbox. Do not infer formats from Offerwall.GG or another network.

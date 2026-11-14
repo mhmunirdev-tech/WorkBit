@@ -14,6 +14,10 @@ from app.integrations.offer_providers.offerwall_gg import (
     OfferwallGGConfigurationError,
     offerwall_gg_adapter,
 )
+from app.integrations.offer_providers.offerwall_me import (
+    OfferwallMeConfigurationError,
+    offerwall_me_adapter,
+)
 from app.integrations.offer_providers.bitlabs import (
     BitLabsConfigurationError,
     bitlabs_adapter,
@@ -57,6 +61,19 @@ def _offerwall_user_country(request: Request, user: User) -> str:
     if len(country) == 2 and country.isalpha() and country != "XX":
         return country
     return user.country.strip().upper()
+
+
+@router.get("/providers/offerwall-me/wall-url")
+def offerwall_me_wall_url(
+    user: User = Depends(current_user),
+) -> JSONResponse:
+    if not settings.offerwall_me_enabled:
+        raise HTTPException(404, "Offerwall.me is not enabled.")
+    try:
+        wall_url = offerwall_me_adapter.build_wall_url(user.id)
+    except OfferwallMeConfigurationError as error:
+        raise HTTPException(503, str(error)) from error
+    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/providers/cpx-research/wall-url")
