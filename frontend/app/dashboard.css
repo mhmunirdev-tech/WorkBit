@@ -4868,6 +4868,11 @@ body {
   background: #f7f9fc;
 }
 
+.bitcotasks-wall-container {
+  min-height: 780px;
+  margin-top: 20px;
+}
+
 .theoremreach-wall-loading {
   display: grid;
   gap: 12px;

@@ -62,6 +62,12 @@ class Settings(BaseSettings):
     theoremreach_currency_name_plural: str = "Credits"
     theoremreach_exchange_rate: Decimal = Field(default=Decimal("10"), ge=10)
     theoremreach_decimals_to_display: int = Field(default=2, ge=0, le=8)
+    bitcotasks_enabled: bool = False
+    bitcotasks_postback_enabled: bool = False
+    bitcotasks_api_key: str | None = None
+    bitcotasks_secret_key: str | None = None
+    bitcotasks_currency_name: str = "Points"
+    bitcotasks_exchange_rate: Decimal | None = Field(default=None, gt=0)
     enable_mock_rewards: bool = False
     package_bkash_number: str = "01839299096"
     package_nagad_number: str = "01811914794"

@@ -10,6 +10,11 @@ from app.integrations.offer_providers.bitlabs import (
     BitLabsConfigurationError,
     bitlabs_adapter,
 )
+from app.integrations.offer_providers.bitcotasks import (
+    BitcoTasksCallbackError,
+    BitcoTasksConfigurationError,
+    bitcotasks_adapter,
+)
 from app.integrations.offer_providers.cpx_research import (
     CPXResearchCallbackError,
     CPXResearchConfigurationError,
@@ -37,10 +42,12 @@ from app.services.cpx_research import cpx_research_conversion_service
 from app.services.offerwall_gg import offerwall_gg_conversion_service
 from app.services.offerwall_me import offerwall_me_conversion_service
 from app.services.theoremreach import theoremreach_conversion_service
+from app.services.bitcotasks import bitcotasks_conversion_service
 router = APIRouter(prefix="/postbacks", tags=["postbacks"])
 OFFERWALL_ME_POSTBACK_SOURCE_IPS = frozenset(
     {"95.216.65.163", "2a01:4f9:2b:1dc::2"}
 )
+BITCOTASKS_POSTBACK_SOURCE_IPS = frozenset({"45.14.135.48"})
 
 
 def _is_offerwall_me_source_allowed(request: Request) -> bool:
@@ -53,6 +60,19 @@ def _is_offerwall_me_source_allowed(request: Request) -> bool:
     return any(
         source_ip == ipaddress.ip_address(value)
         for value in OFFERWALL_ME_POSTBACK_SOURCE_IPS
+    )
+
+
+def _is_bitcotasks_source_allowed(request: Request) -> bool:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    source = forwarded_for.split(",", 1)[0].strip()
+    try:
+        source_ip = ipaddress.ip_address(source)
+    except ValueError:
+        return False
+    return any(
+        source_ip == ipaddress.ip_address(value)
+        for value in BITCOTASKS_POSTBACK_SOURCE_IPS
     )
 
 
@@ -212,6 +232,43 @@ async def receive_theoremreach_postback(
             return PlainTextResponse("RETRY", status_code=503)
         return PlainTextResponse("REJECTED", status_code=error.status_code)
     return PlainTextResponse("OK")
+
+
+@router.post("/bitcotasks", response_class=PlainTextResponse)
+async def receive_bitcotasks_postback(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    if not settings.bitcotasks_postback_enabled:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    if not _is_bitcotasks_source_allowed(request):
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    callback_values: dict[str, str] = {}
+    form = await request.form()
+    for key, value in form.multi_items():
+        normalized_key = key.lower()
+        if normalized_key in callback_values or not isinstance(value, str):
+            return PlainTextResponse("FORBIDDEN", status_code=400)
+        callback_values[normalized_key] = value
+
+    try:
+        callback = bitcotasks_adapter.verify_callback(callback_values)
+    except BitcoTasksConfigurationError:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    except BitcoTasksCallbackError:
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    if callback.debug:
+        return PlainTextResponse("ok")
+
+    try:
+        bitcotasks_conversion_service.process_callback(db, callback)
+    except HTTPException as error:
+        if error.status_code >= 500:
+            return PlainTextResponse("RETRY", status_code=503)
+        return PlainTextResponse("REJECTED", status_code=error.status_code)
+    return PlainTextResponse("ok")
 
 
 @router.post("/offerwall-me", response_class=PlainTextResponse)

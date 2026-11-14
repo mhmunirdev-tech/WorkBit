@@ -104,4 +104,16 @@ Offerwall.me requires signed user IDs from 1 October 2026. WorkBit generates the
 
 WorkBit uses Offerwall.me's documented `GET https://offerwall.me/offerapi.php` API. It derives the USD amount used for WorkBit reward estimates from the returned Points reward and configured exchange rate, matching the signed callback amount rather than the API's separate gross `payout` field. It validates each returned start URL and country, applies the active reward policy, and opens the returned tracking URL unchanged when the user chooses **Start offer**. The offer API has no documented pagination parameter, so the page's **Load more offers** control reveals the next batch from the fetched catalog. The provider may include a per-user tracking URL in the API response; the endpoint is authenticated, marked no-store, and never logs or persists those links.
 
+## BitcoTasks
+
+The BitcoTasks SDK v2 wall is shown only when `BITCOTASKS_ENABLED=true` and `BITCOTASKS_API_KEY` is configured. Its API key and 32-character WorkBit UUID-hex `subId` are intentionally browser-visible; the Secret Key must remain in the backend environment. WorkBit uses that Secret Key to produce a per-user HMAC-SHA256 `sig` for the SDK's optional signed Worker Balance tags. Set the website's postback URL in BitcoTasks to:
+
+```text
+https://api.workbitbd.com/api/v1/postbacks/bitcotasks
+```
+
+Configure `BITCOTASKS_SECRET_KEY`, `BITCOTASKS_CURRENCY_NAME`, and `BITCOTASKS_EXCHANGE_RATE` to match the BitcoTasks app exactly. Keep `BITCOTASKS_POSTBACK_ENABLED=false` until its callback is tested and a trusted ingress rule allows only BitcoTasks' documented postback IP `45.14.135.48`; WorkBit also checks that source IP from the deployment's trusted `X-Forwarded-For` header. The handler accepts HTTP POST form callbacks, rejects duplicate parameters, verifies `md5(subId + transId + reward + secretKey)` with constant-time comparison, and acknowledges correctly signed `debug=1` callbacks without crediting. Since the provider signature does not cover `status` or `payout`, the source-IP restriction is required as an additional guard.
+
+For live callbacks, WorkBit converts the signed reward to USD using the configured exchange rate, does not trust the unsigned `payout` field for wallet accounting, and uses the existing reward-policy ledger. Status `1` credits idempotently; status `2` must reference the original transaction and reverses it idempotently. The SDK's Balance tab remains available for provider-side withdrawals; when BitcoTasks Worker Balance is enabled, WorkBit receives the reward callback when the user withdraws there (or when Auto Withdraw sends it). The provider's separate Banner, PopUp/PopAds, and Direct Link placements are not part of this SDK integration.
+
 Other offer providers remain disabled. Their adapters, request formats, and callback signature implementations must be added only after reviewing each provider's official documentation and testing with its sandbox. Do not infer formats from Offerwall.GG or another network.

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
 import { AdsPlacements } from "./ads/ads-placements";
 import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
+import { BitcoTasksOfferWall } from "./ads/providers/bitcotasks/wall";
 import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { OfferwallMeWall } from "./ads/providers/offerwall-me/wall";
@@ -129,6 +130,7 @@ function OffersCatalog() {
         <div className="offers-provider-heading"><p className="eyebrow">PARTNER INVENTORY</p><h2>Offers from WorkBit providers</h2><p className="muted">Each provider has its own eligibility rules and confirmation process.</p></div>
         <TheoremReachSurveyCatalog />
         <CPXResearchOfferWall />
+        <BitcoTasksOfferWall />
         <OfferwallMeWall />
         <BitLabsOfferWall />
         <OfferwallGGCatalog />

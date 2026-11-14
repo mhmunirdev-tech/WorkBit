@@ -37,3 +37,20 @@ Ad display providers are isolated under `frontend/components/ads/providers/<prov
 The Explore offers page can display AmanahAds placements when the frontend build has `NEXT_PUBLIC_AMANAHADS_INSTANCE_KEY` configured. `AmanahAd` supports the documented iframe and script-based `div` render modes and the provider's five documented sizes, plus `FULLSCREEN` (375x667) for rewarded and interstitial placements. The page uses iframe mode by default and offers a user-initiated popup; it does not open repeated or unsolicited popups. The optional `useAmanahPopup` hook listens only to `amanah:popup-close` messages from `https://amanahads.com`.
 
 An instance key used by browser code is visible to users and must not be treated as an API or postback secret. Use the dev key only for local testing and use the provider's approved production key for the production domain. These placements display ads only: they do not verify an offer completion or credit a WorkBit wallet. Do not advertise or issue user rewards for these placements until an authenticated provider callback and an approved reward flow are implemented and tested.
+
+## BitcoTasks SDK v2
+
+The authenticated `GET /api/v1/offers/providers/bitcotasks/sdk-config` endpoint returns the public API key and a 32-character UUID-hex `subId` for the signed-in user, with `Cache-Control: no-store`. If the Secret Key is configured, it also returns a per-user HMAC-SHA256 `sig` so the BitcoTasks Worker Balance can use signed tags. The Offers page loads BitcoTasks' SDK v2 and mounts its ready-made UI with PTC, video, faucet, shortlinks, tasks, surveys, offers, and articles. The API key and user sub-ID are visible to the browser as required by the SDK. Keep the Secret Key on the backend, never in frontend code or a `NEXT_PUBLIC_*` variable. The SDK v2 flow does not need the Bearer Token.
+
+Configure these backend environment variables after the BitcoTasks website/app is approved:
+
+- `BITCOTASKS_API_KEY`: the website's public API key.
+- `BITCOTASKS_SECRET_KEY`: the website's private Secret Key, used only to verify postbacks.
+- `BITCOTASKS_CURRENCY_NAME`: exact currency name set in the BitcoTasks app.
+- `BITCOTASKS_EXCHANGE_RATE`: units of that currency per $1 USD, exactly matching the app. If the BitcoTasks display currency is `WBC`, use the matching WBC-per-USD rate.
+- `BITCOTASKS_ENABLED=false` while setting up; set to `true` after the app is approved and the SDK config works.
+- `BITCOTASKS_POSTBACK_ENABLED=false` until the callback and source-IP rule are configured and tested; then set to `true`.
+
+Set the BitcoTasks Postback URL to `https://api.workbitbd.com/api/v1/postbacks/bitcotasks`. Its documented callback is an HTTP POST form with `subId`, `transId`, `reward`, `reward_name`, `reward_value`, `payout`, `status`, `debug`, and `signature`. WorkBit checks the documented `md5(subId + transId + reward + secretKey)` signature, the BitcoTasks source IP (`45.14.135.48`), configured currency and exchange rate, and duplicate fields. It derives the USD amount from the signed reward and configured rate; the unsigned `payout` is retained only as metadata. Status `1` credits once through WorkBit's reward policy; status `2` reverses the matching original transaction once. Signed debug callbacks are acknowledged without a wallet change. The SDK's BitcoTasks Balance tab is available for provider-side withdrawals; if Worker Balance is enabled, users receive WorkBit credits when BitcoTasks sends the withdrawal postback.
+
+The SDK v2 does not provide Banner, PopUp/PopAds, or Direct Link tabs. Those require separate publisher placement code from the BitcoTasks account and are not enabled by this offerwall integration.
