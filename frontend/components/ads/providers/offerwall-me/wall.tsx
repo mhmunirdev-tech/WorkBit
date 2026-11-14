@@ -64,6 +64,8 @@ export function OfferwallMeWall() {
     try {
       const result = await api<OfferwallMeOffersResponse>(
         "/offers/providers/offerwall-me/catalog",
+        {},
+        30_000,
       );
       setOffers(result.offers);
     } catch (reason: unknown) {

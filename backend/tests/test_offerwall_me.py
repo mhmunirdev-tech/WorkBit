@@ -5,12 +5,12 @@ from decimal import Decimal
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 from app.core.config import settings
 from app.database.session import SessionLocal
 from app.models import OfferConversion, User, Wallet
-from conftest import activate_package
+from conftest import activate_package, engine
 
 PUBLIC_API_KEY = "offerwall-me-public-key"
 SECRET_KEY = "test-offerwall-me-secret"
@@ -283,17 +283,28 @@ def test_offerwall_me_catalog_returns_filtered_offers_and_server_signed_api_requ
     MockOfferwallMeClient.payload = offer_payload(user_id)
     MockOfferwallMeClient.status_code = 200
     monkeypatch.setattr(httpx, "AsyncClient", MockOfferwallMeClient)
+    policy_query_count = 0
 
-    response = client.get(
-        "/api/v1/offers/providers/offerwall-me/catalog",
-        headers={
-            "x-forwarded-for": "8.8.8.8",
-            "x-vercel-ip-country": "BD",
-            "user-agent": "WorkBit test browser",
-        },
-    )
+    def count_policy_queries(conn, cursor, statement, parameters, context, executemany):
+        nonlocal policy_query_count
+        if "reward_policies" in statement.lower():
+            policy_query_count += 1
+
+    event.listen(engine, "before_cursor_execute", count_policy_queries)
+    try:
+        response = client.get(
+            "/api/v1/offers/providers/offerwall-me/catalog",
+            headers={
+                "x-forwarded-for": "8.8.8.8",
+                "x-vercel-ip-country": "BD",
+                "user-agent": "WorkBit test browser",
+            },
+        )
+    finally:
+        event.remove(engine, "before_cursor_execute", count_policy_queries)
 
     assert response.status_code == 200
+    assert policy_query_count == 1
     assert response.headers["cache-control"] == "no-store"
     payload = response.json()
     assert payload["total"] == 2

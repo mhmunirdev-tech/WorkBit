@@ -58,7 +58,11 @@ function redirectToLogin(): void {
 
 const inFlightGetRequests = new Map<string, Promise<unknown>>();
 
-export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+export function api<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = 15_000,
+): Promise<T> {
   const method = init.method?.toUpperCase() ?? "GET";
   const canDeduplicate =
     method === "GET" &&
@@ -72,13 +76,13 @@ export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     !init.integrity &&
     !init.keepalive;
 
-  if (!canDeduplicate) return requestApi<T>(path, init);
+  if (!canDeduplicate) return requestApi<T>(path, init, timeoutMs);
 
-  const requestKey = getApiRequestUrl(path);
+  const requestKey = `${timeoutMs}:${getApiRequestUrl(path)}`;
   const inFlightRequest = inFlightGetRequests.get(requestKey);
   if (inFlightRequest) return inFlightRequest as Promise<T>;
 
-  const request = requestApi<T>(path, init);
+  const request = requestApi<T>(path, init, timeoutMs);
   inFlightGetRequests.set(requestKey, request);
   const clearRequest = () => {
     if (inFlightGetRequests.get(requestKey) === request) {
@@ -89,9 +93,13 @@ export function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return request;
 }
 
-async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
+async function requestApi<T>(
+  path: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<T> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const headers = new Headers(init.headers);

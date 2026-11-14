@@ -18,6 +18,7 @@ from app.integrations.offer_providers.offerwall_me import (
 )
 from app.models import User
 from app.schemas.offerwall_me import (
+    OfferwallMeApiOffer,
     OfferwallMeApiResponse,
     OfferwallMeOfferRead,
     OfferwallMeOffersRead,
@@ -96,7 +97,7 @@ class OfferwallMeCatalogService:
             raise HTTPException(503, "Offerwall.me could not return offers.")
 
         target_country = user_country
-        offers: list[OfferwallMeOfferRead] = []
+        eligible_offers: list[tuple[OfferwallMeApiOffer, str, Decimal]] = []
         for offer in payload.data or []:
             eligible_countries = {country.strip().upper() for country in offer.countries}
             if (
@@ -111,34 +112,37 @@ class OfferwallMeCatalogService:
             payout_usd = (
                 offer.reward / settings.offerwall_me_exchange_rate
             ).quantize(Decimal("0.00000001"))
+            eligible_offers.append((offer, click_url, payout_usd))
 
-            user_reward = reward_decision_service.estimate_user_reward(
-                db,
-                user,
-                OFFERWALL_ME_SLUG,
-                offer.id,
-                payout_usd,
+        user_rewards = reward_decision_service.estimate_user_rewards_for_offers(
+            db,
+            user,
+            OFFERWALL_ME_SLUG,
+            [(offer.id, payout_usd) for offer, _, payout_usd in eligible_offers],
+        )
+        offers = [
+            OfferwallMeOfferRead(
+                id=offer.id,
+                provider=offer.provider[:80],
+                title=(offer.title or offer.name or "Offerwall.me offer")[:200],
+                description=offer.description[:1000],
+                image_url=self._validated_image_url(offer.image),
+                devices=[item[:40] for item in offer.devices[:8]],
+                countries=[
+                    item.upper() if item.upper() == "ALL" else item.upper()[:2]
+                    for item in offer.countries[:40]
+                ],
+                provider_reward=offer.reward,
+                reward_name=settings.offerwall_me_currency_name,
+                provider_payout_usd=payout_usd,
+                estimated_user_reward_usd=user_reward,
+                multi_step=offer.is_multi_step,
+                click_url=click_url,
             )
-            offers.append(
-                OfferwallMeOfferRead(
-                    id=offer.id,
-                    provider=offer.provider[:80],
-                    title=(offer.title or offer.name or "Offerwall.me offer")[:200],
-                    description=offer.description[:1000],
-                    image_url=self._validated_image_url(offer.image),
-                    devices=[item[:40] for item in offer.devices[:8]],
-                    countries=[
-                        item.upper() if item.upper() == "ALL" else item.upper()[:2]
-                        for item in offer.countries[:40]
-                    ],
-                    provider_reward=offer.reward,
-                    reward_name=settings.offerwall_me_currency_name,
-                    provider_payout_usd=payout_usd,
-                    estimated_user_reward_usd=user_reward,
-                    multi_step=offer.is_multi_step,
-                    click_url=click_url,
-                )
+            for (offer, click_url, payout_usd), user_reward in zip(
+                eligible_offers, user_rewards
             )
+        ]
 
         return OfferwallMeOffersRead(offers=offers, total=len(offers))
 

@@ -271,6 +271,29 @@ class RewardDecisionService:
             raise HTTPException(503, "No reward policy is configured.")
         return self._calculate_user_reward(policy, provider_payout)
 
+    def estimate_user_rewards_for_offers(
+        self,
+        db: Session,
+        user: User,
+        network_id: str,
+        offer_payouts: list[tuple[str, Decimal]],
+    ) -> list[Decimal]:
+        if not offer_payouts:
+            return []
+        candidates = db.scalars(
+            select(RewardPolicy).where(RewardPolicy.enabled.is_(True))
+        ).all()
+        active_candidates = [p for p in candidates if self._policy_active(p)]
+        rewards = []
+        for offer_id, provider_payout in offer_payouts:
+            policy = self._select_policy_from_candidates(
+                active_candidates, user.country, network_id, offer_id
+            )
+            if policy is None:
+                raise HTTPException(503, "No reward policy is configured.")
+            rewards.append(self._calculate_user_reward(policy, provider_payout))
+        return rewards
+
     def estimate_user_reward_for_country(
         self,
         db: Session,
@@ -317,6 +340,17 @@ class RewardDecisionService:
     ) -> RewardPolicy | None:
         candidates = db.scalars(select(RewardPolicy).where(RewardPolicy.enabled.is_(True))).all()
         candidates = [p for p in candidates if self._policy_active(p)]
+        return self._select_policy_from_candidates(
+            candidates, country_code, network_id, offer_id
+        )
+
+    def _select_policy_from_candidates(
+        self,
+        candidates: list[RewardPolicy],
+        country_code: str,
+        network_id: str,
+        offer_id: str,
+    ) -> RewardPolicy | None:
         ranked: list[tuple[int, str, str, RewardPolicy]] = []
         for policy in candidates:
             if policy.country_code and policy.country_code.upper() != country_code.upper():
