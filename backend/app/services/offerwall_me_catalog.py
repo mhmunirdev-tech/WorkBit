@@ -118,9 +118,14 @@ class OfferwallMeCatalogService:
                 Decimal("0.01"), rounding=ROUND_HALF_UP
             )
             if offer.reward.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) != expected_reward:
+                currency_name = settings.offerwall_me_currency_name[:40]
                 raise HTTPException(
                     502,
-                    "Offerwall.me reward does not match the configured currency rate at 2-decimal precision.",
+                    (
+                        f"Offerwall.me returned {offer.reward} {currency_name} for "
+                        f"${payout_usd} USD; rate {settings.offerwall_me_exchange_rate} "
+                        f"expects {expected_reward} {currency_name}."
+                    ),
                 )
 
             user_reward = reward_decision_service.estimate_user_reward(
