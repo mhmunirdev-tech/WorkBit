@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowUpRight, Gamepad2, Search, Smartphone, Sparkles } from "lucide-react";
 import { ApiError, api } from "../../../../lib/api";
-import { formatUsd } from "../../../../lib/utils";
+import { formatUsd, formatWbcFromUsd } from "../../../../lib/utils";
 import { Alert, AlertDescription } from "../../../ui/alert";
 import { Badge } from "../../../ui/badge";
 import { Button } from "../../../ui/button";
@@ -31,6 +31,7 @@ type OfferwallMeOffer = {
 type OfferwallMeOffersResponse = {
   offers: OfferwallMeOffer[];
   total: number;
+  usd_bdt_rate: string | null;
 };
 
 const pageSize = 50;
@@ -50,6 +51,7 @@ function formatProviderReward(value: string) {
 
 export function OfferwallMeWall() {
   const [offers, setOffers] = useState<OfferwallMeOffer[]>([]);
+  const [usdBdtRate, setUsdBdtRate] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [device, setDevice] = useState("all");
   const [minimumReward, setMinimumReward] = useState("");
@@ -68,6 +70,7 @@ export function OfferwallMeWall() {
         30_000,
       );
       setOffers(result.offers);
+      setUsdBdtRate(result.usd_bdt_rate);
     } catch (reason: unknown) {
       if (reason instanceof ApiError && reason.status === 404) {
         setHidden(true);
@@ -242,7 +245,13 @@ export function OfferwallMeWall() {
                 <div className="offerwall-gg-card-footer">
                   <div className="offerwall-gg-reward">
                     <small>EST. WORKBIT REWARD</small>
-                    <strong>{formatUsd(offer.estimated_user_reward_usd)}</strong>
+                    <strong>
+                      {formatWbcFromUsd(offer.estimated_user_reward_usd, usdBdtRate) ??
+                        formatUsd(offer.estimated_user_reward_usd)}
+                    </strong>
+                    {!usdBdtRate && (
+                      <small>WBC estimate unavailable until the USD/BDT rate is configured</small>
+                    )}
                     <small>
                       Offerwall.me: {formatProviderReward(offer.provider_reward)}{" "}
                       {offer.reward_name}

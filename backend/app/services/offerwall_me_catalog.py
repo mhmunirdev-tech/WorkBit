@@ -16,7 +16,7 @@ from app.integrations.offer_providers.offerwall_me import (
     OfferwallMeConfigurationError,
     offerwall_me_adapter,
 )
-from app.models import User
+from app.models import PayoutSettings, User
 from app.schemas.offerwall_me import (
     OfferwallMeApiOffer,
     OfferwallMeApiResponse,
@@ -144,7 +144,12 @@ class OfferwallMeCatalogService:
             )
         ]
 
-        return OfferwallMeOffersRead(offers=offers, total=len(offers))
+        payout_settings = db.get(PayoutSettings, "default")
+        return OfferwallMeOffersRead(
+            offers=offers,
+            total=len(offers),
+            usd_bdt_rate=payout_settings.usd_bdt_rate if payout_settings else None,
+        )
 
     @staticmethod
     def _validated_click_url(value: str, user_id: str) -> str:

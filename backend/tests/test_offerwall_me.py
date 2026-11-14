@@ -10,7 +10,7 @@ from sqlalchemy import event, select
 from app.core.config import settings
 from app.database.session import SessionLocal
 from app.models import OfferConversion, User, Wallet
-from conftest import activate_package, engine
+from conftest import activate_package, configure_payout_rate, engine
 
 PUBLIC_API_KEY = "offerwall-me-public-key"
 SECRET_KEY = "test-offerwall-me-secret"
@@ -278,6 +278,7 @@ def test_offerwall_me_catalog_returns_filtered_offers_and_server_signed_api_requ
     client, monkeypatch
 ):
     configure_offerwall_me(monkeypatch)
+    configure_payout_rate(client)
     login(client)
     user_id = get_user_id()
     MockOfferwallMeClient.payload = offer_payload(user_id)
@@ -308,6 +309,7 @@ def test_offerwall_me_catalog_returns_filtered_offers_and_server_signed_api_requ
     assert response.headers["cache-control"] == "no-store"
     payload = response.json()
     assert payload["total"] == 2
+    assert Decimal(payload["usd_bdt_rate"]) == Decimal("120.00")
     assert {offer["id"] for offer in payload["offers"]} == {"offer-1", "offer-all"}
     offer = next(offer for offer in payload["offers"] if offer["id"] == "offer-1")
     assert offer["title"] == "Install and register"
@@ -399,7 +401,7 @@ def test_offerwall_me_catalog_handles_empty_data_and_rejects_unsafe_urls(
         headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
     )
     assert empty.status_code == 200
-    assert empty.json() == {"offers": [], "total": 0}
+    assert empty.json() == {"offers": [], "total": 0, "usd_bdt_rate": None}
 
     unsafe_payload = offer_payload(user_id)
     unsafe_payload["data"][0]["url"] = "https://evil.example/offer?id=" + user_id

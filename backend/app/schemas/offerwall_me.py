@@ -56,3 +56,4 @@ class OfferwallMeOfferRead(BaseModel):
 class OfferwallMeOffersRead(BaseModel):
     offers: list[OfferwallMeOfferRead]
     total: int
+    usd_bdt_rate: Decimal | None = None
