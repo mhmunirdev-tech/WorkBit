@@ -43,6 +43,33 @@ class OfferwallMeCallback:
 
 class OfferwallMeAdapter:
     @staticmethod
+    def api_credentials() -> tuple[str, str, str]:
+        public_api_key, secret_key = OfferwallMeAdapter._credentials()
+        api_token = settings.offerwall_me_api_token or ""
+        if not api_token.strip():
+            raise OfferwallMeConfigurationError(
+                "Offerwall.me API bearer token is not configured."
+            )
+        return public_api_key, secret_key, api_token.strip()
+
+    @staticmethod
+    def signed_user_identity(user_id: str) -> tuple[str, str]:
+        public_api_key, secret_key = OfferwallMeAdapter._credentials()
+        try:
+            user_id = str(UUID(user_id))
+        except ValueError as error:
+            raise OfferwallMeConfigurationError("WorkBit user ID must be a UUID.") from error
+
+        expires = str(int(time.time()) + 3600)
+        message = "\n".join(("offerwall-user-v1", public_api_key, user_id, expires))
+        signature = hmac.new(
+            secret_key.encode("utf-8"),
+            message.encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+        return expires, signature
+
+    @staticmethod
     def _credentials() -> tuple[str, str]:
         public_api_key = (settings.offerwall_me_public_api_key or "").strip()
         secret_key = settings.offerwall_me_secret_key or ""
@@ -66,21 +93,9 @@ class OfferwallMeAdapter:
         if not settings.offerwall_me_enabled:
             raise OfferwallMeConfigurationError("Offerwall.me integration is disabled.")
 
-        public_api_key, secret_key = self._credentials()
-        try:
-            user_id = str(UUID(user_id))
-        except ValueError as error:
-            raise OfferwallMeConfigurationError("WorkBit user ID must be a UUID.") from error
-
-        expires = str(int(time.time()) + 3600)
-        message = "\n".join(
-            ("offerwall-user-v1", public_api_key, user_id, expires)
-        )
-        signature = hmac.new(
-            secret_key.encode("utf-8"),
-            message.encode("utf-8"),
-            hashlib.sha256,
-        ).hexdigest()
+        public_api_key, _ = self._credentials()
+        expires, signature = self.signed_user_identity(user_id)
+        user_id = str(UUID(user_id))
         return (
             f"{OFFERWALL_ME_ORIGIN}/offerwall/"
             f"{quote(public_api_key, safe='')}/{quote(user_id, safe='')}?"

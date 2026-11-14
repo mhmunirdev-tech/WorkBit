@@ -78,15 +78,16 @@ WorkBit wallet currency is USD, so configure the Offerwall.GG placement currency
 
 ## Offerwall.me
 
-Offerwall.me is displayed as an authenticated iframe in Explore offers. WorkBit builds the placement URL using the signed-in user's UUID and a one-hour HMAC-SHA256 identity signature. The public API key and private placement secret are required in the backend environment; the private secret is never sent to the browser. Enable `OFFERWALL_ME_ENABLED=true` only after configuring the placement and its callback.
+Offerwall.me offers are displayed as native WorkBit cards in Explore offers. The backend requests the offer catalog using the signed-in user's UUID, trusted client IP, country, and one-hour HMAC-SHA256 identity signature. The public API key, API bearer token, and private placement secret are backend-only values. Enable `OFFERWALL_ME_ENABLED=true` only after configuring the placement and its callback.
 
 Configure these backend environment variables:
 
 - `OFFERWALL_ME_PUBLIC_API_KEY`: the placement's public API key.
+- `OFFERWALL_ME_API_TOKEN`: the private bearer token used by Offerwall.me's server-side offer API.
 - `OFFERWALL_ME_SECRET_KEY`: the private placement secret.
 - `OFFERWALL_ME_CURRENCY_NAME=Points`.
 - `OFFERWALL_ME_EXCHANGE_RATE=1000`: configure the placement for 1000 Points per $1 payout. The WorkBit wallet remains USD; the callback converts provider Points to the signed USD payout before applying WorkBit's reward policy.
-- `OFFERWALL_ME_ENABLED=false` while configuring; set to `true` after testing the signed wall URL.
+- `OFFERWALL_ME_ENABLED=false` while configuring; set to `true` after testing the signed catalog request.
 - `OFFERWALL_ME_POSTBACK_ENABLED=false` until the Vercel firewall is configured and the callback is tested; then set to `true`.
 
 In Offerwall.me, choose **Single Postback** and enter this exact URL:
@@ -99,6 +100,8 @@ The endpoint accepts the provider's POST form callback, rejects duplicate fields
 
 The provider signature does not cover status, payout, or all other callback fields. Before enabling rewards, create a Vercel Firewall rule to allow the callback path only from Offerwall.me's documented postback IPs (`95.216.65.163` and `2a01:4f9:2b:1dc::2`) and deny all other source IPs. WorkBit also checks the trusted `X-Forwarded-For` source IP against this list. Do not enable `OFFERWALL_ME_POSTBACK_ENABLED` if the deployed proxy does not provide a trustworthy client IP. The callback returns `ok` with HTTP 200 after durable processing; failures return non-2xx so Offerwall.me can retry.
 
-Offerwall.me requires signed user IDs from 1 October 2026. WorkBit generates the required expiring HMAC-SHA256 identity signature server-side. Do not expose the private placement secret or share generated signed wall URLs.
+Offerwall.me requires signed user IDs from 1 October 2026. WorkBit generates the required expiring HMAC-SHA256 identity signature server-side. Do not expose the private placement secret or API bearer token, or share generated signed requests/tracking URLs.
+
+WorkBit uses Offerwall.me's documented `GET https://offerwall.me/offerapi.php` API. It validates each returned start URL and country, estimates the WorkBit USD reward from the provider payout through the active reward policy, and opens the returned tracking URL unchanged when the user chooses **Start offer**. The offer API has no documented pagination parameter, so the page's **Load more offers** control reveals the next batch from the fetched catalog. The provider may include a per-user tracking URL in the API response; the endpoint is authenticated, marked no-store, and never logs or persists those links.
 
 Other offer providers remain disabled. Their adapters, request formats, and callback signature implementations must be added only after reviewing each provider's official documentation and testing with its sandbox. Do not infer formats from Offerwall.GG or another network.

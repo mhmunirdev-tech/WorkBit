@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     offerwall_me_enabled: bool = False
     offerwall_me_postback_enabled: bool = False
     offerwall_me_public_api_key: str | None = None
+    offerwall_me_api_token: str | None = None
     offerwall_me_secret_key: str | None = None
     offerwall_me_currency_name: str = "Points"
     offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)

@@ -32,11 +32,13 @@ from app.integrations.offer_providers.theoremreach import (
 )
 from app.models import Offer, RewardDecision, User, Wallet
 from app.schemas.offerwall_gg import OfferwallGGOffersRead
+from app.schemas.offerwall_me import OfferwallMeOffersRead
 from app.schemas.conversions import MockPostbackRequest
 from app.schemas.offers import OfferRead
 from app.services.conversions import conversion_service
 from app.services.offers import offer_service
 from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
+from app.services.offerwall_me_catalog import offerwall_me_catalog_service
 from app.services.theoremreach_surveys import theoremreach_survey_catalog_service
 from app.schemas.theoremreach_surveys import TheoremReachSurveysRead
 
@@ -121,6 +123,30 @@ async def theoremreach_surveys(
     )
     response.headers["Cache-Control"] = "no-store"
     return surveys
+
+
+@router.get(
+    "/providers/offerwall-me/catalog",
+    response_model=OfferwallMeOffersRead,
+)
+async def offerwall_me_catalog(
+    request: Request,
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> OfferwallMeOffersRead:
+    user_ip = _offerwall_user_ip(request)
+    if not user_ip and settings.environment == "development" and request.client:
+        user_ip = request.client.host
+    result = await offerwall_me_catalog_service.list_offers(
+        db=db,
+        user=user,
+        user_ip=user_ip or "",
+        user_country=_offerwall_user_country(request, user),
+        user_agent=request.headers.get("user-agent", ""),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return result
 
 
 @router.get(

@@ -4,6 +4,7 @@ import time
 from decimal import Decimal
 from urllib.parse import parse_qs, urlencode, urlsplit
 
+import httpx
 from sqlalchemy import select
 
 from app.core.config import settings
@@ -13,6 +14,7 @@ from conftest import activate_package
 
 PUBLIC_API_KEY = "offerwall-me-public-key"
 SECRET_KEY = "test-offerwall-me-secret"
+API_TOKEN = "test-offerwall-me-api-token"
 SOURCE_IP = "95.216.65.163"
 
 
@@ -20,6 +22,7 @@ def configure_offerwall_me(monkeypatch):
     monkeypatch.setattr(settings, "offerwall_me_enabled", True)
     monkeypatch.setattr(settings, "offerwall_me_postback_enabled", True)
     monkeypatch.setattr(settings, "offerwall_me_public_api_key", PUBLIC_API_KEY)
+    monkeypatch.setattr(settings, "offerwall_me_api_token", API_TOKEN)
     monkeypatch.setattr(settings, "offerwall_me_secret_key", SECRET_KEY)
     monkeypatch.setattr(settings, "offerwall_me_currency_name", "Points")
     monkeypatch.setattr(settings, "offerwall_me_exchange_rate", Decimal("1000"))
@@ -207,3 +210,162 @@ def test_offerwall_me_wall_url_is_unavailable_when_disabled(client, monkeypatch)
     response = client.get("/api/v1/offers/providers/offerwall-me/wall-url")
 
     assert response.status_code == 404
+
+
+class MockOfferwallMeClient:
+    payload = None
+    status_code = 200
+    request_args = None
+
+    def __init__(self, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return None
+
+    async def get(self, url, params, headers):
+        type(self).request_args = (url, params, headers)
+        return httpx.Response(
+            self.status_code,
+            json=self.payload,
+            request=httpx.Request("GET", url),
+        )
+
+
+def offer_payload(user_id):
+    return {
+        "status": 200,
+        "data": [
+            {
+                "id": "offer-1",
+                "provider": "Partner",
+                "name": "Install and register",
+                "description": "Complete the advertiser requirements.",
+                "image": "https://cdn.example.com/offer.png",
+                "reward": 1000,
+                "payout": "1.000000",
+                "devices": ["Android", "Mobile"],
+                "countries": ["BD"],
+                "is_multi_step": True,
+                "url": f"https://offerwall.me/offerstart.php?id={user_id}&offer=offer-1",
+            },
+            {
+                "id": "offer-us",
+                "provider": "Partner",
+                "name": "US only",
+                "reward": 1000,
+                "payout": "1",
+                "countries": ["US"],
+                "url": f"https://offerwall.me/offerstart.php?id={user_id}&offer=offer-us",
+            },
+            {
+                "id": "offer-all",
+                "provider": "Offerwall",
+                "name": "Available everywhere",
+                "reward": 500,
+                "payout": "0.5",
+                "countries": ["ALL"],
+                "url": f"https://offerwall.me/offerstart.php?id={user_id}&offer=offer-all",
+            },
+        ],
+    }
+
+
+def test_offerwall_me_catalog_returns_filtered_offers_and_server_signed_api_request(
+    client, monkeypatch
+):
+    configure_offerwall_me(monkeypatch)
+    login(client)
+    user_id = get_user_id()
+    MockOfferwallMeClient.payload = offer_payload(user_id)
+    MockOfferwallMeClient.status_code = 200
+    monkeypatch.setattr(httpx, "AsyncClient", MockOfferwallMeClient)
+
+    response = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={
+            "x-forwarded-for": "8.8.8.8",
+            "x-vercel-ip-country": "BD",
+            "user-agent": "WorkBit test browser",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    payload = response.json()
+    assert payload["total"] == 2
+    assert {offer["id"] for offer in payload["offers"]} == {"offer-1", "offer-all"}
+    offer = next(offer for offer in payload["offers"] if offer["id"] == "offer-1")
+    assert offer["title"] == "Install and register"
+    assert offer["provider_reward"] == "1000"
+    assert offer["reward_name"] == "Points"
+    assert Decimal(offer["provider_payout_usd"]) == Decimal("1")
+    assert offer["estimated_user_reward_usd"] == "0.70000000"
+    assert offer["countries"] == ["BD"]
+    assert offer["click_url"].startswith("https://offerwall.me/offerstart.php?")
+
+    url, params, headers = MockOfferwallMeClient.request_args
+    assert url == "https://offerwall.me/offerapi.php"
+    assert params["id"] == user_id
+    assert params["ip"] == "8.8.8.8"
+    assert params["country"] == "BD"
+    assert params["api"] == PUBLIC_API_KEY
+    assert params["token"] == API_TOKEN
+    assert headers["User-Agent"] == "WorkBit test browser"
+    message = (
+        f"offerwall-user-v1\n{PUBLIC_API_KEY}\n{user_id}\n"
+        f"{params['identityExpires']}"
+    )
+    expected_signature = hmac.new(
+        SECRET_KEY.encode(),
+        message.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    assert params["identitySignature"] == expected_signature
+
+
+def test_offerwall_me_catalog_handles_empty_data_and_rejects_unsafe_urls(
+    client, monkeypatch
+):
+    configure_offerwall_me(monkeypatch)
+    login(client)
+    user_id = get_user_id()
+    monkeypatch.setattr(httpx, "AsyncClient", MockOfferwallMeClient)
+
+    MockOfferwallMeClient.payload = {"status": 404, "message": "No data found"}
+    empty = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
+    )
+    assert empty.status_code == 200
+    assert empty.json() == {"offers": [], "total": 0}
+
+    unsafe_payload = offer_payload(user_id)
+    unsafe_payload["data"][0]["url"] = "https://evil.example/offer?id=" + user_id
+    MockOfferwallMeClient.payload = unsafe_payload
+    unsafe = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
+    )
+    assert unsafe.status_code == 502
+
+
+def test_offerwall_me_catalog_requires_user_ip_and_api_token(client, monkeypatch):
+    configure_offerwall_me(monkeypatch)
+    login(client)
+
+    no_ip = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={"x-vercel-ip-country": "BD"},
+    )
+    assert no_ip.status_code == 503
+
+    monkeypatch.setattr(settings, "offerwall_me_api_token", None)
+    missing_token = client.get(
+        "/api/v1/offers/providers/offerwall-me/catalog",
+        headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
+    )
+    assert missing_token.status_code == 503
