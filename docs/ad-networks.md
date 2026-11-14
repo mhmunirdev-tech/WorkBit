@@ -11,6 +11,7 @@ The display providers are intentionally separate from the offer/reward pipeline.
 | Cointraffic | `frontend/components/ads/providers/cointraffic/banner.tsx` | `NEXT_PUBLIC_COINTRAFFIC_ENABLED=true`, `NEXT_PUBLIC_COINTRAFFIC_TAG_SRC`; zone ID is optional | Provider unified code in its placement on `/offers` |
 | PropellerAds | `frontend/components/ads/providers/propellerads/tag.tsx` | `NEXT_PUBLIC_PROPELLERADS_ENABLED=true`, `NEXT_PUBLIC_PROPELLERADS_TAG_SRC`; zone ID is optional | Provider-generated display script in its placement on `/offers` |
 | Monetag | `frontend/components/ads/providers/monetag/tag.tsx` | `NEXT_PUBLIC_MONETAG_ENABLED=true`, `NEXT_PUBLIC_MONETAG_TAG_SRC` | Fixed display placement after the offerwall sections on `/offers`; zone ID is optional metadata |
+| Offerwall.me Banner | `frontend/components/ads/providers/offerwall-me/banner.tsx` | `NEXT_PUBLIC_OFFERWALL_ME_BANNER_ENABLED=true`, `NEXT_PUBLIC_OFFERWALL_ME_BANNER_PLACEMENT_ID` | Direct banner script on `/offers`; 728x90 on desktop and 300x250 on smaller screens |
 | Bitmedia | `frontend/components/ads/providers/bitmedia/banner.tsx` | `NEXT_PUBLIC_BITMEDIA_ENABLED=true`, `NEXT_PUBLIC_BITMEDIA_PLACEMENT_ID`; dimensions are optional | Bitmedia JavaScript placement on `/offers` |
 | ProfitOn | `frontend/app/layout.tsx` | `NEXT_PUBLIC_PROFITON_DOMAIN_VERIFICATION` | Optional domain-verification meta tag only; no ProfitOn ad placement is enabled |
 
@@ -48,5 +49,14 @@ NEXT_PUBLIC_COINTRAFFIC_TAG_SRC=https://appsha-pnd.ctengine.io/js/script.js?wkey
 ```
 
 The supplied unified code is inserted inside the Cointraffic placement on `/offers`, not into the document head. Cointraffic says unified code loads all advertising formats activated for the website, so review the enabled placements in its dashboard before switching it on. The integration does not issue WorkBit rewards.
+
+For Offerwall.me banners, set the following variables in the frontend Production environment and redeploy:
+
+```env
+NEXT_PUBLIC_OFFERWALL_ME_BANNER_ENABLED=true
+NEXT_PUBLIC_OFFERWALL_ME_BANNER_PLACEMENT_ID=2lDAUVzFUGM2VZcA9hcRggp5XvKKQe
+```
+
+The placement ID is public and is taken from the generated banner code. WorkBit loads the `728x90` tag at desktop widths and the `300x250` tag on smaller screens, directly in the `/offers` page rather than inside a nested iframe. The `468x60` tag is not used by this responsive placement. The ad is display-only: impressions and clicks do not credit WorkBit rewards. Offerwall.me controls campaign eligibility and fill, so the slot can remain empty.
 
 For ProfitOn domain verification, copy the verification value from the ProfitOn publisher dashboard into `NEXT_PUBLIC_PROFITON_DOMAIN_VERIFICATION` in the frontend deployment environment and redeploy. The value is emitted as a verification meta tag in the document head only when configured. This setting verifies domain ownership; it does not load ads. ProfitOn Native Banner placement remains separate and disabled until the site is approved and its generated placement tag has been reviewed and configured. Do not award WorkBit points for ad impressions or clicks.

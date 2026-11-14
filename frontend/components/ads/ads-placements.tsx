@@ -7,6 +7,7 @@ import { CoinzillaNativePlacement } from "./providers/coinzilla/native";
 import { MonetagPlacement } from "./providers/monetag/tag";
 import { PropellerAdsPlacement } from "./providers/propellerads/tag";
 import { HilltopAdsVastVideoPlacement } from "./providers/hilltopads/vast-video";
+import { OfferwallMeBannerPlacement } from "./providers/offerwall-me/banner";
 
 const adProviders = [
   { id: "adsterra", name: "Adsterra", configured: true, Placement: AdsterraBannerPlacement },
@@ -55,6 +56,14 @@ const adProviders = [
       process.env.NEXT_PUBLIC_MONETAG_ENABLED?.toLowerCase() === "true" &&
       Boolean(process.env.NEXT_PUBLIC_MONETAG_TAG_SRC?.trim()),
     Placement: MonetagPlacement,
+  },
+  {
+    id: "offerwall-me-banner",
+    name: "Offerwall.me Banner",
+    configured:
+      process.env.NEXT_PUBLIC_OFFERWALL_ME_BANNER_ENABLED?.toLowerCase() === "true" &&
+      Boolean(process.env.NEXT_PUBLIC_OFFERWALL_ME_BANNER_PLACEMENT_ID?.trim()),
+    Placement: OfferwallMeBannerPlacement,
   },
   {
     id: "bitmedia",
