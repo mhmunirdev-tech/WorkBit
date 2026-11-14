@@ -11,6 +11,7 @@ import "./landing-modern.css";
 export const metadata: Metadata = {
   title: "WorkBit | Work. Complete. Earn.",
   description: "A transparent marketplace for legitimate, provider-confirmed reward offers.",
+  referrer: "no-referrer-when-downgrade",
   other: {
     "offerwall-verification": "ow-b83eb7451b057e11c305",
     coinzilla: "896b0c141c35883782f9a8f44ee465e4",

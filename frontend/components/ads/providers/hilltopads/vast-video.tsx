@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 const imaSdkUrl = "https://imasdk.googleapis.com/js/sdkloader/ima3.js";
 const vastTagUrl =
-  "https://vapid-size.com/d/m/F.zkdqGZNRv/ZAG/UF/Qedmj9ou/ZzUD1_keP/TQcO2zMKTukszhMFjTE/tsN/zxYOxeOvTSM/ysNBQ-";
+  "https://vapid-size.com/dumvF.zLdfGbN-v/Z/GJUb/zeLma9ZuRZgU/1PkwPWT/cq2aMLTJkxZQM/jbE/tRNtzrYlxNOUT/MdyyNcQn";
 
 type ImaAdError = {
   getMessage(): string;
