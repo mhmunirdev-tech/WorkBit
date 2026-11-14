@@ -8,7 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 def error(code: str, message: str, status: int) -> JSONResponse:
     return JSONResponse(status_code=status, content={"success": False, "error": {"code": code, "message": message}})
 
-async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     messages = {
         401: ("UNAUTHENTICATED", "Authentication is required."),
         403: ("FORBIDDEN", "You do not have permission to perform this action."),
@@ -18,6 +18,11 @@ async def http_exception_handler(_: Request, exc: StarletteHTTPException) -> JSO
         503: ("SERVICE_UNAVAILABLE", "The service is temporarily unavailable."),
         410: ("ENDPOINT_RETIRED", "This endpoint is no longer available."),
     }
+    if exc.status_code == 502 and request.url.path == "/api/v1/offers/providers/offerwall-me/catalog":
+        default = "Offerwall.me could not provide valid offers."
+        message = exc.detail if isinstance(exc.detail, str) else default
+        return error("UPSTREAM_ERROR", message, exc.status_code)
+
     code, default = messages.get(exc.status_code, ("REQUEST_ERROR", "The request could not be completed."))
     message = str(exc.detail) if exc.status_code in {400, 402, 410, 429, 503} else default
     return error(code, message, exc.status_code)

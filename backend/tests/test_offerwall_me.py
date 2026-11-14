@@ -351,6 +351,10 @@ def test_offerwall_me_catalog_handles_empty_data_and_rejects_unsafe_urls(
         headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
     )
     assert unsafe.status_code == 502
+    assert unsafe.json()["error"] == {
+        "code": "UPSTREAM_ERROR",
+        "message": "Offerwall.me returned an unsafe offer link.",
+    }
 
 
 def test_offerwall_me_catalog_requires_user_ip_and_api_token(client, monkeypatch):
