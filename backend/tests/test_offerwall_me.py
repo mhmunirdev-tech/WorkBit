@@ -21,8 +21,8 @@ def configure_offerwall_me(monkeypatch):
     monkeypatch.setattr(settings, "offerwall_me_postback_enabled", True)
     monkeypatch.setattr(settings, "offerwall_me_public_api_key", PUBLIC_API_KEY)
     monkeypatch.setattr(settings, "offerwall_me_secret_key", SECRET_KEY)
-    monkeypatch.setattr(settings, "offerwall_me_currency_name", "USD")
-    monkeypatch.setattr(settings, "offerwall_me_exchange_rate", Decimal("1"))
+    monkeypatch.setattr(settings, "offerwall_me_currency_name", "Points")
+    monkeypatch.setattr(settings, "offerwall_me_exchange_rate", Decimal("1000"))
 
 
 def login(client):
@@ -61,9 +61,9 @@ def callback_values(user_id, transaction_id="owm-tx-1", **overrides):
         "transId": transaction_id,
         "offer_name": "Test task",
         "offer_type": "task",
-        "reward": "1.00000000",
-        "reward_name": "USD",
-        "reward_value": "1",
+        "reward": "1000.00000000",
+        "reward_name": "Points",
+        "reward_value": "1000",
         "payout": "1.00000000",
         "userIp": "203.0.113.10",
         "country": "BD",
@@ -129,7 +129,7 @@ def test_offerwall_me_callback_credits_once_and_reverses_idempotently(
         callback_values(
             user_id,
             status="2",
-            reward="-1.00000000",
+            reward="-1000.00000000",
             payout="-1.00000000",
         ),
     )
@@ -138,7 +138,7 @@ def test_offerwall_me_callback_credits_once_and_reverses_idempotently(
         callback_values(
             user_id,
             status="2",
-            reward="-1.00000000",
+            reward="-1000.00000000",
             payout="-1.00000000",
         ),
     )
@@ -175,6 +175,8 @@ def test_offerwall_me_callback_rejects_bad_signature_source_and_payout(
 
     mismatched_payout = callback_values(user_id, payout="2")
     assert postback(client, mismatched_payout).status_code == 403
+    mismatched_currency = callback_values(user_id, reward_name="USD")
+    assert postback(client, mismatched_currency).status_code == 403
 
 
 def test_offerwall_me_callback_rejects_duplicate_fields_and_disabled_callback(

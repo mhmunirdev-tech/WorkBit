@@ -84,8 +84,8 @@ Configure these backend environment variables:
 
 - `OFFERWALL_ME_PUBLIC_API_KEY`: the placement's public API key.
 - `OFFERWALL_ME_SECRET_KEY`: the private placement secret.
-- `OFFERWALL_ME_CURRENCY_NAME=USD`.
-- `OFFERWALL_ME_EXCHANGE_RATE=1`: configure the placement for one USD unit per $1 payout. If using another rate, set the matching positive decimal value here.
+- `OFFERWALL_ME_CURRENCY_NAME=Points`.
+- `OFFERWALL_ME_EXCHANGE_RATE=1000`: configure the placement for 1000 Points per $1 payout. The WorkBit wallet remains USD; the callback converts provider Points to the signed USD payout before applying WorkBit's reward policy.
 - `OFFERWALL_ME_ENABLED=false` while configuring; set to `true` after testing the signed wall URL.
 - `OFFERWALL_ME_POSTBACK_ENABLED=false` until the Vercel firewall is configured and the callback is tested; then set to `true`.
 
@@ -95,7 +95,7 @@ In Offerwall.me, choose **Single Postback** and enter this exact URL:
 https://api.workbitbd.com/api/v1/postbacks/offerwall-me
 ```
 
-The endpoint accepts the provider's POST form callback, rejects duplicate fields, verifies `md5(subId + transId + reward + secretKey)`, validates the configured exchange rate and payout, requires a valid WorkBit UUID, and processes credits and status `2` reversals idempotently. WorkBit derives the USD amount from the signed `reward` and configured exchange rate, then applies its reward policy. Configure the placement currency as `USD` with an exchange rate of exactly one unit per USD; do not enable callbacks with another setting unless the matching backend exchange rate is configured.
+The endpoint accepts the provider's POST form callback, rejects duplicate fields, verifies `md5(subId + transId + reward + secretKey)`, validates the configured reward currency, exchange rate and payout, requires a valid WorkBit UUID, and processes credits and status `2` reversals idempotently. WorkBit derives the USD amount from the signed `reward` and configured exchange rate, then applies its reward policy. Configure the placement currency as `Points` at 1000 units per USD and use the matching backend environment values. Do not label points as USD in the provider wall.
 
 The provider signature does not cover status, payout, or all other callback fields. Before enabling rewards, create a Vercel Firewall rule to allow the callback path only from Offerwall.me's documented postback IPs (`95.216.65.163` and `2a01:4f9:2b:1dc::2`) and deny all other source IPs. WorkBit also checks the trusted `X-Forwarded-For` source IP against this list. Do not enable `OFFERWALL_ME_POSTBACK_ENABLED` if the deployed proxy does not provide a trustworthy client IP. The callback returns `ok` with HTTP 200 after durable processing; failures return non-2xx so Offerwall.me can retry.
 

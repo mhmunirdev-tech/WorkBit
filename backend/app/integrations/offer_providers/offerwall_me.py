@@ -50,9 +50,10 @@ class OfferwallMeAdapter:
             raise OfferwallMeConfigurationError(
                 "Offerwall.me public API key and private secret are not configured."
             )
-        if settings.offerwall_me_currency_name.strip().upper() != "USD":
+        reward_name = settings.offerwall_me_currency_name.strip()
+        if not reward_name or len(reward_name) > 64:
             raise OfferwallMeConfigurationError(
-                "Offerwall.me currency must be configured as USD for WorkBit wallets."
+                "Offerwall.me reward currency name is invalid."
             )
         if (
             not settings.offerwall_me_exchange_rate.is_finite()
@@ -97,6 +98,7 @@ class OfferwallMeAdapter:
         payout_text = values.get("payout", "").strip()
         signature = values.get("signature", "").strip()
         status = values.get("status", "").strip()
+        reward_name = values.get("reward_name", "").strip()
 
         if (
             user_id != user_id.strip()
@@ -114,6 +116,8 @@ class OfferwallMeAdapter:
             raise OfferwallMeCallbackError("Invalid callback transaction ID.")
         if status not in {"1", "2"}:
             raise OfferwallMeCallbackError("Invalid callback status.")
+        if reward_name.casefold() != settings.offerwall_me_currency_name.strip().casefold():
+            raise OfferwallMeCallbackError("Callback reward currency does not match configuration.")
         if not SIGNED_AMOUNT_PATTERN.fullmatch(reward_text):
             raise OfferwallMeCallbackError("Invalid callback reward.")
         if not AMOUNT_PATTERN.fullmatch(rate_text):
@@ -166,7 +170,7 @@ class OfferwallMeAdapter:
             payout_usd=payout_usd,
             offer_name=values.get("offer_name", "")[:255],
             offer_type=values.get("offer_type", "")[:32],
-            reward_name=values.get("reward_name", "")[:64],
+            reward_name=reward_name[:64],
             country=values.get("country", "").upper()[:2],
         )
 

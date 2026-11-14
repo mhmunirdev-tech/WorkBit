@@ -74,8 +74,8 @@ Deploy `backend/` and `frontend/` as **separate Vercel projects**. Set the backe
 | `OFFERWALL_ME_POSTBACK_ENABLED` | `false` until source IP allowlisting is published and tested |
 | `OFFERWALL_ME_PUBLIC_API_KEY` | Offerwall.me placement public API key |
 | `OFFERWALL_ME_SECRET_KEY` | Offerwall.me placement private secret |
-| `OFFERWALL_ME_CURRENCY_NAME` | `USD` |
-| `OFFERWALL_ME_EXCHANGE_RATE` | `1` for one USD unit per $1 payout |
+| `OFFERWALL_ME_CURRENCY_NAME` | `Points` |
+| `OFFERWALL_ME_EXCHANGE_RATE` | `1000` Points per $1 payout |
 | `THEOREMREACH_ENABLED` | `false` during callback testing; set `true` after publisher approval |
 | `THEOREMREACH_SURVEYS_API_ENABLED` | `false` until TheoremReach enables Publisher API access; then `true` to show individual survey cards |
 | `THEOREMREACH_API_KEY` | TheoremReach publisher app API key |
