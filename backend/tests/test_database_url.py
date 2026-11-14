@@ -1,4 +1,4 @@
-from app.database.url import sqlalchemy_database_url
+from app.database.url import sqlalchemy_connect_args, sqlalchemy_database_url
 
 
 def test_postgres_url_uses_installed_psycopg_driver():
@@ -32,3 +32,13 @@ def test_existing_psycopg_url_and_sqlite_url_are_preserved():
 
     assert postgres_url.drivername == "postgresql+psycopg"
     assert sqlite_url.drivername == "sqlite"
+
+
+def test_psycopg_disables_prepared_statements_for_pooler_compatibility():
+    postgres_url = sqlalchemy_database_url(
+        "postgresql://user:secret@db.example.test:6543/workbit"
+    )
+    sqlite_url = sqlalchemy_database_url("sqlite:///./test-workbit.db")
+
+    assert sqlalchemy_connect_args(postgres_url) == {"prepare_threshold": None}
+    assert sqlalchemy_connect_args(sqlite_url) == {}

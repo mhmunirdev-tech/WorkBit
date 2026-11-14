@@ -8,3 +8,9 @@ def sqlalchemy_database_url(value: str) -> URL:
     if url.drivername in {"postgres", "postgresql"}:
         return url.set(drivername="postgresql+psycopg")
     return url
+
+
+def sqlalchemy_connect_args(url: URL) -> dict[str, object]:
+    if url.drivername == "postgresql+psycopg":
+        return {"prepare_threshold": None}
+    return {}
