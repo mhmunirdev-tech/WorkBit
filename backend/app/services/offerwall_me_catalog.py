@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -106,27 +106,11 @@ class OfferwallMeCatalogService:
             ):
                 continue
             click_url = self._validated_click_url(offer.url, user.id)
-            payout_usd = offer.payout
-            if (
-                not payout_usd.is_finite()
-                or payout_usd <= 0
-                or not offer.reward.is_finite()
-                or offer.reward <= 0
-            ):
+            if not offer.reward.is_finite() or offer.reward <= 0:
                 continue
-            expected_reward = (payout_usd * settings.offerwall_me_exchange_rate).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            if offer.reward.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) != expected_reward:
-                currency_name = settings.offerwall_me_currency_name[:40]
-                raise HTTPException(
-                    502,
-                    (
-                        f"Offerwall.me returned {offer.reward} {currency_name} for "
-                        f"${payout_usd} USD; rate {settings.offerwall_me_exchange_rate} "
-                        f"expects {expected_reward} {currency_name}."
-                    ),
-                )
+            payout_usd = (
+                offer.reward / settings.offerwall_me_exchange_rate
+            ).quantize(Decimal("0.00000001"))
 
             user_reward = reward_decision_service.estimate_user_reward(
                 db,

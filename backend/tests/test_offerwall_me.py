@@ -348,16 +348,18 @@ def test_offerwall_me_catalog_accepts_rewards_rounded_to_configured_currency_pre
     assert response.json()["total"] == 2
     offer = next(item for item in response.json()["offers"] if item["id"] == "offer-1")
     assert offer["provider_reward"] == "123.46"
-    assert Decimal(offer["provider_payout_usd"]) == Decimal("0.123456")
+    assert Decimal(offer["provider_payout_usd"]) == Decimal("0.12346")
 
 
-def test_offerwall_me_catalog_reports_currency_mismatch_amounts(client, monkeypatch):
+def test_offerwall_me_catalog_estimates_from_signed_reward_not_gross_api_payout(
+    client, monkeypatch
+):
     configure_offerwall_me(monkeypatch)
     login(client)
     user_id = get_user_id()
     payload = offer_payload(user_id)
-    payload["data"][0]["reward"] = "123"
-    payload["data"][0]["payout"] = "0.25"
+    payload["data"][0]["reward"] = "14843.81"
+    payload["data"][0]["payout"] = "19.791740"
     MockOfferwallMeClient.payload = payload
     monkeypatch.setattr(httpx, "AsyncClient", MockOfferwallMeClient)
 
@@ -366,14 +368,10 @@ def test_offerwall_me_catalog_reports_currency_mismatch_amounts(client, monkeypa
         headers={"x-forwarded-for": "8.8.8.8", "x-vercel-ip-country": "BD"},
     )
 
-    assert response.status_code == 502
-    assert response.json()["error"] == {
-        "code": "UPSTREAM_ERROR",
-        "message": (
-            "Offerwall.me returned 123 Points for $0.25 USD; "
-            "rate 1000 expects 250.00 Points."
-        ),
-    }
+    assert response.status_code == 200
+    offer = next(item for item in response.json()["offers"] if item["id"] == "offer-1")
+    assert Decimal(offer["provider_payout_usd"]) == Decimal("14.84381")
+    assert offer["estimated_user_reward_usd"] == "10.39066700"
 
 
 def test_offerwall_me_catalog_handles_empty_data_and_rejects_unsafe_urls(
