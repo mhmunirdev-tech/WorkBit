@@ -76,6 +76,29 @@ Offerwall.GG does not include `status` in its signature. The signed amount's sig
 
 WorkBit wallet currency is USD, so configure the Offerwall.GG placement currency name as `USD` with one placement unit per USD. WorkBit then applies its configured reward policy (seeded default: 70% user reward / 30% platform share) only after provider-confirmed completion. Do not enable the wall if the placement uses a different currency or exchange rate. Offerwall.GG publisher payout is separate from user withdrawals: it publicly lists a $30 minimum and NET30 terms and does not list bKash/Nagad as publisher payout options; WorkBit's own user payouts remain the existing manual bKash/Nagad workflow.
 
+## Moonetix
+
+The Moonetix offerwall uses a signed iframe URL and GET postbacks. Configure these backend-only environment variables:
+
+- `MOONETIX_ENABLED=true`
+- `MOONETIX_APP_ID`: the Moonetix app ID shown in the integration dashboard.
+- `MOONETIX_LINK_HASH_SALT`: the server-side salt used for the offerwall `hash` parameter. This is distinct from the postback secret.
+- `MOONETIX_API_KEY`: the app API key for optional server-side Offers API catalog requests.
+- `MOONETIX_POSTBACK_SECRET`: the Postback secret key used to verify callback HMAC-SHA256 signatures.
+- `MOONETIX_CURRENCY_NAME=WBC`
+- `MOONETIX_EXCHANGE_RATE=1000`
+- `MOONETIX_POSTBACK_ENABLED=false` while testing; set it to `true` only after test callbacks and source-IP verification succeed.
+
+Configure the Moonetix callback URL as:
+
+```text
+https://api.workbitbd.com/api/v1/postbacks/moonetix
+```
+
+The postback URL should supply `{user_id}`, `{transaction_id}`, `{reward}`, `{payout}`, `{status}`, and `{hash}`. Moonetix status `1` credits once and status `2` reverses the matching transaction. The signature is HMAC-SHA256 over `transaction_id:user_id:reward:status` using the postback secret. Test transactions containing `test` are acknowledged without wallet changes. Live callbacks are restricted to the Moonetix source IP allowlist and are accepted only when enabled.
+
+The signed user offerwall URL is returned by `GET /api/v1/offers/providers/moonetix/wall-url` for authenticated users. The link hash uses the link hash salt, while callback verification uses the separate postback secret.
+
 ## Offerwall.me
 
 Offerwall.me offers are displayed as native WorkBit cards in Explore offers. The backend requests the offer catalog using the signed-in user's UUID, trusted client IP, country, and one-hour HMAC-SHA256 identity signature. The public API key, API bearer token, and private placement secret are backend-only values. Enable `OFFERWALL_ME_ENABLED=true` only after configuring the placement and its callback.

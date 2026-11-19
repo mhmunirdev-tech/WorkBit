@@ -18,6 +18,10 @@ from app.integrations.offer_providers.offerwall_me import (
     OfferwallMeConfigurationError,
     offerwall_me_adapter,
 )
+from app.integrations.offer_providers.moonetix import (
+    MoonetixConfigurationError,
+    moonetix_adapter,
+)
 from app.integrations.offer_providers.bitcotasks import (
     BitcoTasksConfigurationError,
     bitcotasks_adapter,
@@ -91,6 +95,19 @@ def offerwall_me_wall_url(
     try:
         wall_url = offerwall_me_adapter.build_wall_url(user.id)
     except OfferwallMeConfigurationError as error:
+        raise HTTPException(503, str(error)) from error
+    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/providers/moonetix/wall-url")
+def moonetix_wall_url(
+    user: User = Depends(current_user),
+) -> JSONResponse:
+    if not settings.moonetix_enabled:
+        raise HTTPException(404, "Moonetix is not enabled.")
+    try:
+        wall_url = moonetix_adapter.build_wall_url(user.id)
+    except MoonetixConfigurationError as error:
         raise HTTPException(503, str(error)) from error
     return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 

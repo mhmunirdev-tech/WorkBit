@@ -9,6 +9,7 @@ import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
 import { OfferwallMeWall } from "./ads/providers/offerwall-me/wall";
 import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
+import { MoonetixOfferWall } from "./ads/providers/moonetix/wall";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
@@ -124,6 +125,7 @@ function OffersCatalog() {
         <span aria-hidden="true"><Sparkles size={15} /></span>
         <p>More offers are coming soon. We are adding new offer partners and advertisers.</p>
       </section>
+      <MoonetixOfferWall />
       <div className="offers-tabs" role="tablist" aria-label="Offer type">
         <button className="is-active" type="button" role="tab" aria-selected="true">Incentive offers</button>
         <button type="button" role="tab" aria-selected="false" onClick={() => document.querySelector(".offers-provider-stack")?.scrollIntoView({ behavior: "smooth" })}>Non-incentive offers</button>

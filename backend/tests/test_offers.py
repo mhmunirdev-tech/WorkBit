@@ -1,8 +1,15 @@
 from decimal import Decimal
+import hashlib
+import hmac
 
 from sqlalchemy import select
 
 from app.models import AdNetwork, Offer, OfferNetwork
+from app.core.config import settings
+from app.integrations.offer_providers.moonetix import (
+    MoonetixCallbackError,
+    moonetix_adapter,
+)
 from app.services.rate_limit import _hits
 from conftest import activate_package
 
@@ -240,6 +247,56 @@ def test_non_mock_offer_postbacks_are_unavailable_without_assuming_a_payload(cli
     response = client.post("/api/v1/postbacks/adgem", json={"some": "unverified fields"})
     assert response.status_code == 503
     assert "not configured" in response.json()["error"]["message"].lower()
+
+
+def test_moonetix_signed_callback_and_wall_url(monkeypatch):
+    monkeypatch.setattr(settings, "moonetix_enabled", True)
+    monkeypatch.setattr(settings, "moonetix_app_id", "test-app-id")
+    monkeypatch.setattr(settings, "moonetix_link_hash_salt", "test-link-salt")
+    monkeypatch.setattr(settings, "moonetix_postback_secret", "test-postback-secret")
+    monkeypatch.setattr(settings, "moonetix_currency_name", "WBC")
+    monkeypatch.setattr(settings, "moonetix_exchange_rate", Decimal("1000"))
+
+    user_id = "11111111-1111-1111-1111-111111111111"
+    wall_url = moonetix_adapter.build_wall_url(user_id)
+    assert wall_url.startswith("https://wall.moonetix.com/test-app-id?")
+    assert "user_id=" in wall_url
+    assert "hash=" in wall_url
+
+    transaction_id = "moon-tx-1"
+    reward = "1000"
+    status = "1"
+    signature = hmac.new(
+        b"test-postback-secret",
+        f"{transaction_id}:{user_id}:{reward}:{status}".encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    callback = moonetix_adapter.verify_callback(
+        {
+            "user_id": user_id,
+            "transaction_id": transaction_id,
+            "reward": reward,
+            "payout": "1.00000000",
+            "status": status,
+            "hash": signature,
+        }
+    )
+    assert callback.amount_usd == Decimal("1.00000000")
+
+    bad = {
+        "user_id": user_id,
+        "transaction_id": transaction_id,
+        "reward": reward,
+        "payout": "1.00000000",
+        "status": status,
+        "hash": "0" * 64,
+    }
+    try:
+        moonetix_adapter.verify_callback(bad)
+    except MoonetixCallbackError:
+        pass
+    else:
+        raise AssertionError("Invalid Moonetix callback signature was accepted.")
 
 
 def test_moonetix_test_postback_is_acknowledged_without_wallet_credit(client):

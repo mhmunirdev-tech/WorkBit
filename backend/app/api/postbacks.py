@@ -30,6 +30,11 @@ from app.integrations.offer_providers.offerwall_me import (
     OfferwallMeConfigurationError,
     offerwall_me_adapter,
 )
+from app.integrations.offer_providers.moonetix import (
+    MoonetixCallbackError,
+    MoonetixConfigurationError,
+    moonetix_adapter,
+)
 from app.integrations.offer_providers.theoremreach import (
     TheoremReachCallbackError,
     TheoremReachConfigurationError,
@@ -41,6 +46,7 @@ from app.services.bitlabs import bitlabs_conversion_service
 from app.services.cpx_research import cpx_research_conversion_service
 from app.services.offerwall_gg import offerwall_gg_conversion_service
 from app.services.offerwall_me import offerwall_me_conversion_service
+from app.services.moonetix import moonetix_conversion_service
 from app.services.theoremreach import theoremreach_conversion_service
 from app.services.bitcotasks import bitcotasks_conversion_service
 router = APIRouter(prefix="/postbacks", tags=["postbacks"])
@@ -48,6 +54,9 @@ OFFERWALL_ME_POSTBACK_SOURCE_IPS = frozenset(
     {"95.216.65.163", "2a01:4f9:2b:1dc::2"}
 )
 BITCOTASKS_POSTBACK_SOURCE_IPS = frozenset({"45.14.135.48"})
+MOONETIX_POSTBACK_SOURCE_IPS = frozenset(
+    {"187.124.177.111", "2a02:4780:79:782c::1"}
+)
 
 
 def _is_offerwall_me_source_allowed(request: Request) -> bool:
@@ -76,6 +85,21 @@ def _is_bitcotasks_source_allowed(request: Request) -> bool:
     )
 
 
+def _is_moonetix_source_allowed(request: Request) -> bool:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    source = forwarded_for.split(",", 1)[0].strip()
+    if not source:
+        source = request.client.host if request.client else ""
+    try:
+        source_ip = ipaddress.ip_address(source)
+    except ValueError:
+        return False
+    return any(
+        source_ip == ipaddress.ip_address(value)
+        for value in MOONETIX_POSTBACK_SOURCE_IPS
+    )
+
+
 @router.post("/mock", response_model=ConversionRead, status_code=202)
 def receive_mock_postback(payload: MockPostbackRequest, db: Session = Depends(get_db)):
     if settings.environment != "development":
@@ -85,9 +109,18 @@ def receive_mock_postback(payload: MockPostbackRequest, db: Session = Depends(ge
 
 
 @router.api_route("/moonetix", methods=["GET", "POST"], response_class=PlainTextResponse)
-async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
+async def receive_moonetix_postback(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
     if request.method == "GET":
         values = request.query_params
+        callback_values = {}
+        for key, value in values.multi_items():
+            normalized_key = key.lower()
+            if normalized_key in callback_values or not isinstance(value, str):
+                return PlainTextResponse("FORBIDDEN", status_code=400)
+            callback_values[normalized_key] = value
     else:
         content_type = request.headers.get("content-type", "").lower()
         if "application/json" in content_type:
@@ -123,6 +156,7 @@ async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
         or callback_values.get("transactionid")
         or callback_values.get("trans_id")
         or callback_values.get("tx_id")
+        or callback_values.get("tx")
     )
     test_flag = callback_values.get("test")
     test_status = str(test_flag).lower() if test_flag is not None else ""
@@ -136,11 +170,36 @@ async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
 
     if not settings.moonetix_postback_enabled:
         return PlainTextResponse("UNAVAILABLE", status_code=503)
+    if not _is_moonetix_source_allowed(request):
+        return PlainTextResponse("FORBIDDEN", status_code=403)
 
-    return PlainTextResponse(
-        "Callback verification is not configured.",
-        status_code=503,
-    )
+    aliases = {
+        "transaction_id": transaction_id,
+        "user_id": user_id,
+        "reward": callback_values.get("reward") or callback_values.get("amount"),
+        "payout": callback_values.get("payout") or callback_values.get("payout_usd"),
+        "status": callback_values.get("status"),
+        "hash": callback_values.get("hash") or callback_values.get("signature"),
+        "offer_id": callback_values.get("offer_id") or callback_values.get("offerid"),
+        "offer_name": callback_values.get("offer_name") or callback_values.get("offername"),
+        "country": callback_values.get("country"),
+    }
+    callback_values = {key: value for key, value in aliases.items() if value is not None}
+
+    try:
+        callback = moonetix_adapter.verify_callback(callback_values)
+    except MoonetixConfigurationError:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    except MoonetixCallbackError:
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    try:
+        moonetix_conversion_service.process_callback(db, callback)
+    except HTTPException as error:
+        if error.status_code >= 500:
+            return PlainTextResponse("RETRY", status_code=503)
+        return PlainTextResponse("REJECTED", status_code=error.status_code)
+    return PlainTextResponse("ok")
 
 
 @router.get("/cpx-research", response_class=PlainTextResponse)

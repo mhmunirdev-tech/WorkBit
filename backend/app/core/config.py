@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
     moonetix_enabled: bool = False
     moonetix_postback_enabled: bool = False
+    moonetix_app_id: str | None = None
+    moonetix_api_key: str | None = None
+    moonetix_link_hash_salt: str | None = None
     moonetix_postback_secret: str | None = None
     moonetix_currency_name: str = "Coins"
     moonetix_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
