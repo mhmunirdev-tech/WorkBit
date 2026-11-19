@@ -78,12 +78,14 @@ WorkBit wallet currency is USD, so configure the Offerwall.GG placement currency
 
 ## Moonetix
 
-The Moonetix offerwall uses a signed iframe URL and GET postbacks. Configure these backend-only environment variables:
+Explore offers renders Moonetix's Offers API results as native WorkBit cards. The backend requests `GET https://api.moonetix.com/v1/offers` using the signed-in user's UUID, actual country, and browser user-agent. The API key is sent only in the server-side `Authorization: Bearer` header. Returned `start_url` links are checked for the Moonetix wall host and matching user ID before being rendered. The displayed WorkBit reward estimate applies the active WorkBit reward policy to the API's USD payout; Moonetix's configured currency reward is shown separately.
+
+Configure these backend-only environment variables:
 
 - `MOONETIX_ENABLED=true`
 - `MOONETIX_APP_ID`: the Moonetix app ID shown in the integration dashboard.
-- `MOONETIX_LINK_HASH_SALT`: the server-side salt used for the offerwall `hash` parameter. This is distinct from the postback secret.
-- `MOONETIX_API_KEY`: the app API key for optional server-side Offers API catalog requests.
+- `MOONETIX_API_KEY`: the app API key from the Moonetix API dashboard.
+- `MOONETIX_LINK_HASH_SALT`: the server-side salt used by the legacy signed offerwall URL endpoint. API catalog cards use the provider's signed `start_url`; the salt is not sent to the browser.
 - `MOONETIX_POSTBACK_SECRET`: the Postback secret key used to verify callback HMAC-SHA256 signatures.
 - `MOONETIX_CURRENCY_NAME=WBC`
 - `MOONETIX_EXCHANGE_RATE=1000`
@@ -97,7 +99,7 @@ https://api.workbitbd.com/api/v1/postbacks/moonetix?user_id={user_id}&transactio
 
 The postback URL should supply `{user_id}`, `{transaction_id}`, `{reward}`, `{payout}`, `{status}`, and `{hash}`. Moonetix status `1` credits once and status `2` reverses the matching transaction. The signature is HMAC-SHA256 over `transaction_id:user_id:reward:status` using the postback secret. Test transactions containing `test` are acknowledged without wallet changes. Live callbacks are restricted to the Moonetix source IP allowlist and are accepted only when enabled.
 
-The signed user offerwall URL is returned by `GET /api/v1/offers/providers/moonetix/wall-url` for authenticated users. The link hash uses the link hash salt, while callback verification uses the separate postback secret.
+The signed user offerwall URL remains available at `GET /api/v1/offers/providers/moonetix/wall-url` for authenticated users, but the Offers page uses the native catalog endpoint `GET /api/v1/offers/providers/moonetix/catalog`. The link hash salt and callback secret are distinct; the API key must never be exposed to frontend code.
 
 ## Offerwall.me
 
