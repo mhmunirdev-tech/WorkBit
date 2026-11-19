@@ -84,6 +84,37 @@ def receive_mock_postback(payload: MockPostbackRequest, db: Session = Depends(ge
     return ConversionRead(id=conversion.id, external_transaction_id=conversion.external_transaction_id, click_id=conversion.click_id, status=conversion.status, provider_payout=conversion.provider_payout, currency=conversion.currency)
 
 
+@router.api_route("/moonetix", methods=["GET", "POST"], response_class=PlainTextResponse)
+async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
+    if request.method == "GET":
+        values = request.query_params
+    else:
+        values = await request.form()
+
+    callback_values: dict[str, str] = {}
+    for key, value in values.multi_items():
+        normalized_key = key.lower()
+        if normalized_key in callback_values or not isinstance(value, str):
+            return PlainTextResponse("FORBIDDEN", status_code=400)
+        callback_values[normalized_key] = value
+
+    user_id = callback_values.get("user_id")
+    transaction_id = callback_values.get("transaction_id")
+    if (
+        user_id == "test_user"
+        or (transaction_id is not None and transaction_id.startswith("test_"))
+    ):
+        return PlainTextResponse("ok")
+
+    if not settings.moonetix_postback_enabled:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+
+    return PlainTextResponse(
+        "Callback verification is not configured.",
+        status_code=503,
+    )
+
+
 @router.get("/cpx-research", response_class=PlainTextResponse)
 async def receive_cpx_research_postback(
     request: Request,

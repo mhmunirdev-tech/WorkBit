@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     offerwall_me_secret_key: str | None = None
     offerwall_me_currency_name: str = "Points"
     offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
+    moonetix_enabled: bool = False
+    moonetix_postback_enabled: bool = False
+    moonetix_postback_secret: str | None = None
+    moonetix_currency_name: str = "Coins"
+    moonetix_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
     cpx_research_enabled: bool = False
     cpx_research_postback_enabled: bool = False
     cpx_research_app_id: str = "37861"
