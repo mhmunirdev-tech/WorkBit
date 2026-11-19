@@ -255,6 +255,18 @@ def test_moonetix_test_postback_is_acknowledged_without_wallet_credit(client):
     assert response.status_code == 200
     assert response.text == "ok"
 
+    json_response = client.post(
+        "/api/v1/postbacks/moonetix",
+        json={
+            "userId": "test_user",
+            "transactionId": "test_json_transaction",
+            "status": "1",
+            "reward": "1.00",
+        },
+    )
+    assert json_response.status_code == 200
+    assert json_response.text == "ok"
+
     live_response = client.post(
         "/api/v1/postbacks/moonetix",
         data={

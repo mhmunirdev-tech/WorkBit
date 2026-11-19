@@ -89,14 +89,29 @@ async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
     if request.method == "GET":
         values = request.query_params
     else:
-        values = await request.form()
-
-    callback_values: dict[str, str] = {}
-    for key, value in values.multi_items():
-        normalized_key = key.lower()
-        if normalized_key in callback_values or not isinstance(value, str):
-            return PlainTextResponse("FORBIDDEN", status_code=400)
-        callback_values[normalized_key] = value
+        content_type = request.headers.get("content-type", "").lower()
+        if "application/json" in content_type:
+            try:
+                payload = await request.json()
+            except ValueError:
+                return PlainTextResponse("FORBIDDEN", status_code=400)
+            if not isinstance(payload, dict):
+                return PlainTextResponse("FORBIDDEN", status_code=400)
+            callback_values = {
+                str(key).lower(): str(value)
+                for key, value in payload.items()
+                if value is not None
+            }
+            if len(callback_values) != len(payload):
+                return PlainTextResponse("FORBIDDEN", status_code=400)
+        else:
+            values = await request.form()
+            callback_values = {}
+            for key, value in values.multi_items():
+                normalized_key = key.lower()
+                if normalized_key in callback_values or not isinstance(value, str):
+                    return PlainTextResponse("FORBIDDEN", status_code=400)
+                callback_values[normalized_key] = value
 
     user_id = (
         callback_values.get("user_id")
