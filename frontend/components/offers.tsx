@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Sparkles } from "lucide-react";
-import { AdsPlacements } from "./ads/ads-placements";
+import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Grid2X2, Search, Sparkles } from "lucide-react";
 import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
 import { BitcoTasksOfferWall } from "./ads/providers/bitcotasks/wall";
 import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
@@ -59,6 +58,7 @@ function OffersCatalog() {
   const [minimumReward, setMinimumReward] = useState("");
   const [maximumTime, setMaximumTime] = useState("");
   const [sortBy, setSortBy] = useState("featured");
+  const [viewMode, setViewMode] = useState<"cards" | "grid">("cards");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const refreshOffers = useCallback(async (showLoading = false) => {
@@ -114,20 +114,21 @@ function OffersCatalog() {
 
   return (
     <>
-      <header className="top"><div><p className="eyebrow">OFFER CATALOG</p><h1>Find your next task</h1><p className="muted">Availability and rewards depend on offer terms and provider verification.</p></div></header>
-      <section className="offers-guide panel" aria-labelledby="offers-guide-title">
-        <div className="offers-guide-heading">
-          <div><p className="eyebrow">HOW TO USE THIS PAGE</p><h2 id="offers-guide-title">Choose a task you can finish</h2></div>
-          <p>Start with the requirements, then compare the estimated reward and time. A provider must confirm completion before WorkBit can credit your wallet.</p>
+      <header className="top offers-page-heading">
+        <div>
+          <h1>Offers</h1>
+          <p className="muted">Offers help you earn rewards by completing partner tasks and offers on your own devices.</p>
         </div>
-        <div className="offers-guide-steps">
-          <div><span>1</span><strong>Filter the list</strong><small>Use category, device, reward, or time.</small></div>
-          <div><span>2</span><strong>Read the terms</strong><small>Check eligibility before starting.</small></div>
-          <div><span>3</span><strong>Track the result</strong><small>Review pending and approved rewards in your wallet.</small></div>
-        </div>
+      </header>
+      <section className="offers-status-banner" role="status">
+        <span aria-hidden="true"><Sparkles size={15} /></span>
+        <p>More offers are coming soon. We are adding new offer partners and advertisers.</p>
       </section>
+      <div className="offers-tabs" role="tablist" aria-label="Offer type">
+        <button className="is-active" type="button" role="tab" aria-selected="true">Incentive offers</button>
+        <button type="button" role="tab" aria-selected="false" onClick={() => document.querySelector(".offers-provider-stack")?.scrollIntoView({ behavior: "smooth" })}>Non-incentive offers</button>
+      </div>
       <div className="offers-provider-stack" aria-label="Partner offer sections">
-        <div className="offers-provider-heading"><p className="eyebrow">PARTNER INVENTORY</p><h2>Offers from WorkBit providers</h2><p className="muted">Each provider has its own eligibility rules and confirmation process.</p></div>
         <TheoremReachSurveyCatalog />
         <CPXResearchOfferWall />
         <BitcoTasksOfferWall />
@@ -135,7 +136,6 @@ function OffersCatalog() {
         <BitLabsOfferWall />
         <OfferwallGGCatalog />
       </div>
-      <AdsPlacements />
       {isDevelopment && (
         <>
           <div className="offer-catalog-toolbar">
@@ -146,16 +146,27 @@ function OffersCatalog() {
             <span aria-live="polite">{loading ? "Loading offers..." : `${visibleOffers.length} ${visibleOffers.length === 1 ? "offer" : "offers"}`}</span>
           </div>
           <section className="offer-controls" aria-label="Offer filters">
-            <Label className="search-control">Search offers<Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by title or category" /></Label>
+            <Label className="search-control offers-search-control"><span>Search offers</span><span className="offers-search-input"><Search aria-hidden="true" size={16} /><Input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search offers" /></span></Label>
             <Label>Category<Select value={category} onValueChange={setCategory}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map((item) => <SelectItem key={item} value={item}>{item === "All" ? "All categories" : item[0] + item.slice(1).toLowerCase()}</SelectItem>)}</SelectContent></Select></Label>
             <Label>Device<Select value={device || "ANY"} onValueChange={(value) => setDevice(value === "ANY" ? "" : value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ANY">Any device</SelectItem><SelectItem value="WEB">Web</SelectItem><SelectItem value="IOS">iOS</SelectItem><SelectItem value="ANDROID">Android</SelectItem></SelectContent></Select></Label>
             <Label>Minimum reward<Input type="number" inputMode="decimal" min="0" step="0.01" value={minimumReward} onChange={(event) => setMinimumReward(event.target.value)} placeholder="Any amount" /></Label>
             <Label>Maximum time (minutes)<Input type="number" inputMode="numeric" min="1" max="1440" step="1" value={maximumTime} onChange={(event) => setMaximumTime(event.target.value)} placeholder="Any duration" /></Label>
             <Label>Sort by<Select value={sortBy} onValueChange={setSortBy}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="featured">Featured</SelectItem><SelectItem value="reward">Highest reward</SelectItem><SelectItem value="time">Shortest time</SelectItem></SelectContent></Select></Label>
           </section>
+          <div className="offers-list-toolbar">
+            <div className="offers-sort-copy">
+              <Clock3 aria-hidden="true" size={15} />
+              <span><strong>Saved 0</strong><small>Conversion data and EPC update across 30 days.</small></span>
+            </div>
+            <div className="offers-view-actions">
+              <span>View:</span>
+              <button className={viewMode === "cards" ? "is-active" : ""} type="button" aria-label="Card view" aria-pressed={viewMode === "cards"} onClick={() => setViewMode("cards")}><Grid2X2 size={15} /> Cards</button>
+              <button className={viewMode === "grid" ? "is-active" : ""} type="button" aria-label="Compact grid view" aria-pressed={viewMode === "grid"} onClick={() => setViewMode("grid")}><Clock3 size={15} /> Table</button>
+            </div>
+          </div>
           {error && <Alert className="state error-state" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
           {loading ? <section className="offer-grid" aria-label="Loading offer catalog">{[1, 2, 3].map((item) => <Card className="offer skeleton" key={item}><CardContent className="offer-body"><Skeleton className="h-5 w-2/3" /><Skeleton className="h-4 w-1/2" /></CardContent></Card>)}</section>
-            : !error && visibleOffers.length ? <section className="offer-grid" aria-label="Available offers">
+            : !error && visibleOffers.length ? <section className={`offer-grid${viewMode === "grid" ? " is-compact" : ""}`} aria-label="Available offers">
               {visibleOffers.map((offer) => <Card className="offer" key={offer.id}>
                 <div className={`offer-art offer-art-${offer.category.toLowerCase()}`}>
                   <div className="offer-art-topline"><span className="offer-art-label">{offer.featured ? "FEATURED OFFER" : "DISCOVER & EARN"}</span><Badge variant="secondary">{offer.device_type}</Badge></div>
