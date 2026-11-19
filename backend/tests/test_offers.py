@@ -300,6 +300,18 @@ def test_moonetix_signed_callback_and_wall_url(monkeypatch):
 
 
 def test_moonetix_test_postback_is_acknowledged_without_wallet_credit(client):
+    get_response = client.get(
+        "/api/v1/postbacks/moonetix",
+        params={
+            "user_id": "test_user",
+            "transaction_id": "test_get_transaction",
+            "status": "1",
+            "reward": "1.00",
+        },
+    )
+    assert get_response.status_code == 200
+    assert get_response.text == "ok"
+
     response = client.post(
         "/api/v1/postbacks/moonetix",
         data={

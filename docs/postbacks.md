@@ -89,10 +89,10 @@ The Moonetix offerwall uses a signed iframe URL and GET postbacks. Configure the
 - `MOONETIX_EXCHANGE_RATE=1000`
 - `MOONETIX_POSTBACK_ENABLED=false` while testing; set it to `true` only after test callbacks and source-IP verification succeed.
 
-Configure the Moonetix callback URL as:
+Configure the Moonetix callback URL with the documented macros (not just the bare endpoint):
 
 ```text
-https://api.workbitbd.com/api/v1/postbacks/moonetix
+https://api.workbitbd.com/api/v1/postbacks/moonetix?user_id={user_id}&transaction_id={transaction_id}&status={status}&reward={reward}&payout={payout}&hash={hash}
 ```
 
 The postback URL should supply `{user_id}`, `{transaction_id}`, `{reward}`, `{payout}`, `{status}`, and `{hash}`. Moonetix status `1` credits once and status `2` reverses the matching transaction. The signature is HMAC-SHA256 over `transaction_id:user_id:reward:status` using the postback secret. Test transactions containing `test` are acknowledged without wallet changes. Live callbacks are restricted to the Moonetix source IP allowlist and are accepted only when enabled.
