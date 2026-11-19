@@ -242,6 +242,31 @@ def test_non_mock_offer_postbacks_are_unavailable_without_assuming_a_payload(cli
     assert "not configured" in response.json()["error"]["message"].lower()
 
 
+def test_moonetix_test_postback_is_acknowledged_without_wallet_credit(client):
+    response = client.post(
+        "/api/v1/postbacks/moonetix",
+        data={
+            "user_id": "test_user",
+            "transaction_id": "test_transaction",
+            "status": "1",
+            "reward": "1.00",
+        },
+    )
+    assert response.status_code == 200
+    assert response.text == "ok"
+
+    live_response = client.post(
+        "/api/v1/postbacks/moonetix",
+        data={
+            "user_id": "11111111-1111-1111-1111-111111111111",
+            "transaction_id": "live-transaction",
+            "status": "1",
+            "reward": "1.00",
+        },
+    )
+    assert live_response.status_code == 503
+
+
 def test_mock_offer_catalog_is_unavailable_outside_development(client, monkeypatch):
     from app.core.config import settings
 

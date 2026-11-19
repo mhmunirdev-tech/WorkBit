@@ -98,11 +98,24 @@ async def receive_moonetix_postback(request: Request) -> PlainTextResponse:
             return PlainTextResponse("FORBIDDEN", status_code=400)
         callback_values[normalized_key] = value
 
-    user_id = callback_values.get("user_id")
-    transaction_id = callback_values.get("transaction_id")
+    user_id = (
+        callback_values.get("user_id")
+        or callback_values.get("userid")
+        or callback_values.get("user")
+    )
+    transaction_id = (
+        callback_values.get("transaction_id")
+        or callback_values.get("transactionid")
+        or callback_values.get("trans_id")
+        or callback_values.get("tx_id")
+    )
+    test_flag = callback_values.get("test")
+    test_status = str(test_flag).lower() if test_flag is not None else ""
     if (
         user_id == "test_user"
-        or (transaction_id is not None and transaction_id.startswith("test_"))
+        or (user_id is not None and "test" in user_id.lower())
+        or (transaction_id is not None and transaction_id.lower().startswith("test"))
+        or test_status in {"1", "true", "yes", "test"}
     ):
         return PlainTextResponse("ok")
 
