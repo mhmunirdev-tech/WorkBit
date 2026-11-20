@@ -7,6 +7,7 @@ import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
 import { BitcoTasksOfferWall } from "./ads/providers/bitcotasks/wall";
 import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
+import { OfferwallAdCatalog } from "./ads/providers/offerwall-ad/catalog";
 import { OfferwallMeWall } from "./ads/providers/offerwall-me/wall";
 import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
 import { MoonetixCatalog } from "./ads/providers/moonetix/catalog";
@@ -137,6 +138,7 @@ function OffersCatalog() {
         <OfferwallMeWall />
         <BitLabsOfferWall />
         <OfferwallGGCatalog />
+        <OfferwallAdCatalog />
       </div>
       {isDevelopment && (
         <>
