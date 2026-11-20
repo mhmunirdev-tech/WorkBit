@@ -5,11 +5,14 @@ import hmac
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 from uuid import UUID
 
 from app.core.config import settings
 
 OFFERWALL_AD_SLUG = "offerwall-ad"
+OFFERWALL_AD_WALL_ORIGIN = "https://offerwall.ad"
+WALL_ID_PATTERN = re.compile(r"^[0-9a-fA-F]{32}$")
 AMOUNT_PATTERN = re.compile(r"^\d{1,10}(?:\.\d{1,8})?$")
 SIGNATURE_PATTERN = re.compile(r"^sha256=([0-9a-fA-F]{64})$")
 EVENTS = frozenset(
@@ -51,6 +54,31 @@ class OfferwallAdCallback:
 
 
 class OfferwallAdAdapter:
+    def build_wall_url(self, user_id: str) -> str:
+        wall_id = (settings.offerwall_ad_hosted_wall_id or "").strip()
+        if not WALL_ID_PATTERN.fullmatch(wall_id):
+            raise OfferwallAdConfigurationError(
+                "Offerwall Ad hosted wall ID is missing or invalid."
+            )
+        if not settings.offerwall_ad_postback_enabled:
+            raise OfferwallAdConfigurationError(
+                "Offerwall Ad postbacks are not enabled."
+            )
+        if not (settings.offerwall_ad_signing_secret or "").strip():
+            raise OfferwallAdConfigurationError(
+                "Offerwall Ad signing secret is not configured."
+            )
+        try:
+            visitor_id = str(UUID(str(user_id)))
+        except ValueError as error:
+            raise OfferwallAdConfigurationError(
+                "WorkBit user ID must be a UUID."
+            ) from error
+        return (
+            f"{OFFERWALL_AD_WALL_ORIGIN}/wall/{wall_id}?"
+            + urlencode({"uid": visitor_id})
+        )
+
     def verify_callback(
         self,
         payload: dict[str, object],

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
     offerwall_ad_postback_enabled: bool = False
     offerwall_ad_signing_secret: str | None = None
+    offerwall_ad_hosted_wall_id: str = "647a273b4fe0e4f8c6738cb4cfafb1ba"
     moonetix_enabled: bool = False
     moonetix_postback_enabled: bool = False
     moonetix_app_id: str | None = None

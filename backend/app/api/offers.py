@@ -22,6 +22,10 @@ from app.integrations.offer_providers.moonetix import (
     MoonetixConfigurationError,
     moonetix_adapter,
 )
+from app.integrations.offer_providers.offerwall_ad import (
+    OfferwallAdConfigurationError,
+    offerwall_ad_adapter,
+)
 from app.integrations.offer_providers.bitcotasks import (
     BitcoTasksConfigurationError,
     bitcotasks_adapter,
@@ -97,6 +101,19 @@ def offerwall_me_wall_url(
     try:
         wall_url = offerwall_me_adapter.build_wall_url(user.id)
     except OfferwallMeConfigurationError as error:
+        raise HTTPException(503, str(error)) from error
+    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
+
+
+@router.get("/providers/offerwall-ad/wall-url")
+def offerwall_ad_wall_url(
+    user: User = Depends(current_user),
+) -> JSONResponse:
+    if not settings.offerwall_ad_postback_enabled:
+        raise HTTPException(404, "Offerwall Ad is not enabled.")
+    try:
+        wall_url = offerwall_ad_adapter.build_wall_url(user.id)
+    except OfferwallAdConfigurationError as error:
         raise HTTPException(503, str(error)) from error
     return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 

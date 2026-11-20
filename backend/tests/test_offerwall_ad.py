@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 from decimal import Decimal
+from urllib.parse import parse_qs, urlsplit
 
 from sqlalchemy import select
 
@@ -11,6 +12,15 @@ from app.models import OfferConversion, User, Wallet
 from conftest import activate_package
 
 SIGNING_SECRET = "test-offerwall-ad-signing-secret"
+HOSTED_WALL_ID = "647a273b4fe0e4f8c6738cb4cfafb1ba"
+
+
+def login_user(client):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": "workbit-user@example.com", "password": "WorkBitDev123!"},
+    )
+    assert response.status_code == 200
 
 
 def configure_offerwall_ad(monkeypatch):
@@ -217,3 +227,33 @@ def test_offerwall_ad_rejects_duplicate_json_fields(client, monkeypatch):
 
 def test_offerwall_ad_postback_is_disabled_by_default(client):
     assert client.post("/api/v1/postbacks/offerwall-ad").status_code == 503
+
+
+def test_offerwall_ad_hosted_wall_uses_the_authenticated_user_id_and_is_no_store(
+    client, monkeypatch
+):
+    monkeypatch.setattr(settings, "offerwall_ad_postback_enabled", True)
+    monkeypatch.setattr(settings, "offerwall_ad_signing_secret", SIGNING_SECRET)
+    monkeypatch.setattr(settings, "offerwall_ad_hosted_wall_id", HOSTED_WALL_ID)
+    login_user(client)
+
+    response = client.get("/api/v1/offers/providers/offerwall-ad/wall-url")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    url = urlsplit(response.json()["wall_url"])
+    assert url.scheme == "https"
+    assert url.netloc == "offerwall.ad"
+    assert url.path == f"/wall/{HOSTED_WALL_ID}"
+    assert parse_qs(url.query)["uid"] == [get_user_id()]
+
+
+def test_offerwall_ad_hosted_wall_rejects_an_invalid_wall_id(client, monkeypatch):
+    monkeypatch.setattr(settings, "offerwall_ad_postback_enabled", True)
+    monkeypatch.setattr(settings, "offerwall_ad_signing_secret", SIGNING_SECRET)
+    monkeypatch.setattr(settings, "offerwall_ad_hosted_wall_id", "not-a-wall-id")
+    login_user(client)
+
+    response = client.get("/api/v1/offers/providers/offerwall-ad/wall-url")
+
+    assert response.status_code == 503

@@ -4868,6 +4868,22 @@ body {
   background: #f7f9fc;
 }
 
+.offerwall-ad-frame {
+  display: block;
+  width: 100%;
+  min-height: 780px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.offerwall-ad-loading {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
 .bitcotasks-wall-container {
   min-height: 780px;
   margin-top: 20px;

@@ -137,6 +137,7 @@ Configure these backend-only environment variables:
 
 - `OFFERWALL_AD_SIGNING_SECRET`: the HMAC signing secret configured for Offerwall Ad publisher webhooks. This is separate from the optional shared callback password.
 - `OFFERWALL_AD_POSTBACK_ENABLED=false` while configuring and testing. Set it to `true` only after a signed JSON test succeeds.
+- `OFFERWALL_AD_HOSTED_WALL_ID`: the 32-character ID from the hosted wall URL. WorkBit's authenticated wall URL endpoint adds the current user's stable UUID as `uid`; the response is never cached.
 
 Use the event macros `subid`, `transaction_id`, `conversion_id`, `offer_id`, `offer_name`, `payout`, `currency`, `status`, `event`, `network`, `campaign_id`, `click_id`, and `unix_timestamp` in the JSON body. `subid` must be the stable WorkBit user UUID. WorkBit uses the provider `payout` in USD and applies its active reward policy; converted reward units are metadata only. Approved and released events create or release a reward, held events create a pending reward, reversed events reverse the matching transaction, and rejected events do not create a reward. Retries are idempotent by the provider transaction ID.
 
@@ -162,7 +163,7 @@ Use this JSON body mapping in the publisher postback configuration:
 }
 ```
 
-The public API overview documents the Offers API path (`GET /api/v1/offers`), Bearer authentication, and short-lived signed tracking URLs, but does not publish an offer-response JSON schema or tracking-URL property. WorkBit therefore does not yet fetch or display Offerwall Ad catalog offers; do not infer provider fields. Obtain a real, redacted API response schema before implementing the catalog.
+WorkBit embeds the publisher's hosted wall on `/offers` rather than parsing the Offers API. Configure the hosted wall currency as `WBC` and ensure its rate reflects WorkBit's active reward policy; the callback credits only the final WorkBit policy amount. The custom API catalog remains unimplemented because Offerwall Ad does not publish its response schema.
 
 ## BitcoTasks
 

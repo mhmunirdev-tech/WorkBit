@@ -22,6 +22,12 @@ The authenticated `GET /api/v1/offers/providers/offerwall-gg/catalog` endpoint d
 
 Offerwall.GG's placement currency must be `USD` at exactly one unit per USD, matching the WorkBit wallet and configured callback currency. The displayed user estimate applies the active WorkBit reward policy and rounding; it is not the provider's gross payout and is not guaranteed until the conversion is verified. For each category or search view, further inventory is available with the page's **Load more offers** button.
 
+## Offerwall Ad hosted wall
+
+The authenticated `GET /api/v1/offers/providers/offerwall-ad/wall-url` endpoint builds the hosted wall URL with the current WorkBit user's stable UUID in the documented `uid` parameter. The ID is configured through the backend-only `OFFERWALL_AD_HOSTED_WALL_ID`; `OFFERWALL_AD_POSTBACK_ENABLED` and the signing secret must also be configured before the wall is shown. The URL response is marked `no-store`.
+
+The `/offers` page embeds the provider-hosted wall in an iframe. Set its allowed embed origin to `https://workbitbd.com` and keep **Require visitor ID** enabled. The hosted wall's WBC-per-USD rate should align with WorkBit's active reward policy; WorkBit credits only the amount calculated by that policy after a verified provider callback. The custom Offers API card catalog is not implemented because the provider does not publish its JSON response schema.
+
 Advertising and rewarded/display ads use the separate `ad_networks` registry and adapter boundary. They are not offer inventory and do not create wallet rewards through the offer conversion pipeline.
 
 ## CPX Research survey wall
