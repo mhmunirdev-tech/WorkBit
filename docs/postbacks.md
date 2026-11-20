@@ -140,6 +140,8 @@ Configure these backend-only environment variables:
 
 Use the event macros `subid`, `transaction_id`, `conversion_id`, `offer_id`, `offer_name`, `payout`, `currency`, `status`, `event`, `network`, `campaign_id`, `click_id`, and `unix_timestamp` in the JSON body. `subid` must be the stable WorkBit user UUID. WorkBit uses the provider `payout` in USD and applies its active reward policy; converted reward units are metadata only. Approved and released events create or release a reward, held events create a pending reward, reversed events reverse the matching transaction, and rejected events do not create a reward. Retries are idempotent by the provider transaction ID.
 
+Signed callbacks with the JSON boolean `"test": true` are acknowledged with HTTP 200 but never create or change a WorkBit reward.
+
 Use this JSON body mapping in the publisher postback configuration:
 
 ```json
@@ -160,7 +162,7 @@ Use this JSON body mapping in the publisher postback configuration:
 }
 ```
 
-The public API overview and account screenshots currently show the Offers API path (`GET /api/v1/offers`), Bearer authentication, and a short-lived signed tracking URL, but no offer-response JSON schema. The native offer catalog and cards remain unimplemented until Offerwall Ad documents its response fields and tracking-URL property; do not infer them.
+The public API overview documents the Offers API path (`GET /api/v1/offers`), Bearer authentication, and short-lived signed tracking URLs, but does not publish an offer-response JSON schema or tracking-URL property. WorkBit therefore does not yet fetch or display Offerwall Ad catalog offers; do not infer provider fields. Obtain a real, redacted API response schema before implementing the catalog.
 
 ## BitcoTasks
 

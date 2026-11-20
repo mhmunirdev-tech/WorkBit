@@ -47,6 +47,7 @@ class OfferwallAdCallback:
     campaign_id: str
     click_id: str
     unix_timestamp: str
+    is_test: bool
 
 
 class OfferwallAdAdapter:
@@ -115,6 +116,9 @@ class OfferwallAdAdapter:
         status = self._text(payload, "status", required=True).casefold()
         if status not in {"approved", "held", "reversed", "rejected"}:
             raise OfferwallAdCallbackError("Invalid Offerwall Ad conversion status.")
+        is_test = payload.get("test", False)
+        if not isinstance(is_test, bool):
+            raise OfferwallAdCallbackError("Invalid Offerwall Ad test flag.")
 
         return OfferwallAdCallback(
             user_id=user_id,
@@ -131,6 +135,7 @@ class OfferwallAdAdapter:
             campaign_id=self._text(payload, "campaign_id")[:128],
             click_id=self._text(payload, "click_id")[:128],
             unix_timestamp=self._text(payload, "unix_timestamp")[:32],
+            is_test=is_test,
         )
 
     @staticmethod

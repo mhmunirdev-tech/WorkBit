@@ -144,6 +144,22 @@ def test_offerwall_ad_held_reward_is_pending_until_release(client, monkeypatch):
     assert after_release[1] == before[1]
 
 
+def test_offerwall_ad_approved_test_callback_does_not_credit_wallet(
+    client, monkeypatch
+):
+    configure_offerwall_ad(monkeypatch)
+    activate_package(client, "OFFERWALL-AD-SAFE-TEST")
+    user_id = get_user_id()
+    before = get_balances()
+    payload = callback_payload(user_id, "conversion.approved", "approved")
+    payload["test"] = True
+
+    response = send_callback(client, payload)
+
+    assert response.status_code == 200
+    assert get_balances() == before
+
+
 def test_offerwall_ad_rejects_bad_signatures_and_non_body_signing(
     client, monkeypatch
 ):

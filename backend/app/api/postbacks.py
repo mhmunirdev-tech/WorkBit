@@ -478,6 +478,9 @@ async def receive_offerwall_ad_postback(
     except OfferwallAdCallbackError:
         return PlainTextResponse("FORBIDDEN", status_code=403)
 
+    if callback.is_test:
+        return PlainTextResponse("OK")
+
     try:
         offerwall_ad_conversion_service.process_callback(db, callback)
     except HTTPException as error:
