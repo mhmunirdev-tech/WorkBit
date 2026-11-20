@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     offerwall_me_secret_key: str | None = None
     offerwall_me_currency_name: str = "Points"
     offerwall_me_exchange_rate: Decimal = Field(default=Decimal("1000"), gt=0)
+    offerwall_ad_postback_enabled: bool = False
+    offerwall_ad_signing_secret: str | None = None
     moonetix_enabled: bool = False
     moonetix_postback_enabled: bool = False
     moonetix_app_id: str | None = None

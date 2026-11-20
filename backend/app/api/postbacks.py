@@ -1,4 +1,6 @@
 import ipaddress
+import json
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
@@ -30,6 +32,11 @@ from app.integrations.offer_providers.offerwall_me import (
     OfferwallMeConfigurationError,
     offerwall_me_adapter,
 )
+from app.integrations.offer_providers.offerwall_ad import (
+    OfferwallAdCallbackError,
+    OfferwallAdConfigurationError,
+    offerwall_ad_adapter,
+)
 from app.integrations.offer_providers.moonetix import (
     MoonetixCallbackError,
     MoonetixConfigurationError,
@@ -46,6 +53,7 @@ from app.services.bitlabs import bitlabs_conversion_service
 from app.services.cpx_research import cpx_research_conversion_service
 from app.services.offerwall_gg import offerwall_gg_conversion_service
 from app.services.offerwall_me import offerwall_me_conversion_service
+from app.services.offerwall_ad import offerwall_ad_conversion_service
 from app.services.moonetix import moonetix_conversion_service
 from app.services.theoremreach import theoremreach_conversion_service
 from app.services.bitcotasks import bitcotasks_conversion_service
@@ -98,6 +106,15 @@ def _is_moonetix_source_allowed(request: Request) -> bool:
         source_ip == ipaddress.ip_address(value)
         for value in MOONETIX_POSTBACK_SOURCE_IPS
     )
+
+
+def _unique_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"Duplicate JSON field: {key}")
+        result[key] = value
+    return result
 
 
 @router.post("/mock", response_model=ConversionRead, status_code=202)
@@ -420,6 +437,54 @@ async def receive_offerwall_me_postback(
             return PlainTextResponse("RETRY", status_code=503)
         return PlainTextResponse("REJECTED", status_code=error.status_code)
     return PlainTextResponse("ok")
+
+
+@router.post("/offerwall-ad", response_class=PlainTextResponse)
+async def receive_offerwall_ad_postback(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> PlainTextResponse:
+    if not settings.offerwall_ad_postback_enabled:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    if "application/json" not in request.headers.get("content-type", "").lower():
+        return PlainTextResponse("FORBIDDEN", status_code=400)
+
+    raw_body = await request.body()
+    try:
+        payload = json.loads(
+            raw_body.decode("utf-8"),
+            parse_float=Decimal,
+            parse_int=Decimal,
+            object_pairs_hook=_unique_json_object,
+        )
+    except (UnicodeDecodeError, ValueError):
+        return PlainTextResponse("FORBIDDEN", status_code=400)
+    if not isinstance(payload, dict):
+        return PlainTextResponse("FORBIDDEN", status_code=400)
+
+    try:
+        callback = offerwall_ad_adapter.verify_callback(
+            payload=payload,
+            raw_body=raw_body,
+            signature=request.headers.get("x-offerwall-ad-signature", ""),
+            signature_source=request.headers.get(
+                "x-offerwall-ad-signature-source", ""
+            ),
+            event_header=request.headers.get("x-offerwall-ad-event", ""),
+            event_id=request.headers.get("x-offerwall-ad-event-id", ""),
+        )
+    except OfferwallAdConfigurationError:
+        return PlainTextResponse("UNAVAILABLE", status_code=503)
+    except OfferwallAdCallbackError:
+        return PlainTextResponse("FORBIDDEN", status_code=403)
+
+    try:
+        offerwall_ad_conversion_service.process_callback(db, callback)
+    except HTTPException as error:
+        if error.status_code >= 500:
+            return PlainTextResponse("RETRY", status_code=503)
+        return PlainTextResponse("REJECTED", status_code=error.status_code)
+    return PlainTextResponse("OK")
 
 
 @router.post("/{provider}", status_code=503)

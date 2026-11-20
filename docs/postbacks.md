@@ -129,6 +129,39 @@ Offerwall.me requires signed user IDs from 1 October 2026. WorkBit generates the
 
 WorkBit uses Offerwall.me's documented `GET https://offerwall.me/offerapi.php` API. It derives the USD amount used for WorkBit reward estimates from the returned Points reward and configured exchange rate, matching the signed callback amount rather than the API's separate gross `payout` field. It validates each returned start URL and country, applies the active reward policy, and opens the returned tracking URL unchanged when the user chooses **Start offer**. The offer API has no documented pagination parameter, so the page's **Load more offers** control reveals the next batch from the fetched catalog. The provider may include a per-user tracking URL in the API response; the endpoint is authenticated, marked no-store, and never logs or persists those links.
 
+## Offerwall Ad
+
+WorkBit accepts Offerwall Ad's signed JSON publisher postbacks at `POST /api/v1/postbacks/offerwall-ad`. Configure the delivery method as **signed JSON webhook** with signature source `body`. The signature is `sha256=<hex HMAC-SHA256 of the exact raw JSON body>` and is verified before parsing or normalizing the payload. WorkBit also requires `X-Offerwall-Ad-Event`, `X-Offerwall-Ad-Event-Id`, and a body `event` value that matches the event header. Do not use the GET or form-post delivery modes with this endpoint.
+
+Configure these backend-only environment variables:
+
+- `OFFERWALL_AD_SIGNING_SECRET`: the HMAC signing secret configured for Offerwall Ad publisher webhooks. This is separate from the optional shared callback password.
+- `OFFERWALL_AD_POSTBACK_ENABLED=false` while configuring and testing. Set it to `true` only after a signed JSON test succeeds.
+
+Use the event macros `subid`, `transaction_id`, `conversion_id`, `offer_id`, `offer_name`, `payout`, `currency`, `status`, `event`, `network`, `campaign_id`, `click_id`, and `unix_timestamp` in the JSON body. `subid` must be the stable WorkBit user UUID. WorkBit uses the provider `payout` in USD and applies its active reward policy; converted reward units are metadata only. Approved and released events create or release a reward, held events create a pending reward, reversed events reverse the matching transaction, and rejected events do not create a reward. Retries are idempotent by the provider transaction ID.
+
+Use this JSON body mapping in the publisher postback configuration:
+
+```json
+{
+  "subid": "{subid}",
+  "transaction_id": "{transaction_id}",
+  "conversion_id": "{conversion_id}",
+  "offer_id": "{offer_id}",
+  "offer_name": "{offer_name}",
+  "payout": "{payout}",
+  "currency": "{currency}",
+  "status": "{status}",
+  "event": "{event}",
+  "network": "{network}",
+  "campaign_id": "{campaign_id}",
+  "click_id": "{click_id}",
+  "unix_timestamp": "{unix_timestamp}"
+}
+```
+
+The public API overview and account screenshots currently show the Offers API path (`GET /api/v1/offers`), Bearer authentication, and a short-lived signed tracking URL, but no offer-response JSON schema. The native offer catalog and cards remain unimplemented until Offerwall Ad documents its response fields and tracking-URL property; do not infer them.
+
 ## BitcoTasks
 
 The BitcoTasks SDK v2 wall is shown only when `BITCOTASKS_ENABLED=true` and `BITCOTASKS_API_KEY` is configured. Its API key and 32-character WorkBit UUID-hex `subId` are intentionally browser-visible; the Secret Key must remain in the backend environment. WorkBit uses that Secret Key to produce a per-user HMAC-SHA256 `sig` for the SDK's optional signed Worker Balance tags. Set the website's postback URL in BitcoTasks to:
