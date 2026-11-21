@@ -87,7 +87,7 @@ export function CPXResearchOfferWall() {
         )}
       </div>
       <p className="theoremreach-wall-note">
-        CPX completion rewards will be credited only after its verified server callback is configured.
+        CPX may screen you out if your profile does not match a survey&apos;s target group. Try another survey and keep your answers accurate; WorkBit cannot override CPX eligibility. Rewards require a verified provider callback.
       </p>
     </section>
   );
