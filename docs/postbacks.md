@@ -48,6 +48,8 @@ Only completed callbacks with a positive `VALUE:USD` are processed. Screen-outs,
 
 TheoremReach appears in Explore offers as a provider-hosted web survey iframe. The authenticated `GET /api/v1/offers/providers/theoremreach/wall-url` endpoint does not require a WorkBit package purchase. It builds the direct entry URL server-side with the WorkBit user UUID, a unique entry transaction ID, the configured partner/placement ID, and the app currency settings. The URL is signed with the TheoremReach app secret using HMAC-SHA1 over the complete unsigned URL, then URL-safe Base64 encoding of the raw digest. The API key is required in the iframe URL by TheoremReach; the secret key is never sent to the browser. The URL response is marked `Cache-Control: no-store`.
 
+The individual-survey catalog sends the verified client IP and Vercel-derived country to TheoremReach so its eligibility decision uses the user's actual region. WorkBit does not rotate or spoof IP addresses; survey availability remains subject to TheoremReach's targeting and the user's profile.
+
 Configure these backend environment variables:
 
 - Keep `THEOREMREACH_ENABLED=false` while configuring. A correctly signed `debug=true` callback can be tested while disabled and never credits the wallet. Set it to `true` only after publisher approval to show the live wall and accept real rewards.

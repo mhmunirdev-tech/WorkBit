@@ -172,7 +172,8 @@ async def theoremreach_surveys(
     surveys = await theoremreach_survey_catalog_service.list_surveys(
         db,
         user,
-        request.client.host if request.client else "",
+        _offerwall_user_ip(request) or "",
+        _offerwall_user_country(request, user),
     )
     response.headers["Cache-Control"] = "no-store"
     return surveys

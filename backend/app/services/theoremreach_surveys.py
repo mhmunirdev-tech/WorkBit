@@ -31,11 +31,23 @@ class TheoremReachSurveyCatalogService:
         db: Session,
         user: User,
         user_ip: str,
+        user_country: str,
     ) -> TheoremReachSurveysRead:
         if not settings.theoremreach_enabled:
             raise HTTPException(404, "TheoremReach is not enabled.")
         if not settings.theoremreach_surveys_api_enabled:
             raise HTTPException(404, "TheoremReach Surveys API is not enabled.")
+        if not user_ip:
+            raise HTTPException(
+                503,
+                "A verified user IP is required to load TheoremReach surveys.",
+            )
+        country_code = user_country.strip().upper()
+        if len(country_code) != 2 or not country_code.isalpha() or country_code == "XX":
+            raise HTTPException(
+                503,
+                "A valid user country is required to load TheoremReach surveys.",
+            )
 
         try:
             api_key, _, partner_id, _ = theoremreach_adapter.publisher_api_credentials()
@@ -48,7 +60,7 @@ class TheoremReachSurveyCatalogService:
             ("api_key", api_key),
             ("user_id", user.id),
             ("ip", user_ip),
-            ("country_code", user.country.upper()),
+            ("country_code", country_code),
             ("max_result_count", "100"),
         ]
         unsigned_url = f"{THEOREMREACH_SURVEYS_API_URL}?{urlencode(params)}"

@@ -163,7 +163,10 @@ export function Shell({
       walletActive.current = false;
     };
   }, [refreshWallet]);
-  useLiveRefresh(refreshWallet, { eventName: WALLET_UPDATED_EVENT });
+  useLiveRefresh(refreshWallet, {
+    intervalMs: pathname.startsWith("/offers") ? 5_000 : 10_000,
+    eventName: WALLET_UPDATED_EVENT,
+  });
 
   const refreshNotifications = useCallback(async () => {
     try {

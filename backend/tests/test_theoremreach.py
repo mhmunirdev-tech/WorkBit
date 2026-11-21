@@ -192,7 +192,13 @@ def test_theoremreach_surveys_api_returns_signed_individual_survey_cards(
     )
     mock_theoremreach_surveys(monkeypatch, mock_client)
 
-    response = client.get("/api/v1/offers/providers/theoremreach/surveys")
+    response = client.get(
+        "/api/v1/offers/providers/theoremreach/surveys",
+        headers={
+            "X-Forwarded-For": "8.8.8.8",
+            "X-Vercel-IP-Country": "GB",
+        },
+    )
 
     assert response.status_code == 200
     result = response.json()
@@ -221,8 +227,19 @@ def test_theoremreach_surveys_api_returns_signed_individual_survey_cards(
     api_query = parse_qs(urlsplit(mock_client.request_url).query)
     assert api_query["api_key"] == [API_KEY]
     assert api_query["user_id"] == [get_user_id()]
-    assert api_query["country_code"]
+    assert api_query["ip"] == ["8.8.8.8"]
+    assert api_query["country_code"] == ["GB"]
     assert "hash" in api_query
+
+
+def test_theoremreach_surveys_require_verified_client_ip(client, monkeypatch):
+    configure_theoremreach(monkeypatch)
+    login_user(client)
+
+    response = client.get("/api/v1/offers/providers/theoremreach/surveys")
+
+    assert response.status_code == 503
+    assert "verified user IP" in response.json()["error"]["message"]
 
 
 def test_theoremreach_surveys_api_requires_publisher_access(client, monkeypatch):
@@ -234,7 +251,10 @@ def test_theoremreach_surveys_api_requires_publisher_access(client, monkeypatch)
         MockTheoremReachClient({"error": "Publisher API access denied."}, status_code=403),
     )
 
-    response = client.get("/api/v1/offers/providers/theoremreach/surveys")
+    response = client.get(
+        "/api/v1/offers/providers/theoremreach/surveys",
+        headers={"X-Forwarded-For": "8.8.8.8"},
+    )
 
     assert response.status_code == 503
     assert "enabled by your account manager" in response.json()["error"]["message"]
