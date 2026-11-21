@@ -54,7 +54,9 @@ from app.services.offerwall_gg_catalog import offerwall_gg_catalog_service
 from app.services.offerwall_me_catalog import offerwall_me_catalog_service
 from app.services.moonetix_catalog import moonetix_catalog_service
 from app.services.theoremreach_surveys import theoremreach_survey_catalog_service
+from app.services.timewall_surveys import timewall_survey_catalog_service
 from app.schemas.theoremreach_surveys import TheoremReachSurveysRead
+from app.schemas.timewall_surveys import TimeWallSurveysRead
 
 router = APIRouter(prefix="/offers", tags=["offers"])
 
@@ -174,6 +176,26 @@ async def theoremreach_surveys(
         user,
         _offerwall_user_ip(request) or "",
         _offerwall_user_country(request, user),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return surveys
+
+
+@router.get(
+    "/providers/timewall/surveys",
+    response_model=TimeWallSurveysRead,
+)
+async def timewall_surveys(
+    request: Request,
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> TimeWallSurveysRead:
+    surveys = await timewall_survey_catalog_service.list_surveys(
+        db=db,
+        user=user,
+        user_ip=_offerwall_user_ip(request) or "",
+        user_agent=request.headers.get("user-agent", ""),
     )
     response.headers["Cache-Control"] = "no-store"
     return surveys

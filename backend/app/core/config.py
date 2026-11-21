@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     theoremreach_currency_name_plural: str = "Credits"
     theoremreach_exchange_rate: Decimal = Field(default=Decimal("10"), ge=10)
     theoremreach_decimals_to_display: int = Field(default=2, ge=0, le=8)
+    timewall_enabled: bool = False
+    timewall_api_key: str | None = None
     bitcotasks_enabled: bool = False
     bitcotasks_postback_enabled: bool = False
     bitcotasks_api_key: str | None = None
