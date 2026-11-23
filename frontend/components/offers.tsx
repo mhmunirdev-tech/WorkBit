@@ -129,10 +129,18 @@ function OffersCatalog() {
         <p>More offers are coming soon. We are adding new offer partners and advertisers.</p>
       </section>
       <nav className="offers-tabs" aria-label="Offer sections">
-        <a className="is-active" href="#earn-offers">Earn with offers</a>
+        <a className="is-active" href="#partner-shopping">Admitad partner deals</a>
+        <a href="#earn-offers">Earn with offers</a>
         <a href="#sponsored-ads">Sponsored ads</a>
-        <a href="#partner-shopping">Shop partner stores</a>
       </nav>
+      <section className="offers-category-section" id="partner-shopping" aria-labelledby="partner-shopping-title">
+        <header className="offers-category-heading">
+          <p className="eyebrow">PARTNER SHOPPING</p>
+          <h2 id="partner-shopping-title">Stores & deals</h2>
+          <p className="muted">Browse external partner stores. These purchases are not WorkBit earning tasks.</p>
+        </header>
+        <AdmitadCatalog />
+      </section>
       <section className="offers-category-section" id="earn-offers" aria-labelledby="earn-offers-title">
         <header className="offers-category-heading">
           <p className="eyebrow">EARN REWARDS</p>
@@ -167,14 +175,6 @@ function OffersCatalog() {
           <p className="muted">These ads support WorkBit and do not earn wallet rewards from impressions or clicks.</p>
         </header>
         <AdsPlacements />
-      </section>
-      <section className="offers-category-section" id="partner-shopping" aria-labelledby="partner-shopping-title">
-        <header className="offers-category-heading">
-          <p className="eyebrow">PARTNER SHOPPING</p>
-          <h2 id="partner-shopping-title">Stores & deals</h2>
-          <p className="muted">Browse external partner stores. These purchases are not WorkBit earning tasks.</p>
-        </header>
-        <AdmitadCatalog />
       </section>
       {isDevelopment && (
         <>
