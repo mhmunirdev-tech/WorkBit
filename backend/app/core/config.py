@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     offerwall_gg_public_key: str | None = None
     offerwall_gg_secret_key: str | None = None
     offerwall_gg_currency_name: str = "USD"
+    admitad_enabled: bool = False
+    admitad_client_id: str | None = None
+    admitad_client_secret: str | None = None
+    admitad_website_id: str | None = None
     offerwall_me_enabled: bool = False
     offerwall_me_postback_enabled: bool = False
     offerwall_me_public_api_key: str | None = None

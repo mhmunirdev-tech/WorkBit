@@ -9620,23 +9620,111 @@ body {
   border-bottom: 1px solid #e7edf4;
 }
 
-.offers-tabs button {
+.offers-tabs a {
+  display: inline-flex;
+  align-items: center;
   height: 38px;
   padding: 0 14px;
   border: 1px solid #dfe7f1;
   border-radius: 999px;
   background: #fff;
   color: #5d6b7d;
-  cursor: pointer;
+  text-decoration: none;
   font: inherit;
   font-size: 12px;
   font-weight: 750;
 }
 
-.offers-tabs button.is-active {
+.offers-tabs a:hover,
+.offers-tabs a:focus-visible {
+  border-color: #b6c7ed;
+  color: #3457c6;
+}
+
+.offers-tabs a.is-active {
   border-color: #d2daf8;
   background: #edf1ff;
   color: #3457c6;
+}
+
+.offers-category-section {
+  display: grid;
+  gap: 18px;
+  margin: 0 0 30px;
+  scroll-margin-top: 24px;
+}
+
+.offers-category-heading {
+  display: grid;
+  gap: 5px;
+}
+
+.offers-category-heading .eyebrow,
+.offers-category-heading h2,
+.offers-category-heading p {
+  margin: 0;
+}
+
+.offers-category-heading h2 {
+  color: #182b49;
+  font-size: 22px;
+  letter-spacing: -0.035em;
+}
+
+.offers-category-heading > p:last-child {
+  max-width: 720px;
+  font-size: 12px;
+}
+
+.offers-provider-groups {
+  display: grid;
+  gap: 26px;
+}
+
+.offers-provider-group {
+  display: grid;
+  gap: 12px;
+}
+
+.offers-provider-group > h3 {
+  margin: 0;
+  color: #203452;
+  font-size: 15px;
+}
+
+.admitad-search {
+  max-width: 480px;
+}
+
+.admitad-art {
+  background: linear-gradient(135deg, #f3f5ff, #eaf5f3);
+}
+
+.admitad-action-list {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  color: #53647a;
+  font-size: 11px;
+  list-style: none;
+}
+
+.admitad-action-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admitad-action-list strong {
+  color: #203452;
+}
+
+.admitad-commission-note {
+  max-width: 190px;
+  color: #718097;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .offers-search-control > span:first-child {

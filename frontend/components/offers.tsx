@@ -11,6 +11,8 @@ import { OfferwallAdCatalog } from "./ads/providers/offerwall-ad/catalog";
 import { OfferwallMeWall } from "./ads/providers/offerwall-me/wall";
 import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
 import { MoonetixCatalog } from "./ads/providers/moonetix/catalog";
+import { AdmitadCatalog } from "./ads/providers/admitad/catalog";
+import { AdsPlacements } from "./ads/ads-placements";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
@@ -126,20 +128,54 @@ function OffersCatalog() {
         <span aria-hidden="true"><Sparkles size={15} /></span>
         <p>More offers are coming soon. We are adding new offer partners and advertisers.</p>
       </section>
-      <MoonetixCatalog />
-      <div className="offers-tabs" role="tablist" aria-label="Offer type">
-        <button className="is-active" type="button" role="tab" aria-selected="true">Incentive offers</button>
-        <button type="button" role="tab" aria-selected="false" onClick={() => document.querySelector(".offers-provider-stack")?.scrollIntoView({ behavior: "smooth" })}>Non-incentive offers</button>
-      </div>
-      <div className="offers-provider-stack" aria-label="Partner offer sections">
-        <TheoremReachSurveyCatalog />
-        <CPXResearchOfferWall />
-        <BitcoTasksOfferWall />
-        <OfferwallMeWall />
-        <BitLabsOfferWall />
-        <OfferwallGGCatalog />
-        <OfferwallAdCatalog />
-      </div>
+      <nav className="offers-tabs" aria-label="Offer sections">
+        <a className="is-active" href="#earn-offers">Earn with offers</a>
+        <a href="#sponsored-ads">Sponsored ads</a>
+        <a href="#partner-shopping">Shop partner stores</a>
+      </nav>
+      <section className="offers-category-section" id="earn-offers" aria-labelledby="earn-offers-title">
+        <header className="offers-category-heading">
+          <p className="eyebrow">EARN REWARDS</p>
+          <h2 id="earn-offers-title">Surveys, games & tasks</h2>
+          <p className="muted">Complete eligible partner activities. WorkBit rewards require provider confirmation.</p>
+        </header>
+        <div className="offers-provider-groups">
+          <section className="offers-provider-group" aria-labelledby="survey-offers-title">
+            <h3 id="survey-offers-title">Surveys</h3>
+            <div className="offers-provider-stack">
+              <TheoremReachSurveyCatalog />
+              <CPXResearchOfferWall />
+              <BitLabsOfferWall />
+            </div>
+          </section>
+          <section className="offers-provider-group" aria-labelledby="task-offers-title">
+            <h3 id="task-offers-title">Games, apps & partner tasks</h3>
+            <div className="offers-provider-stack">
+              <MoonetixCatalog />
+              <BitcoTasksOfferWall />
+              <OfferwallMeWall />
+              <OfferwallGGCatalog />
+              <OfferwallAdCatalog />
+            </div>
+          </section>
+        </div>
+      </section>
+      <section className="offers-category-section" id="sponsored-ads" aria-labelledby="sponsored-ads-title">
+        <header className="offers-category-heading">
+          <p className="eyebrow">AD PARTNERS</p>
+          <h2 id="sponsored-ads-title">Sponsored ads</h2>
+          <p className="muted">These ads support WorkBit and do not earn wallet rewards from impressions or clicks.</p>
+        </header>
+        <AdsPlacements />
+      </section>
+      <section className="offers-category-section" id="partner-shopping" aria-labelledby="partner-shopping-title">
+        <header className="offers-category-heading">
+          <p className="eyebrow">PARTNER SHOPPING</p>
+          <h2 id="partner-shopping-title">Stores & deals</h2>
+          <p className="muted">Browse external partner stores. These purchases are not WorkBit earning tasks.</p>
+        </header>
+        <AdmitadCatalog />
+      </section>
       {isDevelopment && (
         <>
           <div className="offer-catalog-toolbar">

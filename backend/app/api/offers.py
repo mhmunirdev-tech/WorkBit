@@ -42,7 +42,9 @@ from app.integrations.offer_providers.theoremreach import (
     TheoremReachConfigurationError,
     theoremreach_adapter,
 )
+from app.services.admitad_catalog import admitad_catalog_service
 from app.models import Offer, RewardDecision, User, Wallet
+from app.schemas.admitad import AdmitadCampaignsRead
 from app.schemas.offerwall_gg import OfferwallGGOffersRead
 from app.schemas.offerwall_me import OfferwallMeOffersRead
 from app.schemas.moonetix import MoonetixOffersRead
@@ -79,6 +81,38 @@ def _offerwall_user_country(request: Request, user: User) -> str:
     if len(country) == 2 and country.isalpha() and country != "XX":
         return country
     return user.country.strip().upper()
+
+
+@router.get("/providers/admitad/catalog", response_model=AdmitadCampaignsRead)
+async def admitad_catalog(
+    request: Request,
+    response: Response,
+    user: User = Depends(current_user),
+) -> AdmitadCampaignsRead:
+    if not settings.admitad_enabled:
+        raise HTTPException(404, "Admitad is not enabled.")
+    result = await admitad_catalog_service.list_campaigns(
+        _offerwall_user_country(request, user)
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
+@router.get("/providers/admitad/campaigns/{campaign_id}/link")
+async def admitad_campaign_link(
+    request: Request,
+    campaign_id: int,
+    response: Response,
+    user: User = Depends(current_user),
+) -> dict[str, str]:
+    if not settings.admitad_enabled:
+        raise HTTPException(404, "Admitad is not enabled.")
+    link_url = await admitad_catalog_service.campaign_link(
+        campaign_id,
+        _offerwall_user_country(request, user),
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return {"link_url": link_url}
 
 
 @router.get("/providers/bitcotasks/sdk-config")

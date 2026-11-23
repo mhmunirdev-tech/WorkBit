@@ -60,3 +60,26 @@ NEXT_PUBLIC_OFFERWALL_ME_BANNER_PLACEMENT_ID=2lDAUVzFUGM2VZcA9hcRggp5XvKKQe
 The placement ID is public and is taken from the generated banner code. WorkBit loads the `728x90` tag at desktop widths and the `300x250` tag on smaller screens, directly in the `/offers` page rather than inside a nested iframe. The `468x60` tag is not used by this responsive placement. The ad is display-only: impressions and clicks do not credit WorkBit rewards. Offerwall.me controls campaign eligibility and fill, so the slot can remain empty.
 
 For ProfitOn domain verification, copy the verification value from the ProfitOn publisher dashboard into `NEXT_PUBLIC_PROFITON_DOMAIN_VERIFICATION` in the frontend deployment environment and redeploy. The value is emitted as a verification meta tag in the document head only when configured. This setting verifies domain ownership; it does not load ads. ProfitOn Native Banner placement remains separate and disabled until the site is approved and its generated placement tag has been reviewed and configured. Do not award WorkBit points for ad impressions or clicks.
+
+## Admitad partner stores
+
+The `/offers` page keeps Admitad in a separate **Shop partner stores** section. This is an affiliate-store directory, not an offerwall: purchases do not earn WorkBit rewards or cashback. The integration does not process Admitad commissions as user conversions.
+
+Before enabling it:
+
+1. Register and verify WorkBit as a publisher ad space in Admitad. Obtain the application `client_id` and `client_secret`, and request API access to `advcampaigns_for_website` and `deeplink_generator`.
+2. Set `ADMITAD_WEBSITE_ID` to the approved WorkBit ad-space ID. Apply to each affiliate program in Admitad and wait for approval. WorkBit displays only active programs connected to that ad space, available for the visitor's country, and marked as allowing deeplinks.
+3. Configure the backend environment and restart/redeploy the backend:
+
+   ```env
+   ADMITAD_ENABLED=true
+   ADMITAD_CLIENT_ID=
+   ADMITAD_CLIENT_SECRET=
+   ADMITAD_WEBSITE_ID=
+   ```
+
+The backend obtains OAuth bearer tokens using the client-credentials flow and keeps credentials server-side. Never place the client secret in a `NEXT_PUBLIC_*` variable. A partner link is generated on demand through Admitad's Deeplink API and checked before it is sent to the browser. The `workbit-offers` SubID is non-personal and is used only to identify the page placement.
+
+Admitad program terms, allowed traffic types, country eligibility, and commission approval remain controlled by Admitad and each advertiser. Do not promise users cashback or rewards, or turn affiliate commissions into wallet credits, unless both Admitad and the advertiser explicitly approve that incentive model and a separately verified conversion flow is implemented.
+
+Official references: [Client authorization](https://developers.mitgo.com/hc/en-us/articles/34481345606546-Client-authorization), [API access settings](https://developers.mitgo.com/hc/en-us/articles/34481337268626-Help-on-access-settings), [Affiliate programs](https://developers.mitgo.com/hc/en-us/articles/34481349447058-Affiliate-programs), and [Deeplink generator](https://developers.mitgo.com/hc/en-us/articles/34481332881938-Deeplink-generator).
