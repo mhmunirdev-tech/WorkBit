@@ -147,7 +147,7 @@ function OffersCatalog() {
           <h2 id="earn-offers-title">Surveys, games & tasks</h2>
           <p className="muted">Complete eligible partner activities. WorkBit rewards require provider confirmation.</p>
         </header>
-        <div className="offers-provider-stack">
+        <div className="offers-provider-grid">
           <TheoremReachSurveyCatalog />
           <CPXResearchOfferWall />
           <BitLabsOfferWall />

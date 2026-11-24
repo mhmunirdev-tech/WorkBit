@@ -120,7 +120,7 @@ export function MoonetixCatalog() {
   if (hidden) return null;
 
   return (
-    <section className="offerwall-gg moonetix-catalog" aria-labelledby="moonetix-catalog-title">
+    <article className="offerwall-gg moonetix-catalog" aria-labelledby="moonetix-catalog-title">
       <div className="offerwall-gg-heading">
         <div>
           <p className="eyebrow">MOONETIX OFFERS</p>
@@ -296,6 +296,6 @@ export function MoonetixCatalog() {
       <p className="offerwall-gg-note">
         Rewards are estimates based on WorkBit&apos;s active reward policy. Moonetix confirms each completed step before WorkBit credits your wallet.
       </p>
-    </section>
+    </article>
   );
 }

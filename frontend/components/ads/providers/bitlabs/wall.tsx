@@ -37,7 +37,7 @@ export function BitLabsOfferWall() {
   if (hidden) return null;
 
   return (
-    <section className="bitlabs-wall" aria-labelledby="bitlabs-wall-title">
+    <article className="bitlabs-wall" aria-labelledby="bitlabs-wall-title">
       <div className="bitlabs-wall-heading">
         <div>
           <p className="eyebrow">BITLABS PARTNER OFFERS</p>
@@ -70,6 +70,6 @@ export function BitLabsOfferWall() {
       <p className="bitlabs-wall-note">
         Offer eligibility, completion status, and final rewards are determined by BitLabs. Please review each offer&apos;s requirements.
       </p>
-    </section>
+    </article>
   );
 }

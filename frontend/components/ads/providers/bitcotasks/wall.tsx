@@ -160,7 +160,7 @@ export function BitcoTasksOfferWall() {
   if (hidden) return null;
 
   return (
-    <section className="theoremreach-wall" aria-labelledby="bitcotasks-wall-title">
+    <article className="theoremreach-wall" aria-labelledby="bitcotasks-wall-title">
       <div className="theoremreach-wall-heading">
         <div>
           <p className="eyebrow">BITCOTASKS</p>
@@ -194,6 +194,6 @@ export function BitcoTasksOfferWall() {
         BitcoTasks credits are added to your WorkBit wallet only after its
         verified server callback is received.
       </p>
-    </section>
+    </article>
   );
 }

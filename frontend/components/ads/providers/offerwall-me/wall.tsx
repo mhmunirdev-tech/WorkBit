@@ -118,7 +118,7 @@ export function OfferwallMeWall() {
   if (hidden) return null;
 
   return (
-    <section className="offerwall-gg" aria-labelledby="offerwall-me-title">
+    <article className="offerwall-gg" aria-labelledby="offerwall-me-title">
       <div className="offerwall-gg-heading">
         <div>
           <p className="eyebrow">OFFERWALL.ME OFFERS</p>
@@ -293,6 +293,6 @@ export function OfferwallMeWall() {
       <p className="offerwall-gg-note">
         Rewards shown are estimated from WorkBit&apos;s active reward policy. Provider verification is required before rewards are credited.
       </p>
-    </section>
+    </article>
   );
 }

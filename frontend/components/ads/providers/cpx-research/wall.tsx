@@ -39,7 +39,7 @@ export function CPXResearchOfferWall() {
   if (hidden) return null;
 
   return (
-    <section
+    <article
       className={`theoremreach-wall${isOpen ? " is-expanded" : ""}`}
       aria-labelledby="cpx-research-wall-title"
     >
@@ -89,6 +89,6 @@ export function CPXResearchOfferWall() {
       <p className="theoremreach-wall-note">
         CPX may screen you out if your profile does not match a survey&apos;s target group. Try another survey and keep your answers accurate; WorkBit cannot override CPX eligibility. Rewards require a verified provider callback.
       </p>
-    </section>
+    </article>
   );
 }

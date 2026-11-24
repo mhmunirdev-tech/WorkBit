@@ -42,7 +42,7 @@ export function OfferwallAdCatalog() {
   if (hidden) return null;
 
   return (
-    <section
+    <article
       className="offerwall-gg offerwall-ad-catalog"
       aria-labelledby="offerwall-ad-title"
     >
@@ -79,6 +79,6 @@ export function OfferwallAdCatalog() {
       <p className="offerwall-ad-note">
         Offerwall Ad determines offer eligibility and confirmation. WorkBit applies its reward policy when a verified callback arrives.
       </p>
-    </section>
+    </article>
   );
 }

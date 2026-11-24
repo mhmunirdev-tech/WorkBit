@@ -100,7 +100,7 @@ export function TheoremReachSurveyCatalog() {
 
   if (wallUrl) {
     return (
-      <section className="theoremreach-wall" aria-labelledby="theoremreach-surveys-title">
+      <article className="theoremreach-wall" aria-labelledby="theoremreach-surveys-title">
         <div className="theoremreach-wall-heading">
           <div>
             <p className="eyebrow">THEOREMREACH SURVEYS</p>
@@ -120,12 +120,12 @@ export function TheoremReachSurveyCatalog() {
         <p className="theoremreach-wall-note">
           Only verified server callbacks credit survey rewards to your WorkBit wallet.
         </p>
-      </section>
+      </article>
     );
   }
 
   return (
-    <section className="offerwall-gg" aria-labelledby="theoremreach-surveys-title">
+    <article className="offerwall-gg" aria-labelledby="theoremreach-surveys-title">
       <div className="offerwall-gg-heading">
         <div>
           <p className="eyebrow">THEOREMREACH SURVEYS</p>
@@ -234,6 +234,6 @@ export function TheoremReachSurveyCatalog() {
       <p className="offerwall-gg-note">
         Rewards are estimates. Survey eligibility and completion are verified by TheoremReach before WorkBit credits your wallet.
       </p>
-    </section>
+    </article>
   );
 }

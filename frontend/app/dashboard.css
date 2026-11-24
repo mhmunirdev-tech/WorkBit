@@ -4826,7 +4826,7 @@ body {
 
 .offerwall-gg,
 .theoremreach-wall,
-.offers-provider-stack > .bitlabs-wall {
+.offers-provider-grid > .bitlabs-wall {
   min-width: 0;
   margin: 0;
   padding: 22px;
@@ -5675,7 +5675,7 @@ body {
 @media (max-width: 620px) {
   .theoremreach-wall,
   .offerwall-gg,
-  .offers-provider-stack > .bitlabs-wall {
+  .offers-provider-grid > .bitlabs-wall {
     padding: 15px;
   }
 
@@ -9509,7 +9509,7 @@ body {
   line-height: 1.45;
 }
 
-.offers-provider-stack {
+.offers-provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   align-items: stretch;
@@ -9524,7 +9524,7 @@ body {
   padding: 2px 2px 0;
 }
 
-.offers-provider-stack > section {
+.offers-provider-grid > article {
   width: 100%;
   min-width: 0;
   margin-bottom: 0;

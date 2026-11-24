@@ -120,7 +120,7 @@ export function OfferwallGGCatalog() {
   }, [category, device, minimumReward, offers, search]);
 
   return (
-    <section className="offerwall-gg" aria-labelledby="offerwall-gg-title">
+    <article className="offerwall-gg" aria-labelledby="offerwall-gg-title">
       <div className="offerwall-gg-heading">
         <div>
           <p className="eyebrow">PARTNER OFFERS</p>
@@ -282,6 +282,6 @@ export function OfferwallGGCatalog() {
           </a>
         )}
       </p>
-    </section>
+    </article>
   );
 }
