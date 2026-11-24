@@ -30,10 +30,6 @@ from app.integrations.offer_providers.bitcotasks import (
     BitcoTasksConfigurationError,
     bitcotasks_adapter,
 )
-from app.integrations.offer_providers.bitlabs import (
-    BitLabsConfigurationError,
-    bitlabs_adapter,
-)
 from app.integrations.offer_providers.cpx_research import (
     CPXResearchConfigurationError,
     cpx_research_adapter,
@@ -307,20 +303,6 @@ async def offerwall_gg_catalog(
     )
     response.headers["Cache-Control"] = "no-store"
     return result
-
-
-@router.get("/providers/bitlabs/wall-url")
-def bitlabs_wall_url(
-    user: User = Depends(current_user),
-    db: Session = Depends(get_db),
-) -> JSONResponse:
-    if not settings.bitlabs_enabled:
-        raise HTTPException(404, "BitLabs is not enabled.")
-    try:
-        wall_url = bitlabs_adapter.build_wall_url(user.id)
-    except BitLabsConfigurationError as error:
-        raise HTTPException(503, str(error)) from error
-    return JSONResponse({"wall_url": wall_url}, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/providers/offerwall-gg/wall-url")

@@ -116,7 +116,7 @@ export function BitcoTasksOfferWall() {
         apiKey: config.api_key,
         subId: config.sub_id,
         sig: config.sig,
-        title: "Earn with BitcoTasks",
+        title: "Earn with offers",
         theme: "light",
         accent: "#2563eb",
         categories: [
@@ -163,11 +163,10 @@ export function BitcoTasksOfferWall() {
     <article className="theoremreach-wall" aria-labelledby="bitcotasks-wall-title">
       <div className="theoremreach-wall-heading">
         <div>
-          <p className="eyebrow">BITCOTASKS</p>
+          <p className="eyebrow">TASKS & OFFERS</p>
           <h2 id="bitcotasks-wall-title">Earn from offers and tasks</h2>
           <p className="muted">
-            Browse available activities. Availability and rewards are determined
-            by BitcoTasks.
+            Browse available activities. Availability and rewards depend on offer terms.
           </p>
         </div>
       </div>
@@ -191,8 +190,7 @@ export function BitcoTasksOfferWall() {
         </>
       )}
       <p className="theoremreach-wall-note">
-        BitcoTasks credits are added to your WorkBit wallet only after its
-        verified server callback is received.
+        Rewards are credited to your WorkBit wallet only after a verified server callback.
       </p>
     </article>
   );

@@ -13,7 +13,6 @@ OFFER_PROVIDERS = (
     ("CPAlead", "cpalead", 30),
     ("Offerwall.GG", "offerwall-gg", 40),
     ("Monlix", "monlix", 50),
-    ("BitLabs", "bitlabs", 60),
     ("AdGate Media", "adgate", 70),
     ("Torox", "torox", 80),
     ("AdswedMedia", "adswedmedia", 90),

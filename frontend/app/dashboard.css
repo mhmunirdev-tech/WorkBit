@@ -4825,8 +4825,7 @@ body {
 }
 
 .offerwall-gg,
-.theoremreach-wall,
-.offers-provider-grid > .bitlabs-wall {
+.theoremreach-wall {
   min-width: 0;
   margin: 0;
   padding: 22px;
@@ -4846,31 +4845,13 @@ body {
   letter-spacing: -.4px;
 }
 
-.bitlabs-wall-heading h2 {
-  margin: 0 0 8px;
-  color: #1e2f49;
-  font-size: 21px;
-  letter-spacing: -.4px;
-}
-
 .offerwall-gg-heading p:last-child,
-.theoremreach-wall-heading p:last-child,
-.bitlabs-wall-heading p:last-child {
+.theoremreach-wall-heading p:last-child {
   margin: 0;
 }
 
-.theoremreach-wall-frame {
-  display: block;
-  width: 100%;
-  min-height: clamp(560px, 75vh, 780px);
-  margin-top: 20px;
-  border: 0;
-  border-radius: 12px;
-  background: #f7f9fc;
-}
-
 .offerwall-ad-frame,
-.bitlabs-wall-frame {
+.theoremreach-wall-frame {
   display: block;
   width: 100%;
   min-height: clamp(560px, 75vh, 780px);
@@ -4891,21 +4872,13 @@ body {
   margin-top: 20px;
 }
 
-.theoremreach-wall-loading,
-.bitlabs-wall-loading {
+.theoremreach-wall-loading {
   display: grid;
   gap: 12px;
   margin-top: 20px;
 }
 
 .theoremreach-wall-note {
-  margin: 14px 0 0;
-  color: #718096;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.bitlabs-wall-note {
   margin: 14px 0 0;
   color: #718096;
   font-size: 12px;
@@ -5674,8 +5647,7 @@ body {
 
 @media (max-width: 620px) {
   .theoremreach-wall,
-  .offerwall-gg,
-  .offers-provider-grid > .bitlabs-wall {
+  .offerwall-gg {
     padding: 15px;
   }
 
@@ -9511,7 +9483,7 @@ body {
 
 .offers-provider-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: stretch;
   gap: 18px;
 }
@@ -9528,6 +9500,30 @@ body {
   width: 100%;
   min-width: 0;
   margin-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+  .offers-provider-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .offers-provider-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .offers-provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .offers-provider-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .offers-page-heading {

@@ -121,8 +121,8 @@ export function OfferwallMeWall() {
     <article className="offerwall-gg" aria-labelledby="offerwall-me-title">
       <div className="offerwall-gg-heading">
         <div>
-          <p className="eyebrow">OFFERWALL.ME OFFERS</p>
-          <h2 id="offerwall-me-title">More ways to earn</h2>
+          <p className="eyebrow">MORE WAYS TO EARN</p>
+          <h2 id="offerwall-me-title">Explore available offers</h2>
           <p className="muted">
             Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer&apos;s terms.
           </p>

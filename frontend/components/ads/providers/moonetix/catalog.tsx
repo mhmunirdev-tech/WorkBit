@@ -123,7 +123,7 @@ export function MoonetixCatalog() {
     <article className="offerwall-gg moonetix-catalog" aria-labelledby="moonetix-catalog-title">
       <div className="offerwall-gg-heading">
         <div>
-          <p className="eyebrow">MOONETIX OFFERS</p>
+          <p className="eyebrow">GAMES & APPS</p>
           <h2 id="moonetix-catalog-title">Complete offers and earn WBC</h2>
           <p className="muted">
             Browse eligible offers. New users only; VPNs and emulators are not allowed.

@@ -62,10 +62,6 @@ class Settings(BaseSettings):
     cpx_research_postback_enabled: bool = False
     cpx_research_app_id: str = "37861"
     cpx_research_secure_hash: str | None = None
-    bitlabs_enabled: bool = False
-    bitlabs_api_key: str | None = None
-    bitlabs_postback_secret: str | None = None
-    bitlabs_callback_url: str | None = None
     theoremreach_enabled: bool = False
     theoremreach_surveys_api_enabled: bool = False
     theoremreach_api_key: str | None = None

@@ -45,10 +45,10 @@ export function CPXResearchOfferWall() {
     >
       <div className="theoremreach-wall-heading">
         <div>
-          <p className="eyebrow">CPX RESEARCH SURVEYS</p>
-          <h2 id="cpx-research-wall-title">Complete surveys</h2>
+          <p className="eyebrow">SURVEYS</p>
+          <h2 id="cpx-research-wall-title">Find surveys</h2>
           <p className="muted">
-            Survey availability and completion are determined by CPX Research.
+            Survey availability and completion depend on eligibility and survey terms.
           </p>
         </div>
       </div>

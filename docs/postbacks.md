@@ -27,23 +27,6 @@ Security limitation: CPX's documented callback hash covers `trans_id`, not the o
 
 The screenshot's Security Hash was visible in the conversation. Rotate it in CPX General Settings, save the new hash, and update `CPX_RESEARCH_SECURE_HASH` in the backend environment before enabling this callback. Do not share the new hash. Keep the CPX Test Mode inactive for live users; test callbacks only with a CPX test user/IP and confirm no real user is credited.
 
-## BitLabs
-
-The BitLabs integration uses the provider-hosted web offerwall in an iframe and the general Reward & Reconciliation callback. The authenticated `GET /api/v1/offers/providers/bitlabs/wall-url` endpoint returns the documented `https://web.bitlabs.ai/?uid=<workbit-user-id>&token=<app-api-token>` URL; package purchase is not required. The BitLabs App/API Token is necessarily visible in that iframe URL; do not use it as a secret. The URL is returned with `Cache-Control: no-store`.
-
-Configure these backend environment variables:
-
-- `BITLABS_ENABLED=true`
-- `BITLABS_API_KEY`: BitLabs Integration page's **App/API Token**.
-- `BITLABS_POSTBACK_SECRET`: BitLabs Integration page's **Secret Key**. BitLabs documents this key for callback hash verification.
-- `BITLABS_CALLBACK_URL`: the exact public HTTPS endpoint URL, for example `https://api.workbitbd.com/api/v1/postbacks/bitlabs` (no query string or trailing slash).
-
-Do not put the App/API Token, Secret Key, or Server-to-Server Key in frontend environment variables. This web iframe/callback flow uses the App/API Token and the Secret Key; it does not use the Server-to-Server Key.
-
-In the BitLabs dashboard, configure the **Reward & Reconciliation Callback** to call the URL in `BITLABS_CALLBACK_URL`. Include the callback parameters `uid` (`USER:UID`), `tx` (`TX`), `usd` (`VALUE:USD`), `ref` (`REF`), and `activity_type` (`ACTIVITY:TYPE`). Offer metadata may also be included as `offer_id` (`OFFER:ID`), `task_id` (`OFFER:TASK:ID`), and `offer_state` (`OFFER:TASK:STATE`). BitLabs appends `hash` automatically. The callback endpoint verifies the HMAC-SHA1 over the exact callback URL and raw query string using the BitLabs **Secret Key**, rejects duplicate parameters and invalid signatures, and acknowledges dashboard `debug=true` tests without crediting a wallet.
-
-Only completed callbacks with a positive `VALUE:USD` are processed. Screen-outs, start bonuses, pending/reconciled offer states, and zero-value callbacks do not create credits. `REF` links reconciliation callbacks to the original transaction; an eligible existing reward is reversed through WorkBit's reward ledger. Repeated transaction callbacks are idempotent. If a non-zero reconciliation amount differs from the original provider payout, WorkBit fails closed with a retry response rather than guessing how to apply a partial adjustment; review such cases before manually resending the callback. WorkBit treats BitLabs `VALUE:USD` as publisher payout and applies the configured WorkBit reward policy; check the BitLabs app-currency configuration so the amount shown in their wall is clear and consistent with the WorkBit credit. Test the endpoint with BitLabs' **Callback Tester** after saving the callback settings. The BitLabs offerwall is hidden when `BITLABS_ENABLED=false`.
-
 ## TheoremReach
 
 TheoremReach appears in Explore offers as a provider-hosted web survey iframe. The authenticated `GET /api/v1/offers/providers/theoremreach/wall-url` endpoint does not require a WorkBit package purchase. It builds the direct entry URL server-side with the WorkBit user UUID, a unique entry transaction ID, the configured partner/placement ID, and the app currency settings. The URL is signed with the TheoremReach app secret using HMAC-SHA1 over the complete unsigned URL, then URL-safe Base64 encoding of the raw digest. The API key is required in the iframe URL by TheoremReach; the secret key is never sent to the browser. The URL response is marked `Cache-Control: no-store`.

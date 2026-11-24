@@ -48,8 +48,8 @@ export function OfferwallAdCatalog() {
     >
       <div className="offerwall-gg-heading">
         <div>
-          <p className="eyebrow">OFFERWALL AD</p>
-          <h2 id="offerwall-ad-title">Complete offers and earn WBC</h2>
+          <p className="eyebrow">MORE OFFERS</p>
+          <h2 id="offerwall-ad-title">Explore available offers</h2>
           <p className="muted">
             Browse eligible partner offers. WorkBit credits rewards after verified completion.
           </p>

@@ -13,7 +13,6 @@ OFFER_PROVIDER_SLUGS = (
     "cpalead",
     "offerwall-gg",
     "monlix",
-    "bitlabs",
     "adgate",
     "torox",
     "adswedmedia",

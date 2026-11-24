@@ -202,10 +202,10 @@ def test_seeded_offer_networks_are_disabled_and_secrets_are_env_references(datab
     try:
         networks = db.scalars(select(OfferNetwork)).all()
         provider_networks = [network for network in networks if network.provider != "MOCK"]
-        assert len(provider_networks) == 10
+        assert len(provider_networks) == 9
         assert {network.slug for network in provider_networks} == {
             "lootably", "adgem", "cpalead", "offerwall-gg", "monlix",
-            "bitlabs", "adgate", "torox", "adswedmedia", "revu",
+            "adgate", "torox", "adswedmedia", "revu",
         }
         assert all(not network.enabled and network.status == "NOT_CONFIGURED" for network in provider_networks)
         assert all(network.api_key_env and network.secret_key_env for network in provider_networks)

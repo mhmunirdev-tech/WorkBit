@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Grid2X2, Search, Sparkles } from "lucide-react";
-import { BitLabsOfferWall } from "./ads/providers/bitlabs/wall";
 import { BitcoTasksOfferWall } from "./ads/providers/bitcotasks/wall";
 import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
 import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
@@ -150,7 +149,6 @@ function OffersCatalog() {
         <div className="offers-provider-grid">
           <TheoremReachSurveyCatalog />
           <CPXResearchOfferWall />
-          <BitLabsOfferWall />
           <MoonetixCatalog />
           <BitcoTasksOfferWall />
           <OfferwallMeWall />

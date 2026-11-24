@@ -103,10 +103,10 @@ export function TheoremReachSurveyCatalog() {
       <article className="theoremreach-wall" aria-labelledby="theoremreach-surveys-title">
         <div className="theoremreach-wall-heading">
           <div>
-            <p className="eyebrow">THEOREMREACH SURVEYS</p>
+            <p className="eyebrow">SURVEYS</p>
             <h2 id="theoremreach-surveys-title">Share your opinion and earn</h2>
             <p className="muted">
-              Survey availability and completion rewards are determined by TheoremReach.
+              Survey availability and completion rewards depend on eligibility and survey terms.
             </p>
           </div>
         </div>
@@ -128,7 +128,7 @@ export function TheoremReachSurveyCatalog() {
     <article className="offerwall-gg" aria-labelledby="theoremreach-surveys-title">
       <div className="offerwall-gg-heading">
         <div>
-          <p className="eyebrow">THEOREMREACH SURVEYS</p>
+          <p className="eyebrow">SURVEYS</p>
           <h2 id="theoremreach-surveys-title">Share your opinion and earn</h2>
           <p className="muted">
             Browse available surveys without leaving WorkBit. Eligibility and final rewards depend on your profile.

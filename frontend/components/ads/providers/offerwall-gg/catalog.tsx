@@ -124,7 +124,7 @@ export function OfferwallGGCatalog() {
       <div className="offerwall-gg-heading">
         <div>
           <p className="eyebrow">PARTNER OFFERS</p>
-          <h2 id="offerwall-gg-title">More ways to earn</h2>
+          <h2 id="offerwall-gg-title">Explore available offers</h2>
           <p className="muted">
             Browse available offers without leaving WorkBit. Eligibility and final rewards depend on each offer&apos;s terms.
           </p>
