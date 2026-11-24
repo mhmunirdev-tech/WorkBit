@@ -147,25 +147,15 @@ function OffersCatalog() {
           <h2 id="earn-offers-title">Surveys, games & tasks</h2>
           <p className="muted">Complete eligible partner activities. WorkBit rewards require provider confirmation.</p>
         </header>
-        <div className="offers-provider-groups">
-          <section className="offers-provider-group" aria-labelledby="survey-offers-title">
-            <h3 id="survey-offers-title">Surveys</h3>
-            <div className="offers-provider-stack">
-              <TheoremReachSurveyCatalog />
-              <CPXResearchOfferWall />
-              <BitLabsOfferWall />
-            </div>
-          </section>
-          <section className="offers-provider-group" aria-labelledby="task-offers-title">
-            <h3 id="task-offers-title">Games, apps & partner tasks</h3>
-            <div className="offers-provider-stack">
-              <MoonetixCatalog />
-              <BitcoTasksOfferWall />
-              <OfferwallMeWall />
-              <OfferwallGGCatalog />
-              <OfferwallAdCatalog />
-            </div>
-          </section>
+        <div className="offers-provider-stack">
+          <TheoremReachSurveyCatalog />
+          <CPXResearchOfferWall />
+          <BitLabsOfferWall />
+          <MoonetixCatalog />
+          <BitcoTasksOfferWall />
+          <OfferwallMeWall />
+          <OfferwallGGCatalog />
+          <OfferwallAdCatalog />
         </div>
       </section>
       <section className="offers-category-section" id="sponsored-ads" aria-labelledby="sponsored-ads-title">

@@ -4824,18 +4824,9 @@ body {
   }
 }
 
-.offerwall-gg {
-  margin: 0 0 28px;
-  padding: 22px;
-  border: 1px solid #e1e8f2;
-  border-radius: 20px;
-  background:
-    radial-gradient(ellipse at 2% 0%, #eff7ff 0, transparent 34%),
-    #fff;
-  box-shadow: 0 12px 30px #2035520a;
-}
-
-.theoremreach-wall {
+.offerwall-gg,
+.theoremreach-wall,
+.offers-provider-stack > .bitlabs-wall {
   min-width: 0;
   margin: 0;
   padding: 22px;
@@ -4847,6 +4838,7 @@ body {
   box-shadow: 0 12px 30px #2035520a;
 }
 
+.offerwall-gg-heading h2,
 .theoremreach-wall-heading h2 {
   margin: 0 0 8px;
   color: #1e2f49;
@@ -4854,24 +4846,34 @@ body {
   letter-spacing: -.4px;
 }
 
-.theoremreach-wall-heading p:last-child {
+.bitlabs-wall-heading h2 {
+  margin: 0 0 8px;
+  color: #1e2f49;
+  font-size: 21px;
+  letter-spacing: -.4px;
+}
+
+.offerwall-gg-heading p:last-child,
+.theoremreach-wall-heading p:last-child,
+.bitlabs-wall-heading p:last-child {
   margin: 0;
 }
 
 .theoremreach-wall-frame {
   display: block;
   width: 100%;
-  min-height: 780px;
+  min-height: clamp(560px, 75vh, 780px);
   margin-top: 20px;
   border: 0;
   border-radius: 12px;
   background: #f7f9fc;
 }
 
-.offerwall-ad-frame {
+.offerwall-ad-frame,
+.bitlabs-wall-frame {
   display: block;
   width: 100%;
-  min-height: 780px;
+  min-height: clamp(560px, 75vh, 780px);
   margin-top: 20px;
   border: 0;
   border-radius: 12px;
@@ -4885,17 +4887,25 @@ body {
 }
 
 .bitcotasks-wall-container {
-  min-height: 780px;
+  min-height: clamp(560px, 75vh, 780px);
   margin-top: 20px;
 }
 
-.theoremreach-wall-loading {
+.theoremreach-wall-loading,
+.bitlabs-wall-loading {
   display: grid;
   gap: 12px;
   margin-top: 20px;
 }
 
 .theoremreach-wall-note {
+  margin: 14px 0 0;
+  color: #718096;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.bitlabs-wall-note {
   margin: 14px 0 0;
   color: #718096;
   font-size: 12px;
@@ -4992,7 +5002,7 @@ body {
 
 .offerwall-gg-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   align-items: stretch;
   gap: 16px;
 }
@@ -5583,9 +5593,6 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .offerwall-gg-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 900px) {
@@ -5597,9 +5604,6 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .offerwall-gg-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 800px) {
@@ -5669,68 +5673,15 @@ body {
 }
 
 @media (max-width: 620px) {
-  .theoremreach-wall {
-    padding: 15px;
-  }
-
-  .bitlabs-wall {
-    margin: 0 0 28px;
-    padding: 22px;
-    border: 1px solid #e1e8f2;
-    border-radius: 20px;
-    background: #fff;
-    box-shadow: 0 12px 30px #2035520a;
-  }
-
-  .bitlabs-wall-heading h2 {
-    margin: 0 0 8px;
-    color: #1e2f49;
-    font-size: 21px;
-    letter-spacing: -.4px;
-  }
-
-  .bitlabs-wall-heading p:last-child {
-    margin: 0;
-  }
-
-  .bitlabs-wall-frame {
-    display: block;
-    width: 100%;
-    min-height: 780px;
-    margin-top: 20px;
-    border: 0;
-    border-radius: 12px;
-    background: #f7f9fc;
-  }
-
-  .bitlabs-wall-loading {
-    display: grid;
-    gap: 12px;
-    margin-top: 20px;
-  }
-
-  .bitlabs-wall-note {
-    margin: 14px 0 0;
-    color: #718096;
-    font-size: 12px;
-    line-height: 1.6;
-  }
-
-  .bitlabs-wall-action {
-    margin: 12px 0 0 10px;
-  }
-
-  .offerwall-gg {
+  .theoremreach-wall,
+  .offerwall-gg,
+  .offers-provider-stack > .bitlabs-wall {
     padding: 15px;
   }
 
   .offerwall-gg-heading {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .offerwall-gg-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .offerwall-gg-error {
@@ -9560,6 +9511,8 @@ body {
 
 .offers-provider-stack {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  align-items: stretch;
   gap: 18px;
 }
 
@@ -9572,6 +9525,8 @@ body {
 }
 
 .offers-provider-stack > section {
+  width: 100%;
+  min-width: 0;
   margin-bottom: 0;
 }
 
@@ -9674,22 +9629,6 @@ body {
 .offers-category-heading > p:last-child {
   max-width: 720px;
   font-size: 12px;
-}
-
-.offers-provider-groups {
-  display: grid;
-  gap: 26px;
-}
-
-.offers-provider-group {
-  display: grid;
-  gap: 12px;
-}
-
-.offers-provider-group > h3 {
-  margin: 0;
-  color: #203452;
-  font-size: 15px;
 }
 
 .admitad-search {
