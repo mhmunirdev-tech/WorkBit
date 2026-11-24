@@ -3,15 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Clock3, Gamepad2, Grid2X2, Search, Sparkles } from "lucide-react";
-import { BitcoTasksOfferWall } from "./ads/providers/bitcotasks/wall";
-import { CPXResearchOfferWall } from "./ads/providers/cpx-research/wall";
-import { OfferwallGGCatalog } from "./ads/providers/offerwall-gg/catalog";
-import { OfferwallAdCatalog } from "./ads/providers/offerwall-ad/catalog";
-import { OfferwallMeWall } from "./ads/providers/offerwall-me/wall";
-import { TheoremReachSurveyCatalog } from "./ads/providers/theoremreach/catalog";
-import { MoonetixCatalog } from "./ads/providers/moonetix/catalog";
 import { AdmitadCatalog } from "./ads/providers/admitad/catalog";
 import { AdsPlacements } from "./ads/ads-placements";
+import { MixedOfferCatalog } from "./ads/mixed-offer-catalog";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd } from "../lib/utils";
@@ -146,15 +140,7 @@ function OffersCatalog() {
           <h2 id="earn-offers-title">Surveys, games & tasks</h2>
           <p className="muted">Complete eligible partner activities. WorkBit rewards require provider confirmation.</p>
         </header>
-        <div className="offers-provider-grid">
-          <TheoremReachSurveyCatalog />
-          <CPXResearchOfferWall />
-          <MoonetixCatalog />
-          <BitcoTasksOfferWall />
-          <OfferwallMeWall />
-          <OfferwallGGCatalog />
-          <OfferwallAdCatalog />
-        </div>
+        <MixedOfferCatalog />
       </section>
       <section className="offers-category-section" id="sponsored-ads" aria-labelledby="sponsored-ads-title">
         <header className="offers-category-heading">
