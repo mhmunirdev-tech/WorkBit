@@ -9627,6 +9627,60 @@ body {
  letter-spacing: .3px;
 }
 
+.mixed-offer-wbp-note {
+ margin: -7px 2px 14px;
+ color: #78869c;
+ font-size: 10px;
+ line-height: 1.5;
+}
+
+.mixed-offer-wallet-alert {
+ margin-bottom: 12px;
+}
+
+.mixed-offer-balance-comparison {
+ display: grid;
+ width: 100%;
+ grid-template-columns: repeat(2, minmax(0, 1fr));
+ gap: 7px;
+ margin-top: 10px;
+}
+
+.mixed-offer-balance-comparison > div {
+ display: grid;
+ min-width: 0;
+ gap: 4px;
+ padding: 8px;
+ border: 1px solid #e8edf4;
+ border-radius: 9px;
+ background: #f7f9fc;
+}
+
+.mixed-offer-balance-comparison > div:last-child {
+ border-color: #dcefe5;
+ background: #f1fbf6;
+}
+
+.mixed-offer-balance-comparison small {
+ color: #7c899e;
+ font-size: 8px;
+ font-weight: 750;
+ line-height: 1.35;
+}
+
+.mixed-offer-balance-comparison strong {
+ overflow: hidden;
+ color: #31425e;
+ font-size: 10px;
+ font-variant-numeric: tabular-nums;
+ text-overflow: ellipsis;
+ white-space: nowrap;
+}
+
+.mixed-offer-balance-comparison > div:last-child strong {
+ color: #197450;
+}
+
 .mixed-offer-actions {
  display: flex;
  align-items: center;

@@ -69,6 +69,11 @@ type OfferwallGGResponse = {
   pages: number;
 };
 
+type WalletSnapshot = {
+  available_balance: string | number;
+  currency: string;
+};
+
 type WallTarget =
   | { kind: "iframe"; url: string }
   | { kind: "bitcotasks" };
@@ -109,6 +114,20 @@ const emptyGroups: OfferwallGroups = {
   hostedWalls: [],
 };
 
+const WBP_PER_USD = 1000;
+
+function estimateWbpFromUsd(usd: string | number) {
+  const amount = Number(usd);
+  return Number.isFinite(amount) ? amount * WBP_PER_USD : null;
+}
+
+function formatWbp(amount: number) {
+  return `${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)} WBP`;
+}
+
 async function loadSource<T>(path: string): Promise<Loaded<T>> {
   try {
     return { kind: "loaded", data: await api<T>(path) };
@@ -145,6 +164,8 @@ export function MixedOfferCatalog() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasLoadError, setHasLoadError] = useState(false);
+  const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
+  const [walletUnavailable, setWalletUnavailable] = useState(false);
   const [search, setSearch] = useState("");
   const [minimumReward, setMinimumReward] = useState("");
   const [activeWall, setActiveWall] = useState<MixedOffer | null>(null);
@@ -164,6 +185,7 @@ export function MixedOfferCatalog() {
       cpxWall,
       bitcoTasks,
       offerwallAd,
+      walletResult,
     ] = await Promise.all([
       loadSource<{ surveys: TheoremReachSurvey[] }>("/offers/providers/theoremreach/surveys"),
       loadSource<{ offers: MoonetixOffer[] }>("/offers/providers/moonetix/catalog"),
@@ -172,6 +194,7 @@ export function MixedOfferCatalog() {
       loadSource<{ wall_url: string }>("/offers/providers/cpx-research/wall-url"),
       loadSource<{ api_key: string; sub_id: string; sig?: string }>("/offers/providers/bitcotasks/sdk-config"),
       loadSource<{ wall_url: string }>("/offers/providers/offerwall-ad/wall-url"),
+      loadSource<WalletSnapshot>("/wallet"),
     ]);
 
     const nextGroups: OfferwallGroups = {
@@ -318,6 +341,11 @@ export function MixedOfferCatalog() {
     if (failedSources > 0) setHasLoadError(true);
     nextGroups.hostedWalls = hostedWalls;
     setGroups(nextGroups);
+    setWallet(walletResult.kind === "loaded" ? walletResult.data : null);
+    setWalletUnavailable(
+      walletResult.kind !== "loaded" ||
+      walletResult.data.currency.toUpperCase() !== "USD",
+    );
     setGgPage(offerwallGG.kind === "loaded" ? offerwallGG.data.page : 1);
     setGgPages(offerwallGG.kind === "loaded" ? offerwallGG.data.pages : 1);
     setLoading(false);
@@ -400,6 +428,10 @@ export function MixedOfferCatalog() {
 
   const activeWallTarget =
     activeWall?.destination.kind === "wall" ? activeWall.destination.target : null;
+  const currentWalletWbp =
+    wallet && wallet.currency.toUpperCase() === "USD"
+      ? estimateWbpFromUsd(wallet.available_balance)
+      : null;
 
   return (
     <div className="mixed-offers">
@@ -465,6 +497,18 @@ export function MixedOfferCatalog() {
         </Alert>
       )}
 
+      {walletUnavailable && (
+        <Alert className="mixed-offer-wallet-alert" role="status">
+          <AlertDescription>
+            Your wallet balance is unavailable, so WBP totals cannot be estimated right now.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <p className="mixed-offer-wbp-note">
+        Estimated display rate: 1 USD = 1,000 WBP. Projected totals assume the offer is completed and approved; your wallet ledger remains in USD.
+      </p>
+
       {loading ? (
         <div className="mixed-offer-grid" aria-label="Loading offers">
           {[0, 1, 2, 3, 4].map((item) => (
@@ -480,7 +524,14 @@ export function MixedOfferCatalog() {
         </div>
       ) : visibleOffers.length > 0 ? (
         <div className="mixed-offer-grid" aria-label="All available offers">
-          {visibleOffers.map((offer) => (
+          {visibleOffers.map((offer) => {
+            const rewardWbp =
+              offer.rewardUsd !== null ? estimateWbpFromUsd(offer.rewardUsd) : null;
+            const projectedWbp =
+              currentWalletWbp !== null && rewardWbp !== null
+                ? currentWalletWbp + rewardWbp
+                : null;
+            return (
             <Card className="offerwall-gg-card" key={offer.id}>
               <div className="offerwall-gg-art">
                 {offer.imageUrl ? (
@@ -513,15 +564,16 @@ export function MixedOfferCatalog() {
                 )}
                 <div className="offerwall-gg-card-footer">
                   <div className="offerwall-gg-reward">
-                    {offer.rewardUsd ? (
+                    {rewardWbp !== null && offer.rewardUsd !== null ? (
                       <>
-                        <small>{offer.rewardIsMaximum ? "EST. REWARD · UP TO" : "EST. REWARD"}</small>
-                        <strong>{formatUsd(offer.rewardUsd)}</strong>
+                        <small>{offer.rewardIsMaximum ? "EST. WBP REWARD · UP TO" : "EST. WBP REWARD"}</small>
+                        <strong>{formatWbp(rewardWbp)}</strong>
+                        <small>Estimated credit: {formatUsd(offer.rewardUsd)}</small>
                       </>
                     ) : (
                       <>
-                        <small>AVAILABLE ACTIVITIES</small>
-                        <strong>Browse</strong>
+                        <small>ESTIMATED REWARD</small>
+                        <strong>{offer.rewardUsd === null ? "Varies" : "Unavailable"}</strong>
                       </>
                     )}
                   </div>
@@ -542,9 +594,20 @@ export function MixedOfferCatalog() {
                     </Button>
                   )}
                 </div>
+                <div className="mixed-offer-balance-comparison">
+                  <div>
+                    <small>Current balance</small>
+                    <strong>{currentWalletWbp === null ? "Unavailable" : formatWbp(currentWalletWbp)}</strong>
+                  </div>
+                  <div>
+                    <small>After offer · est.</small>
+                    <strong>{projectedWbp === null ? "—" : formatWbp(projectedWbp)}</strong>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
       ) : (
         <div className="offerwall-gg-empty">
