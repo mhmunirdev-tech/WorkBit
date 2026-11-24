@@ -9479,15 +9479,201 @@ body {
 }
 
 .mixed-offer-controls {
- grid-template-columns: minmax(240px, 1fr) minmax(190px, 260px) auto;
- align-items: end;
+ display: grid;
+ grid-template-columns: minmax(190px, .85fr) minmax(260px, 1.2fr) minmax(200px, .8fr) auto;
+ align-items: center;
+ gap: 14px;
+ margin: 18px 0 20px;
+ padding: 15px;
+ border: 1px solid #e4eaf3;
+ border-radius: 18px;
+ background: linear-gradient(135deg, #fff 0%, #fbfcff 100%);
+ box-shadow: 0 8px 24px #2035520a;
+}
+
+.mixed-offer-filter-heading {
+ display: flex;
+ min-width: 0;
+ align-items: center;
+ gap: 10px;
+}
+
+.mixed-offer-filter-icon {
+ display: grid;
+ width: 38px;
+ height: 38px;
+ flex: 0 0 auto;
+ place-items: center;
+ border: 1px solid #dfe7ff;
+ border-radius: 12px;
+ background: #f0f4ff;
+ color: #4565c7;
+}
+
+.mixed-offer-filter-heading > span:last-child {
+ display: grid;
+ gap: 3px;
+}
+
+.mixed-offer-filter-heading strong {
+ color: #263650;
+ font-size: 13px;
+ font-weight: 750;
+}
+
+.mixed-offer-filter-heading small {
+ color: #8490a3;
+ font-size: 10px;
+ line-height: 1.4;
+}
+
+.mixed-offer-search {
+ position: relative;
+ display: flex;
+ min-width: 0;
+ align-items: center;
+ color: #8290a4;
+}
+
+.mixed-offer-search > svg {
+ position: absolute;
+ left: 14px;
+ z-index: 1;
+ pointer-events: none;
+ transition: color .18s ease;
+}
+
+.app-shell .app-content .mixed-offer-search .ui-input {
+ width: 100%;
+ height: 46px;
+ padding: 0 14px 0 42px !important;
+ border: 1px solid #e3eaf3;
+ border-radius: 13px !important;
+ background: #fff;
+ color: #24334b;
+ box-shadow: 0 2px 6px #20355208;
+ transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.mixed-offer-search:focus-within > svg {
+ color: #4565c7;
+}
+
+.mixed-offer-search:focus-within .ui-input {
+ border-color: #9db2f6;
+ background: #fff;
+ box-shadow: 0 0 0 3px #315efb16;
+}
+
+.mixed-offer-minimum {
+ display: grid;
+ min-width: 0;
+ gap: 6px;
+ color: #65738a;
+ font-size: 10px;
+ font-weight: 750;
+}
+
+.mixed-offer-reward-input {
+ display: flex;
+ height: 46px;
+ align-items: center;
+ gap: 8px;
+ padding: 0 11px;
+ border: 1px solid #e3eaf3;
+ border-radius: 13px;
+ background: #fff;
+ color: #8290a4;
+ box-shadow: 0 2px 6px #20355208;
+ transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.mixed-offer-reward-input:focus-within {
+ border-color: #9db2f6;
+ box-shadow: 0 0 0 3px #315efb16;
+}
+
+.mixed-offer-reward-input > svg {
+ flex: 0 0 auto;
+ color: #75839a;
+}
+
+.app-shell .app-content .mixed-offer-reward-input .ui-input {
+ width: 100%;
+ min-width: 0;
+ height: 40px !important;
+ min-height: 0 !important;
+ padding: 0 !important;
+ border: 0 !important;
+ border-radius: 0 !important;
+ background: transparent !important;
+ color: #24334b;
+ box-shadow: none;
+}
+
+.mixed-offer-reward-input .ui-input:focus-visible {
+ outline: 0;
+ box-shadow: none;
+}
+
+.mixed-offer-currency {
+ flex: 0 0 auto;
+ padding: 4px 7px;
+ border-radius: 7px;
+ background: #f2f5fa;
+ color: #748198;
+ font-size: 9px;
+ font-weight: 800;
+ letter-spacing: .3px;
+}
+
+.mixed-offer-actions {
+ display: flex;
+ align-items: center;
+ justify-content: flex-end;
+ gap: 8px;
 }
 
 .mixed-offer-count {
- padding-bottom: 11px;
- color: #748198;
- font-size: 12px;
+ display: flex;
+ min-height: 42px;
+ align-items: center;
+ gap: 7px;
+ padding: 0 12px;
+ border: 1px solid #d9eee5;
+ border-radius: 12px;
+ background: #f1fbf6;
+ color: #478269;
+ font-size: 10px;
  white-space: nowrap;
+}
+
+.mixed-offer-count strong {
+ color: #16724f;
+ font-size: 14px;
+ font-variant-numeric: tabular-nums;
+}
+
+.mixed-offer-clear {
+ display: inline-flex;
+ min-height: 36px;
+ align-items: center;
+ gap: 4px;
+ padding: 0 8px;
+ border: 0;
+ border-radius: 9px;
+ background: transparent;
+ color: #728097;
+ cursor: pointer;
+ font: inherit;
+ font-size: 10px;
+ font-weight: 700;
+ transition: background .16s ease, color .16s ease;
+}
+
+.mixed-offer-clear:hover {
+ background: #f0f3f8;
+ color: #33445d;
 }
 
 .mixed-offer-grid {
@@ -9519,12 +9705,12 @@ body {
  }
 
  .mixed-offer-controls {
-   grid-template-columns: repeat(2, minmax(0, 1fr));
+   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
  }
 
- .mixed-offer-count {
+ .mixed-offer-actions {
    grid-column: 1 / -1;
-   padding-bottom: 0;
+   justify-content: space-between;
  }
 }
 
@@ -9538,6 +9724,11 @@ body {
  .mixed-offer-grid,
  .mixed-offer-controls {
    grid-template-columns: minmax(0, 1fr);
+ }
+
+ .mixed-offer-filter-heading,
+ .mixed-offer-actions {
+   grid-column: 1;
  }
 }
 

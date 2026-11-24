@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowUpRight, Clock3, Gamepad2, Search, Smartphone, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Clock3, DollarSign, Gamepad2, Search, SlidersHorizontal, Smartphone, Sparkles, X } from "lucide-react";
 import { ApiError, api } from "../../lib/api";
 import { formatUsd } from "../../lib/utils";
 import { Alert, AlertDescription } from "../ui/alert";
@@ -403,8 +403,12 @@ export function MixedOfferCatalog() {
 
   return (
     <div className="mixed-offers">
-      <div className="offerwall-gg-controls mixed-offer-controls">
-        <label className="offerwall-gg-search">
+      <div className="mixed-offer-controls">
+        <div className="mixed-offer-filter-heading">
+          <span className="mixed-offer-filter-icon"><SlidersHorizontal aria-hidden="true" size={17} /></span>
+          <span><strong>Find an offer</strong><small>Search or set a minimum reward</small></span>
+        </div>
+        <label className="mixed-offer-search">
           <span className="sr-only">Search all offers</span>
           <Search aria-hidden="true" size={17} />
           <Input
@@ -414,22 +418,40 @@ export function MixedOfferCatalog() {
             placeholder="Search offers"
           />
         </label>
-        <label className="offerwall-gg-filter">
-          <span>Minimum estimated reward (USD)</span>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={minimumReward}
-            onChange={(event) => setMinimumReward(event.target.value)}
-            placeholder="Any amount"
-          />
+        <label className="mixed-offer-minimum">
+          <span>Minimum reward</span>
+          <span className="mixed-offer-reward-input">
+            <DollarSign aria-hidden="true" size={16} />
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={minimumReward}
+              onChange={(event) => setMinimumReward(event.target.value)}
+              placeholder="Any amount"
+            />
+            <span className="mixed-offer-currency">USD</span>
+          </span>
         </label>
-        <span className="mixed-offer-count" aria-live="polite">
-          {loading
-            ? "Loading offers..."
-            : `${visibleOffers.length} ${visibleOffers.length === 1 ? "offer" : "offers"}`}
-        </span>
+        <div className="mixed-offer-actions">
+          <span className="mixed-offer-count" aria-live="polite">
+            <strong>{loading ? "…" : visibleOffers.length}</strong>
+            <span>{loading ? "Loading" : visibleOffers.length === 1 ? "offer found" : "offers found"}</span>
+          </span>
+          {(search || minimumReward) && (
+            <button
+              className="mixed-offer-clear"
+              onClick={() => {
+                setSearch("");
+                setMinimumReward("");
+              }}
+              type="button"
+            >
+              <X aria-hidden="true" size={14} />
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {hasLoadError && (
