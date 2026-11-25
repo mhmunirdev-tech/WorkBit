@@ -336,9 +336,9 @@ def dashboard(
 @router.get("/admin/dashboard")
 def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Session = Depends(get_db)):
     user_scope = User.roles.any(Role.name == "USER")
-    total = db.scalar(select(func.count()).select_from(User).where(user_scope)) or 0
     now = datetime.now(timezone.utc)
-    active = db.scalar(
+    total = select(func.count()).select_from(User).where(user_scope).scalar_subquery()
+    active = (
         select(func.count(func.distinct(PackagePurchase.user_id)))
         .join(User, User.id == PackagePurchase.user_id)
         .join(User.roles)
@@ -348,17 +348,22 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
             PackagePurchase.status == "APPROVED",
             PackagePurchase.expires_at > now,
         )
-    ) or 0
-    pending = db.scalar(
-        select(func.count()).select_from(User).where(user_scope, User.status == "PENDING_VERIFICATION")
-    ) or 0
-    balance = db.scalar(
+        .scalar_subquery()
+    )
+    pending = (
+        select(func.count())
+        .select_from(User)
+        .where(user_scope, User.status == "PENDING_VERIFICATION")
+        .scalar_subquery()
+    )
+    balance = (
         select(func.coalesce(func.sum(Wallet.available_balance), Decimal("0")))
         .select_from(Wallet)
         .join(User, User.id == Wallet.user_id)
         .where(user_scope)
-    ) or Decimal("0")
-    approved_ad_payout = db.scalar(
+        .scalar_subquery()
+    )
+    approved_ad_payout = (
         select(func.coalesce(func.sum(RewardDecision.provider_payout), Decimal("0")))
         .join(User, User.id == RewardDecision.user_id)
         .where(
@@ -366,8 +371,9 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
             RewardDecision.status == "APPROVED",
             RewardDecision.currency == "USD",
         )
-    ) or Decimal("0")
-    platform_ad_revenue = db.scalar(
+        .scalar_subquery()
+    )
+    platform_ad_revenue = (
         select(func.coalesce(func.sum(RewardDecision.platform_share), Decimal("0")))
         .join(User, User.id == RewardDecision.user_id)
         .where(
@@ -375,8 +381,9 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
             RewardDecision.status == "APPROVED",
             RewardDecision.currency == "USD",
         )
-    ) or Decimal("0")
-    registered_user_amount = db.scalar(
+        .scalar_subquery()
+    )
+    registered_user_amount = (
         select(func.coalesce(func.sum(PackagePurchase.amount), Decimal("0")))
         .join(User, User.id == PackagePurchase.user_id)
         .where(
@@ -385,14 +392,18 @@ def admin_dashboard(_: User = Depends(require_permission("users.view")), db: Ses
             PackagePurchase.currency == "USD",
             PackagePurchase.payment_method != "WALLET",
         )
-    ) or Decimal("0")
+        .scalar_subquery()
+    )
+    row = db.execute(
+        select(total, active, pending, balance, approved_ad_payout, platform_ad_revenue, registered_user_amount)
+    ).one()
     return {
-        "total_users": total,
-        "active_users": active,
-        "pending_verification": pending,
-        "total_wallet_balance": str(balance),
-        "approved_ad_payout": str(approved_ad_payout),
-        "platform_ad_revenue": str(platform_ad_revenue),
-        "registered_user_amount": str(registered_user_amount),
+        "total_users": row[0] or 0,
+        "active_users": row[1] or 0,
+        "pending_verification": row[2] or 0,
+        "total_wallet_balance": str(row[3] or Decimal("0")),
+        "approved_ad_payout": str(row[4] or Decimal("0")),
+        "platform_ad_revenue": str(row[5] or Decimal("0")),
+        "registered_user_amount": str(row[6] or Decimal("0")),
         "currency": "USD",
     }

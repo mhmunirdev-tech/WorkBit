@@ -46,7 +46,7 @@ type PayoutSettings = {
 
 type Action = "approve" | "reject" | "complete";
 
-function formatMoney(amount: string | number, currency: string) {
+function formatMoney(amount: string | number) {
   return formatUsd(amount);
 }
 
@@ -250,7 +250,7 @@ export function AdminWithdrawals() {
                   onClick={() => void viewDetails(record)}
                   aria-pressed={selected?.id === record.id}
                 >
-                  <span><strong>{formatMoney(record.amount, record.currency)}{record.payout_amount != null && record.payout_currency ? ` → ${formatMoney(record.payout_amount, record.payout_currency)}` : ""}</strong><small>{record.method} · {record.destination_hint}</small></span>
+                  <span><strong>{formatMoney(record.amount)}{record.payout_amount != null && record.payout_currency ? ` → ${formatMoney(record.payout_amount)}` : ""}</strong><small>{record.method} · {record.destination_hint}</small></span>
                   <Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{record.status.toLowerCase()}</Badge>
                   <time dateTime={record.created_at}>{new Date(record.created_at).toLocaleDateString()}</time>
                 </Button>
@@ -268,14 +268,14 @@ export function AdminWithdrawals() {
           ) : (
             <>
               <div className="panel-heading">
-                <div><p className="eyebrow">REQUEST DETAILS</p><h2>{formatMoney(selected.amount, selected.currency)}</h2></div>
+                <div><p className="eyebrow">REQUEST DETAILS</p><h2>{formatMoney(selected.amount)}</h2></div>
                 <Badge className={`withdrawal-status withdrawal-${selected.status.toLowerCase()}`} variant="outline">{selected.status.toLowerCase()}</Badge>
               </div>
               <dl className="admin-withdrawal-fields">
                 <div><dt>User</dt><dd>{selected.user_name} · {selected.user_email}</dd></div>
                 <div><dt>Mobile banking</dt><dd>{selected.method}</dd></div>
                 <div><dt>Destination</dt><dd className="admin-destination">{selected.destination}</dd></div>
-                {selected.payout_amount != null && selected.payout_currency && <div><dt>Expected payout</dt><dd>{formatMoney(selected.payout_amount, selected.payout_currency)}{selected.exchange_rate != null ? ` · 1 ${selected.currency} = ${selected.exchange_rate} BDT` : ""}</dd></div>}
+                {selected.payout_amount != null && selected.payout_currency && <div><dt>Expected payout</dt><dd>{formatMoney(selected.payout_amount)}{selected.exchange_rate != null ? ` · 1 ${selected.currency} = ${selected.exchange_rate} BDT` : ""}</dd></div>}
                 <div><dt>Submitted</dt><dd><time dateTime={selected.created_at}>{new Date(selected.created_at).toLocaleString()}</time></dd></div>
                 {selected.payment_transaction_id && <div><dt>Payment transaction ID</dt><dd>{selected.payment_transaction_id}</dd></div>}
                 {selected.paid_at && <div><dt>Paid at</dt><dd><time dateTime={selected.paid_at}>{new Date(selected.paid_at).toLocaleString()}</time></dd></div>}

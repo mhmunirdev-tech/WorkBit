@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { AdminAnalytics } from "../../../components/admin-analytics";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Analysis | WorkBit Admin",
+  title: "Admin overview | WorkBit",
 };
 
 export default function AdminAnalyticsPage() {
-  return <AdminAnalytics />;
+  redirect("/admin");
 }

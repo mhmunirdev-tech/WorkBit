@@ -47,7 +47,7 @@ type RanksData = {
 type Tab = "leaderboard" | "category";
 type SortBy = "rank" | "name";
 
-function formatMoney(value: string | number, currency: string) {
+function formatMoney(value: string | number) {
   return formatUsd(value);
 }
 
@@ -156,9 +156,9 @@ export function RanksPage() {
               </div>
               <div className={styles.rankProgress}>
                 <div className={styles.progressLabels}>
-                  <span>{formatMoney(data.current_user.qualifying_value, data.currency)} qualifying activity</span>
+                  <span>{formatMoney(data.current_user.qualifying_value)} qualifying activity</span>
                   {data.current_user.next_rank
-                    ? <span>{formatMoney(data.current_user.amount_to_next, data.currency)} to {data.current_user.next_rank}</span>
+                    ? <span>{formatMoney(data.current_user.amount_to_next)} to {data.current_user.next_rank}</span>
                     : <span>Top rank achieved</span>}
                 </div>
                 <div
@@ -240,7 +240,7 @@ export function RanksPage() {
                             </div>
                           </td>
                           <td><span className={`${styles.badge} ${rankStyle(member.rank)}`}><Award size={13} /> {member.rank}</span></td>
-                          <td className={styles.value}>{formatMoney(member.qualifying_value, data.currency)}</td>
+                          <td className={styles.value}>{formatMoney(member.qualifying_value)}</td>
                           <td className={styles.value}>{member.referrals}</td>
                         </tr>
                       ))}
@@ -262,7 +262,7 @@ export function RanksPage() {
                       <span className={`${styles.tierIcon} ${rankStyle(tier.name)}`}><TierIcon size={20} /></span>
                       <p className={styles.overline}>RANK {String(index + 1).padStart(2, "0")}</p>
                       <h2>{tier.name}</h2>
-                      <p className={styles.threshold}>From {formatMoney(tier.threshold, data.currency)}</p>
+                      <p className={styles.threshold}>From {formatMoney(tier.threshold)}</p>
                       <span className={`${styles.tierStatus}${achieved ? ` ${styles.achieved}` : ""}`}>
                         {isCurrent ? "YOUR RANK" : achieved ? "ACHIEVED" : "NOT YET ACHIEVED"}
                       </span>

@@ -26,7 +26,7 @@ type AdminAnalyticsData = {
   }[];
 };
 
-export function AdminAnalytics() {
+export function AdminAnalytics({ embedded = false }: { embedded?: boolean }) {
   const [analytics, setAnalytics] = useState<AdminAnalyticsData | null>(null);
   const [error, setError] = useState("");
 
@@ -47,17 +47,8 @@ export function AdminAnalytics() {
   const trendDays = analytics?.daily.slice(-14) ?? [];
   const maximumDailyVisitors = Math.max(1, ...trendDays.map((day) => day.unique_visitors));
 
-  return (
-    <main className="admin-analytics-page">
-      <header className="admin-dashboard-header">
-        <div>
-          <p className="eyebrow">TRAFFIC & SECURITY</p>
-          <h1>Live analytics</h1>
-          <p>Visitor activity, traffic history and failed sign-in attempts.</p>
-        </div>
-        <div className="admin-dashboard-live"><span />Refreshes every 30 seconds</div>
-      </header>
-
+  const content = (
+    <>
       {error && <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{error}</AlertDescription></Alert>}
 
       <section className="admin-dashboard-metrics admin-analytics-metrics" aria-label="Traffic and security metrics">
@@ -132,6 +123,32 @@ export function AdminAnalytics() {
         </Card>
       </section>
       <p className="admin-analytics-privacy">Visitor identifiers and IP addresses are stored as keyed hashes. Login records show masked email addresses and are automatically purged after 90 days.</p>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="admin-analytics-section" aria-labelledby="admin-activity-heading">
+        <div className="admin-section-heading">
+          <div><p className="eyebrow">TRAFFIC & SECURITY</p><h2 id="admin-activity-heading">Platform activity</h2></div>
+          <div className="admin-dashboard-live"><span />Refreshes every 30 seconds</div>
+        </div>
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <main className="admin-analytics-page">
+      <header className="admin-dashboard-header">
+        <div>
+          <p className="eyebrow">TRAFFIC & SECURITY</p>
+          <h1>Live analytics</h1>
+          <p>Visitor activity, traffic history and failed sign-in attempts.</p>
+        </div>
+        <div className="admin-dashboard-live"><span />Refreshes every 30 seconds</div>
+      </header>
+      {content}
     </main>
   );
 }

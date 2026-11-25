@@ -3700,23 +3700,6 @@ body {
   padding: 0;
 }
 
-.admin-user-space-link {
-  display: flex;
-  min-height: 40px;
-  align-items: center;
-  gap: 12px;
-  margin-top: 16px;
-  padding: 0 11px;
-  border-top: 1px solid #2a3b55;
-  color: #aebbd0;
-  font-size: 11px;
-  text-decoration: none;
-}
-
-.admin-user-space-link:hover {
-  color: #fff;
-}
-
 .admin-withdrawals-header {
   display: flex;
   align-items: flex-start;

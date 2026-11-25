@@ -27,7 +27,7 @@ type Deposit = {
   created_at: string;
 };
 
-function money(value: string, currency: string) {
+function money(value: string) {
   return formatUsd(value);
 }
 
@@ -98,8 +98,8 @@ export function AdminDeposits() {
               <Badge variant="outline">{deposit.status}</Badge>
             </div>
             <dl className="admin-deposit-details">
-              <div><dt>Sent</dt><dd>{money(deposit.amount_bdt, "BDT")}</dd></div>
-              <div><dt>Wallet credit</dt><dd>{money(deposit.amount, deposit.currency)}</dd></div>
+              <div><dt>Sent</dt><dd>{money(deposit.amount_bdt)}</dd></div>
+              <div><dt>Wallet credit</dt><dd>{money(deposit.amount)}</dd></div>
               <div><dt>Method</dt><dd>{deposit.payment_method}</dd></div>
               <div><dt>Transaction ID</dt><dd>{deposit.payment_reference}</dd></div>
               <div><dt>USD/BDT rate</dt><dd>{deposit.exchange_rate}</dd></div>

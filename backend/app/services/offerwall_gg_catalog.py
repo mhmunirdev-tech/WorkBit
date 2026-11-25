@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
@@ -123,7 +123,7 @@ class OfferwallGGCatalogService:
                 OFFERWALL_GG_SLUG,
                 offer.external_id,
                 provider_payout,
-            )
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
             offers.append(
                 OfferwallGGOfferRead(
                     id=offer.id,

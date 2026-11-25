@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpFromLine, Check, PackageCheck, Pause, Play, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpFromLine, Check, PackageCheck, Pause, Play, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { formatUsd, formatWbcFromUsd, WBC_VALUE_BDT } from "../lib/utils";
@@ -175,7 +175,7 @@ const ranges = [
   { label: "90 days", days: 90 },
 ];
 
-function money(value: Amount, currency: string, usdBdtRate: Amount | null) {
+function money(value: Amount, usdBdtRate: Amount | null) {
   return formatWbcFromUsd(value, usdBdtRate) ?? formatUsd(value);
 }
 
@@ -326,11 +326,9 @@ function BannerCarousel({ banners }: { banners: DashboardBanner[] }) {
 
 function EarningsChart({
   points,
-  currency,
   usdBdtRate,
 }: {
   points: DashboardData["earnings_chart"];
-  currency: string;
   usdBdtRate: Amount | null;
 }) {
   const [range, setRange] = useState(30);
@@ -364,7 +362,7 @@ function EarningsChart({
           <h2 id="earnings-heading">Earnings overview</h2>
           <p className="panel-subtitle">Net reward activity from your wallet ledger, including reversals.</p>
         </div>
-        <strong className="chart-total">{money(total, currency, usdBdtRate)}</strong>
+        <strong className="chart-total">{money(total, usdBdtRate)}</strong>
       </div>
       <div className="range-tabs" role="group" aria-label="Earnings chart time range">
         {ranges.map((item) => (
@@ -385,7 +383,7 @@ function EarningsChart({
         className="earnings-chart"
         viewBox="0 0 620 180"
         role="img"
-        aria-label={`Net reward activity for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, currency, usdBdtRate)}.`}
+        aria-label={`Net reward activity for the last ${range} ${range === 1 ? "day" : "days"}. Total ${money(total, usdBdtRate)}.`}
         preserveAspectRatio="none"
       >
         {[24, 68, 112, 160].map((y) => (
@@ -582,25 +580,25 @@ export function Dashboard() {
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
             <p>Earning balance</p>
-            <h2>{money(data.earning_balance, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
+            <h2>{money(data.earning_balance, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>{data.withdrawal_summary.usd_bdt_rate ? `1 WBC = ৳${WBC_VALUE_BDT.toFixed(2)} · based on current withdrawal rate` : "WBC estimate unavailable until the USD/BDT rate is configured"}</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-green" aria-hidden="true">✧</span>
             <p>Earned today</p>
-            <h2>{money(data.stats.today_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
+            <h2>{money(data.stats.today_earnings, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Approved ledger credits</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-violet" aria-hidden="true">✧</span>
             <p>Total earnings</p>
-            <h2>{money(data.lifetime_earned, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
+            <h2>{money(data.lifetime_earned, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Recorded by WorkBit</small>
           </article></Card>
           <Card className="dashboard-metric" asChild><article>
             <span className="metric-icon icon-slate" aria-hidden="true">↙</span>
             <p>Total withdrawn</p>
-            <h2>{money(data.lifetime_withdrawn, data.currency, data.withdrawal_summary.usd_bdt_rate)}</h2>
+            <h2>{money(data.lifetime_withdrawn, data.withdrawal_summary.usd_bdt_rate)}</h2>
             <small>Completed wallet movements</small>
           </article></Card>
         </section>
@@ -624,13 +622,13 @@ export function Dashboard() {
             <div className="referral-stats">
               <div><strong>{data.stats.referrals}</strong><span>Total referrals</span></div>
               <div><strong>{data.stats.active_referrals}</strong><span>Package members</span></div>
-              <div><strong>{money(data.stats.referral_earnings, data.currency, data.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
+              <div><strong>{money(data.stats.referral_earnings, data.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
             </div>
             <Button className="share-button" variant="secondary" type="button" onClick={shareReferralLink}>Share invite <span aria-hidden="true">↗</span></Button>
             <Button className="referral-details-button" variant="link" asChild><Link href="/referrals">View referral details</Link></Button>
             {referralMessage && <Alert className="inline-status" role="status"><AlertDescription>{referralMessage}</AlertDescription></Alert>}
           </article></Card>
-          <EarningsChart points={data.earnings_chart} currency={data.currency} usdBdtRate={data.withdrawal_summary.usd_bdt_rate} />
+          <EarningsChart points={data.earnings_chart} usdBdtRate={data.withdrawal_summary.usd_bdt_rate} />
         </section>
 
         <footer className="dashboard-footer">

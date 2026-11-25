@@ -296,11 +296,15 @@ class WithdrawalService:
             .order_by(WithdrawalRequest.created_at.desc())
         ).all()
 
-    def list_for_admin(self, db: Session) -> list[WithdrawalRequest]:
-        return db.scalars(
-            select(WithdrawalRequest)
-            .order_by(WithdrawalRequest.created_at.desc())
-        ).all()
+    def list_for_admin(
+        self,
+        db: Session,
+        statuses: list[str] | None = None,
+    ) -> list[WithdrawalRequest]:
+        query = select(WithdrawalRequest)
+        if statuses:
+            query = query.where(WithdrawalRequest.status.in_(statuses))
+        return db.scalars(query.order_by(WithdrawalRequest.created_at.desc())).all()
 
     def admin_detail(
         self,

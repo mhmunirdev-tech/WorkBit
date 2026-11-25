@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, PackageCheck, ShieldAlert, ShieldCheck, X, ArrowDownToLine, Settings2, Users, MessageCircle } from "lucide-react";
+import { Activity, ArrowDownToLine, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -17,24 +17,30 @@ type AdminIdentity = {
 
 const AdminIdentityContext = createContext<AdminIdentity | null>(null);
 
+let cachedAdminIdentity: AdminIdentity | null = null;
+
 export function useAdminIdentity() {
   return useContext(AdminIdentityContext);
 }
 
 const navigationGroups = [
   {
-    label: "Workspace",
+    label: "Command center",
     items: [
       { href: "/admin", label: "Overview", icon: LayoutDashboard },
-      { href: "/admin/analytics", label: "Analysis", icon: Activity },
       { href: "/admin/providers", label: "Provider performance", icon: Activity },
+    ],
+  },
+  {
+    label: "People & trust",
+    items: [
       { href: "/admin/users", label: "User registry", icon: Users },
       { href: "/admin/fraud", label: "Fraud management", icon: ShieldAlert },
       { href: "/admin/support", label: "Support tickets", icon: MessageCircle },
     ],
   },
   {
-    label: "Financial operations",
+    label: "Money movement",
     items: [
       { href: "/admin/withdrawals", label: "Manual withdrawals", icon: Banknote },
       { href: "/admin/deposits", label: "Deposit requests", icon: ArrowDownToLine },
@@ -42,7 +48,7 @@ const navigationGroups = [
     ],
   },
   {
-    label: "Platform setup",
+    label: "Platform configuration",
     items: [
       { href: "/admin/packages", label: "Package settings", icon: Settings2 },
       { href: "/admin/banners", label: "Dashboard banners", icon: ImagePlus },
@@ -60,11 +66,23 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pathname === "/admin/login") return;
+    if (cachedAdminIdentity) {
+      setIdentity(cachedAdminIdentity);
+      return;
+    }
+
+    let active = true;
     api<AdminIdentity>("/auth/admin/me")
-      .then(setIdentity)
+      .then((nextIdentity) => {
+        cachedAdminIdentity = nextIdentity;
+        if (active) setIdentity(nextIdentity);
+      })
       .catch(() => {
-        setIdentity(null);
+        if (active) setIdentity(null);
       });
+    return () => {
+      active = false;
+    };
   }, [pathname]);
 
   async function logout() {
@@ -72,6 +90,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setLogoutError("");
     try {
       await api<void>("/auth/admin/logout", { method: "POST" });
+      cachedAdminIdentity = null;
       showToast({ title: "Signed out", description: "You have been signed out.", variant: "success" });
       router.push("/admin/login");
     } catch (error) {
@@ -132,6 +151,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   <Link
                     className={`app-nav-link${active ? " is-active" : ""}`}
                     href={item.href}
+                    prefetch={false}
                     aria-current={active ? "page" : undefined}
                     key={item.href}
                     onClick={() => setMenuOpen(false)}
@@ -144,10 +164,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </nav>
-        <Link className="admin-user-space-link" href="/dashboard">
-          <span className="nav-icon" aria-hidden="true"><ShieldCheck size={17} /></span>
-          User dashboard
-        </Link>
         <div className="sidebar-spacer" />
         {logoutError && <p className="logout-error" role="alert">{logoutError}</p>}
         <div className="sidebar-account">

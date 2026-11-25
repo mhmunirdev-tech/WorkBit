@@ -57,7 +57,7 @@ type Summary = {
   };
 };
 
-function formatMoney(value: Amount, currency: string) {
+function formatMoney(value: Amount) {
   return formatUsd(value);
 }
 
@@ -113,7 +113,7 @@ function useWithdrawalData() {
           ) {
             showToast({
               title: "Withdrawal successful",
-              description: `${formatMoney(record.amount, record.currency)} was marked paid.`,
+              description: `${formatMoney(record.amount)} was marked paid.`,
               variant: "success",
               kind: "withdrawal-paid",
             });
@@ -413,7 +413,7 @@ function PayoutAccountsPanel({
   );
 }
 
-function WithdrawalHistory({ records, currency }: { records: WithdrawalRecord[]; currency: string }) {
+function WithdrawalHistory({ records }: { records: WithdrawalRecord[] }) {
   if (records.length === 0) {
     return (
       <div className="dashboard-empty">
@@ -436,8 +436,8 @@ function WithdrawalHistory({ records, currency }: { records: WithdrawalRecord[];
                 <small>{record.destination_hint}</small>
                 {record.payment_transaction_id && <small>Payment reference: {record.payment_transaction_id}</small>}
               </TableCell>
-              <TableCell>{formatMoney(record.amount, currency)}</TableCell>
-              <TableCell>{record.payout_amount != null && record.payout_currency ? formatMoney(record.payout_amount, record.payout_currency) : "—"}</TableCell>
+              <TableCell>{formatMoney(record.amount)}</TableCell>
+              <TableCell>{record.payout_amount != null && record.payout_currency ? formatMoney(record.payout_amount) : "—"}</TableCell>
               <TableCell>
                 <Badge className={`withdrawal-status withdrawal-${record.status.toLowerCase()}`} variant="outline">{readableStatus(record.status)}</Badge>
                 <small className="withdrawal-status-note">{withdrawalStatusNote(record.status)}</small>
@@ -624,8 +624,8 @@ export function WithdrawalPage({
       {summary && (
         <>
           {!embedded && <section className="withdrawal-summary-grid">
-            <Card className="dashboard-metric" asChild><article><p>Withdrawable earnings</p><h2>{formatMoney(summary.withdrawable_balance, summary.currency)}</h2><small>Deposit balance is reserved for packages</small></article></Card>
-            <Card className="dashboard-metric" asChild><article><p>Minimum request</p><h2>{formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</h2><small>{summary.withdrawal_summary.usd_bdt_rate ? `≈ ${formatMoney(Number(summary.withdrawal_summary.minimum_amount) * Number(summary.withdrawal_summary.usd_bdt_rate), "BDT")}` : "Waiting for admin exchange rate"}</small></article></Card>
+            <Card className="dashboard-metric" asChild><article><p>Withdrawable earnings</p><h2>{formatMoney(summary.withdrawable_balance)}</h2><small>Deposit balance is reserved for packages</small></article></Card>
+            <Card className="dashboard-metric" asChild><article><p>Minimum request</p><h2>{formatMoney(summary.withdrawal_summary.minimum_amount)}</h2><small>{summary.withdrawal_summary.usd_bdt_rate ? `≈ ${formatMoney(Number(summary.withdrawal_summary.minimum_amount) * Number(summary.withdrawal_summary.usd_bdt_rate))}` : "Waiting for admin exchange rate"}</small></article></Card>
             <Card className="dashboard-metric" asChild><article><p>Latest request</p><h2 className="withdrawal-latest-value">{summary.withdrawal_summary.last_request ? readableStatus(summary.withdrawal_summary.last_request.status) : "None"}</h2><small>{summary.withdrawal_summary.last_request ? new Date(summary.withdrawal_summary.last_request.created_at).toLocaleDateString() : "No prior payout request"}</small></article></Card>
           </section>}
 
@@ -643,7 +643,7 @@ export function WithdrawalPage({
           {!historyOnly && !embedded && (
             <Card className={`panel withdrawal-form-panel${embedded ? " wallet-withdrawal-form" : ""}`} id={embedded ? "withdraw-request" : undefined}>
               <div className="panel-heading">
-                <div><p className="eyebrow">SECURE REQUEST</p><h2>Request a withdrawal</h2><p className="panel-subtitle">Payout details are encrypted at rest. Only authorized withdrawal reviewers can view them.</p>{embedded && <p className="wallet-withdrawal-minimum">Minimum request: <strong>{formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</strong></p>}</div>
+                <div><p className="eyebrow">SECURE REQUEST</p><h2>Request a withdrawal</h2><p className="panel-subtitle">Payout details are encrypted at rest. Only authorized withdrawal reviewers can view them.</p>{embedded && <p className="wallet-withdrawal-minimum">Minimum request: <strong>{formatMoney(summary.withdrawal_summary.minimum_amount)}</strong></p>}</div>
               </div>
               {!summary.withdrawal_summary.enabled ? (
                 <div className="state withdrawal-disabled" role="status">
@@ -670,7 +670,7 @@ export function WithdrawalPage({
                       value={amount}
                       onChange={(event) => { setAmount(event.target.value); setCodeSent(false); setCode(""); }}
                     />
-                    <small>Withdrawable: {formatMoney(summary.withdrawable_balance, summary.currency)} · Minimum: {formatMoney(summary.withdrawal_summary.minimum_amount, summary.currency)}</small>
+                    <small>Withdrawable: {formatMoney(summary.withdrawable_balance)} · Minimum: {formatMoney(summary.withdrawal_summary.minimum_amount)}</small>
                   </Label>
                   <Label>Pay out to
                     <Select value={accountId} onValueChange={(value) => { setAccountId(value); setCodeSent(false); setCode(""); }}>
@@ -685,7 +685,7 @@ export function WithdrawalPage({
                     </Select>
                   </Label>
                   {!hasSelectedAccount && <div className="state withdrawal-disabled" role="status">Save a {paymentMethod === "BKASH" ? "bKash" : "Nagad"} number in your wallet before requesting a withdrawal. <Link href="/wallet#payout-accounts">Manage payout accounts</Link></div>}
-                  {estimatedPayout !== null && <div className="withdrawal-payout-estimate"><span>Estimated mobile payout</span><strong>{formatMoney(estimatedPayout, "BDT")}</strong><small>Rate: 1 USD = {Number(summary.withdrawal_summary.usd_bdt_rate).toLocaleString()} BDT · fixed for this request</small></div>}
+                  {estimatedPayout !== null && <div className="withdrawal-payout-estimate"><span>Estimated mobile payout</span><strong>{formatMoney(estimatedPayout)}</strong><small>Rate: 1 USD = {Number(summary.withdrawal_summary.usd_bdt_rate).toLocaleString()} BDT · fixed for this request</small></div>}
                   {!codeSent ? (
                     <Button className="primary" type="button" disabled={!canWithdraw || sendingCode} onClick={() => void sendWithdrawalCode()}>
                       {sendingCode ? "Sending email code…" : "Send withdrawal confirmation code"}
@@ -708,7 +708,7 @@ export function WithdrawalPage({
 
           <Card className={`panel withdrawal-history-panel${embedded ? " wallet-withdrawal-history" : ""}`} id={embedded ? "withdrawal-history" : undefined}>
             <div className="panel-heading"><div><p className="eyebrow">REQUEST RECORDS</p><h2>{historyOnly || embedded ? "Withdrawal history" : "Recent requests"}</h2></div>{!historyOnly && !embedded && <Button className="text-link" variant="link" asChild><Link href="/withdrawals">View all →</Link></Button>}</div>
-            {historyError ? <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{historyError}</AlertDescription></Alert> : <WithdrawalHistory records={historyOnly || embedded ? records : records.slice(0, 5)} currency={summary.currency} />}
+            {historyError ? <Alert className="state error-state" variant="destructive" role="alert"><AlertDescription>{historyError}</AlertDescription></Alert> : <WithdrawalHistory records={historyOnly || embedded ? records : records.slice(0, 5)} />}
             <p className="withdrawal-support-link">Need help with an offer reward or payout? <Link href="/support">Contact support</Link>.</p>
           </Card>
         </>

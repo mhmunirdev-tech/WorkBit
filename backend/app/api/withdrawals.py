@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -145,10 +145,14 @@ def update_payout_settings(
 
 @router.get("/admin/withdrawals", response_model=list[WithdrawalRead])
 def list_admin_withdrawals(
+    status: list[str] | None = Query(default=None),
     _: User = Depends(require_permission("withdrawals.view")),
     db: Session = Depends(get_db),
 ) -> list[dict]:
-    return [_request_read(item) for item in withdrawal_service.list_for_admin(db)]
+    return [
+        _request_read(item)
+        for item in withdrawal_service.list_for_admin(db, statuses=status)
+    ]
 
 
 @router.get("/admin/withdrawals/{withdrawal_id}", response_model=AdminWithdrawalRead)

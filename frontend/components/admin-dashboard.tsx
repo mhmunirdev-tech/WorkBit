@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import { useLiveRefresh } from "../lib/use-live-refresh";
 import { formatUsd } from "../lib/utils";
 import { useAdminIdentity } from "./admin-shell";
+import { AdminAnalytics } from "./admin-analytics";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
@@ -31,7 +32,7 @@ type Withdrawal = {
   created_at: string;
 };
 
-function formatMoney(amount: string | number, currency: string): string {
+function formatMoney(amount: string | number): string {
   return formatUsd(amount);
 }
 
@@ -46,7 +47,7 @@ export function AdminDashboard() {
   const refreshDashboard = useCallback(async () => {
     const [dashboardResult, withdrawalsResult] = await Promise.allSettled([
       api<AdminDashboardData>("/admin/dashboard"),
-      api<Withdrawal[]>("/admin/withdrawals"),
+      api<Withdrawal[]>("/admin/withdrawals?status=PENDING&status=PROCESSING"),
     ]);
     if (dashboardResult.status === "fulfilled") {
       setData(dashboardResult.value);
@@ -66,7 +67,7 @@ export function AdminDashboard() {
   useEffect(() => {
     void refreshDashboard();
   }, [refreshDashboard]);
-  useLiveRefresh(refreshDashboard);
+  useLiveRefresh(refreshDashboard, { intervalMs: 30_000 });
 
   const pendingWithdrawals = (withdrawals ?? []).filter(
     (request) => request.status === "PENDING" || request.status === "PROCESSING",
@@ -82,7 +83,6 @@ export function AdminDashboard() {
         </div>
         <div className="admin-dashboard-header-actions">
           <Button variant="outline" asChild><Link href="/admin/banners"><ImagePlus size={16} /> Manage banners</Link></Button>
-          <Button variant="outline" asChild><Link href="/admin/analytics">View analysis</Link></Button>
           <div className="admin-dashboard-live"><span />Live platform data</div>
         </div>
       </header>
@@ -115,25 +115,25 @@ export function AdminDashboard() {
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-violet"><Banknote size={18} /></span><small>USER WALLETS</small></div>
           <p>Available balance</p>
-          <strong>{data ? formatMoney(data.total_wallet_balance, data.currency) : "—"}</strong>
+          <strong>{data ? formatMoney(data.total_wallet_balance) : "—"}</strong>
           <small className="admin-metric-foot">Combined available wallet funds</small>
         </article></Card>
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-green"><Banknote size={18} /></span><small>APPROVED ADS</small></div>
           <p>Gross approved ad payouts</p>
-          <strong>{data ? formatMoney(data.approved_ad_payout, data.currency) : "—"}</strong>
+          <strong>{data ? formatMoney(data.approved_ad_payout) : "—"}</strong>
           <small className="admin-metric-foot">Total provider payout for approved ads</small>
         </article></Card>
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-green"><Banknote size={18} /></span><small>PLATFORM SHARE</small></div>
           <p>Platform ad share retained</p>
-          <strong>{data ? formatMoney(data.platform_ad_revenue, data.currency) : "—"}</strong>
+          <strong>{data ? formatMoney(data.platform_ad_revenue) : "—"}</strong>
           <small className="admin-metric-foot">Recorded share from approved ads</small>
         </article></Card>
         <Card className="admin-dashboard-metric" asChild><article>
           <div className="admin-metric-heading"><span className="admin-metric-icon admin-icon-amber"><Banknote size={18} /></span><small>APPROVED PACKAGES</small></div>
           <p>Registered user amount</p>
-          <strong>{data ? formatMoney(data.registered_user_amount, data.currency) : "—"}</strong>
+          <strong>{data ? formatMoney(data.registered_user_amount) : "—"}</strong>
           <small className="admin-metric-foot">Verified package payments received</small>
         </article></Card>
       </section>
@@ -160,7 +160,7 @@ export function AdminDashboard() {
                 <Link className="admin-queue-row" href="/admin/withdrawals" key={request.id}>
                   <span className="admin-queue-avatar"><Banknote size={16} /></span>
                   <span className="admin-queue-copy">
-                    <strong>{formatMoney(request.amount, request.currency)}</strong>
+                    <strong>{formatMoney(request.amount)}</strong>
                     <small>{request.destination_hint} · {new Date(request.created_at).toLocaleDateString()}</small>
                   </span>
                   <span className={`admin-queue-status status-${request.status.toLowerCase()}`}>{request.status.toLowerCase()}</span>
@@ -181,6 +181,7 @@ export function AdminDashboard() {
           </Button>
         </Card>
       </section>
+      <AdminAnalytics embedded />
       <footer className="admin-dashboard-footer">WorkBit operations console <span>·</span> User account data is updated from the backend.</footer>
     </main>
   );

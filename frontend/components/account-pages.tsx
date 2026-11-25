@@ -85,7 +85,7 @@ function AccountState({ loading, error }: { loading: boolean; error: string }) {
   return null;
 }
 
-function formatMoney(value: string | number, currency: string, usdBdtRate: string | number | null) {
+function formatMoney(value: string | number, usdBdtRate: string | number | null) {
   return formatWbcFromUsd(value, usdBdtRate) ?? formatUsd(value);
 }
 
@@ -175,7 +175,7 @@ export function ProfilePage() {
           {Number(account.reversal_debt) > 0 && (
             <Alert className="state" role="status">
               <AlertDescription>
-                A provider reversal created a {formatMoney(account.reversal_debt, account.currency, account.withdrawal_summary.usd_bdt_rate)} balance debt. Future approved earnings will clear it before becoming withdrawable.
+                A provider reversal created a {formatMoney(account.reversal_debt, account.withdrawal_summary.usd_bdt_rate)} balance debt. Future approved earnings will clear it before becoming withdrawable.
               </AlertDescription>
             </Alert>
           )}
@@ -233,37 +233,37 @@ export function ProfilePage() {
             <Card className="profile-balance-card is-primary">
               <span className="profile-balance-icon"><WalletCards size={17} /></span>
               <p>Total wallet balance</p>
-              <strong>{formatMoney(account.available_balance, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.available_balance, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>{account.withdrawal_summary.usd_bdt_rate ? `1 WBC = ৳${WBC_VALUE_BDT.toFixed(2)} · deposit and earnings combined` : "WBC estimate unavailable until the USD/BDT rate is configured"}</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-violet"><WalletCards size={17} /></span>
               <p>Deposit balance</p>
-              <strong>{formatMoney(account.deposit_balance, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.deposit_balance, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>For package purchases only</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-green"><ArrowUpRight size={17} /></span>
               <p>Earning balance</p>
-              <strong>{formatMoney(account.earning_balance, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.earning_balance, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>Can be withdrawn or used for packages</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-green"><ArrowUpRight size={17} /></span>
               <p>Total earnings</p>
-              <strong>{formatMoney(account.lifetime_earned, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.lifetime_earned, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>Recorded on your wallet ledger</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-amber"><WalletCards size={17} /></span>
               <p>Total withdrawn</p>
-              <strong>{formatMoney(account.lifetime_withdrawn, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.lifetime_withdrawn, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>Completed withdrawals</small>
             </Card>
             <Card className="profile-balance-card">
               <span className="profile-balance-icon is-violet"><WalletCards size={17} /></span>
               <p>Pending balance</p>
-              <strong>{formatMoney(account.pending_balance, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong>
+              <strong>{formatMoney(account.pending_balance, account.withdrawal_summary.usd_bdt_rate)}</strong>
               <small>Awaiting validation</small>
             </Card>
           </section>
@@ -285,9 +285,9 @@ export function ProfilePage() {
               <div className="profile-referral-stats">
                 <div><strong>{account.stats.referrals}</strong><span>Total referrals</span></div>
                 <div><strong>{account.stats.active_referrals}</strong><span>Package members</span></div>
-                <div><strong>{formatMoney(account.stats.referral_earnings, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
+                <div><strong>{formatMoney(account.stats.referral_earnings, account.withdrawal_summary.usd_bdt_rate)}</strong><span>Referral income</span></div>
               </div>
-              <p className="profile-pending-referral">Pending referral earnings <strong>{formatMoney(account.stats.pending_referral_earnings, account.currency, account.withdrawal_summary.usd_bdt_rate)}</strong></p>
+              <p className="profile-pending-referral">Pending referral earnings <strong>{formatMoney(account.stats.pending_referral_earnings, account.withdrawal_summary.usd_bdt_rate)}</strong></p>
             </Card>
 
             <Card className="panel profile-package-card">
@@ -326,7 +326,7 @@ export function ProfilePage() {
               <div><dt>Email address</dt><dd className="profile-email-value">{account.user.email}</dd></div>
               <div><dt>Country</dt><dd>{account.user.country}</dd></div>
               <div><dt>Referral code</dt><dd>{account.user.referral_code}</dd></div>
-              <div><dt>Minimum withdrawal</dt><dd>{account.withdrawal_summary.enabled ? formatMoney(account.withdrawal_summary.minimum_amount, account.currency, account.withdrawal_summary.usd_bdt_rate) : "Currently unavailable"}</dd></div>
+              <div><dt>Minimum withdrawal</dt><dd>{account.withdrawal_summary.enabled ? formatMoney(account.withdrawal_summary.minimum_amount, account.withdrawal_summary.usd_bdt_rate) : "Currently unavailable"}</dd></div>
             </dl>
           </Card>
         </div>

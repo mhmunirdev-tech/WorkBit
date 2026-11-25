@@ -30,7 +30,7 @@ type Purchase = {
   user_email: string;
 };
 
-function money(amount: string, currency: string) {
+function money(amount: string) {
   return formatUsd(amount);
 }
 
@@ -60,7 +60,7 @@ export function AdminPackagePurchases() {
   async function review(purchase: Purchase, action: "approve" | "reject") {
     const expected = purchase.payment_amount_bdt
       ? `BDT ${Number(purchase.payment_amount_bdt).toLocaleString("en-BD", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-      : money(purchase.amount, purchase.currency);
+      : money(purchase.amount);
     if (action === "approve" && !window.confirm(`Confirm receipt of ${expected} for ${purchase.package_name}?`)) return;
     setBusyId(purchase.id);
     setError("");
@@ -103,7 +103,7 @@ export function AdminPackagePurchases() {
             {purchases.map((purchase) => (
               <article className="admin-package-item" key={purchase.id}>
                 <div className="admin-package-user"><strong>{purchase.user_name}</strong><span>{purchase.user_email}</span></div>
-                <div className="admin-package-summary"><strong>{purchase.package_name} · {money(purchase.amount, purchase.currency)}{purchase.payment_amount_bdt && <> · BDT {Number(purchase.payment_amount_bdt).toLocaleString("en-BD", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}</strong><span>{purchase.payment_method} · Ref: <b>{purchase.payment_reference}</b>{purchase.usd_bdt_rate && <> · Rate: 1 USD = BDT {Number(purchase.usd_bdt_rate).toLocaleString("en-BD")}</>}</span><time dateTime={purchase.created_at}>{new Date(purchase.created_at).toLocaleString()}</time></div>
+                <div className="admin-package-summary"><strong>{purchase.package_name} · {money(purchase.amount)}{purchase.payment_amount_bdt && <> · BDT {Number(purchase.payment_amount_bdt).toLocaleString("en-BD", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>}</strong><span>{purchase.payment_method} · Ref: <b>{purchase.payment_reference}</b>{purchase.usd_bdt_rate && <> · Rate: 1 USD = BDT {Number(purchase.usd_bdt_rate).toLocaleString("en-BD")}</>}</span><time dateTime={purchase.created_at}>{new Date(purchase.created_at).toLocaleString()}</time></div>
                 <Badge className={`withdrawal-status withdrawal-${purchase.status.toLowerCase()}`} variant="outline">{purchase.status.toLowerCase()}</Badge>
                 {purchase.admin_note && <p className="admin-package-note">{purchase.admin_note}</p>}
                 {purchase.status === "PENDING" && (

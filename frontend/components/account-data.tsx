@@ -45,7 +45,7 @@ type Reward = {
   created_at: string;
 };
 
-function amount(value: string, currency: string) {
+function amount(value: string) {
   const numericValue = Number(value);
   const maximumFractionDigits =
     Math.abs(numericValue) > 0 && Math.abs(numericValue) < 0.01 ? 8 : 2;
@@ -155,8 +155,8 @@ export function TransactionsPage() {
     <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel table-panel"><Table className="ledger-table" aria-label="Wallet transactions"><TableHeader><TableRow className="ledger-heading"><TableHead>Transaction</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead>Created</TableHead></TableRow></TableHeader><TableBody>{data.map((item) => {
       const isReferralReward = item.type === "REFERRAL_REWARD_APPROVAL";
       const displayedAmount = isReferralReward
-        ? formatWbcFromUsd(item.amount, wallet?.usd_bdt_rate) ?? amount(item.amount, item.currency)
-        : amount(item.amount, item.currency);
+        ? formatWbcFromUsd(item.amount, wallet?.usd_bdt_rate) ?? amount(item.amount)
+        : amount(item.amount);
       return <TableRow className="ledger-row" key={item.id}><TableCell><strong>{item.description || item.type.replaceAll("_", " ")}</strong><small>{item.type.replaceAll("_", " ")}</small></TableCell><TableCell><strong>{displayedAmount}</strong></TableCell><TableCell><Badge className="status-badge" variant="outline">{item.status}</Badge></TableCell><TableCell><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString()}</time></TableCell></TableRow>;
     })}</TableBody></Table></Card>}</PageState>
   </Shell>;
@@ -166,6 +166,6 @@ export function RewardsPage() {
   const { data, loading, error } = useAccountData<Reward[]>("/rewards");
   const { data: wallet } = useAccountData<Wallet>("/wallet");
   return <Shell><header className="top"><div><p className="eyebrow">REWARD HISTORY</p><h1>Your rewards</h1><p className="muted">Verified provider rewards are shown as WBC equivalents at the current USD/BDT rate. Provider payout amounts and the underlying wallet ledger remain in USD.</p></div></header>
-    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel reward-list">{data.map((item) => <article className="reward-row" key={item.id}><div><strong>{formatWbcFromUsd(item.user_reward, wallet?.usd_bdt_rate) ?? amount(item.user_reward, item.currency)}</strong><small>Provider payout {amount(item.provider_payout, item.currency)} · {new Date(item.created_at).toLocaleString()}</small></div><Badge className="status-badge" variant="outline">{item.status}</Badge></article>)}</Card>}</PageState>
+    <PageState loading={loading} error={error} empty={!data?.length}>{data && data.length > 0 && <Card className="panel reward-list">{data.map((item) => <article className="reward-row" key={item.id}><div><strong>{formatWbcFromUsd(item.user_reward, wallet?.usd_bdt_rate) ?? amount(item.user_reward)}</strong><small>Provider payout {amount(item.provider_payout)} · {new Date(item.created_at).toLocaleString()}</small></div><Badge className="status-badge" variant="outline">{item.status}</Badge></article>)}</Card>}</PageState>
   </Shell>;
 }
