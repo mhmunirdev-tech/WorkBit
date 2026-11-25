@@ -1932,6 +1932,17 @@
   color: #1677f2;
 }
 
+/* Keep top-level admin sections visually separated on every admin screen. */
+.admin-app-content > :is(
+  .admin-analytics-page,
+  .admin-provider-performance,
+  .admin-banners-page,
+  .admin-console-page
+) {
+  display: grid;
+  gap: 16px;
+}
+
 /* The drawer is a mobile-only control; never cover the desktop Overview canvas. */
 @media (min-width: 801px) {
   .admin-app-shell .mobile-menu-toggle,
