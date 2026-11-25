@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, ArrowDownToLine, Banknote, ChevronDown, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, ArrowDownToLine, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -59,7 +59,6 @@ const navigationGroups = [
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname().replace(/\/+$/, "") || "/";
   const router = useRouter();
-  const isOverview = pathname === "/admin";
   const [identity, setIdentity] = useState<AdminIdentity | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -114,7 +113,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminIdentityContext.Provider value={identity}>
-      <main className={`app-shell admin-app-shell${isOverview ? " admin-overview-shell" : ""}`}>
+      <main className="app-shell admin-app-shell">
       <Button
         className="mobile-menu-toggle"
         variant="ghost"
@@ -191,26 +190,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <section className="app-content admin-app-content">
         <header className="admin-console-topbar">
           <div>
-            {isOverview ? (
-              <>
-                <p>ADMIN CONSOLE</p>
-                <strong>View <ChevronDown size={13} aria-hidden="true" /></strong>
-              </>
-            ) : (
-              <>
-                <p>WORKBIT <span>/</span> ADMIN CONSOLE</p>
-                <strong>{currentPage?.label ?? "Operations"}</strong>
-              </>
-            )}
+            <p>WORKBIT <span>/</span> ADMIN CONSOLE</p>
+            <strong>{currentPage?.label ?? "Operations"}</strong>
           </div>
           <div className="admin-console-session">
             <span className="admin-console-secure"><ShieldCheck size={15} /> Secure admin session</span>
             <span className="admin-console-user">{identity?.full_name || "Loading profile…"}</span>
-            {isOverview && (
-              <Avatar className="admin-console-avatar" aria-hidden="true">
-                <AvatarFallback>{initials || "AD"}</AvatarFallback>
-              </Avatar>
-            )}
           </div>
         </header>
         {children}
