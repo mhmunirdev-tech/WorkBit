@@ -1885,3 +1885,363 @@
     justify-content: center;
   }
 }
+
+/* Reference layout: the overview uses a full-width command canvas with an off-canvas menu. */
+.admin-overview-shell {
+  display: block;
+}
+
+.admin-overview-shell .admin-app-content {
+  width: 100%;
+  max-width: none;
+  padding: 0 clamp(22px, 3.1vw, 38px) 42px;
+}
+
+.admin-overview-shell .admin-console-topbar {
+  min-height: 62px;
+  margin: 0 calc(clamp(22px, 3.1vw, 38px) * -1) 0;
+  padding: 10px clamp(22px, 3.1vw, 38px) 10px 76px;
+  border: 0;
+  border-bottom: 1px solid #e2eaf7;
+  border-radius: 0;
+  background: #ffffffd9;
+  box-shadow: 0 8px 25px #2547740b;
+}
+
+.admin-overview-shell .admin-console-topbar p {
+  color: #4d6594;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.admin-overview-shell .admin-console-topbar strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #1f3767;
+  font-size: 10px;
+}
+
+.admin-overview-shell .admin-console-session {
+  gap: 14px;
+}
+
+.admin-overview-shell .admin-console-avatar {
+  width: 29px;
+  height: 29px;
+  border: 2px solid #dce7ff;
+  background: linear-gradient(145deg, #77a5ff, #6288e9);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-overview-menu-toggle {
+  position: fixed;
+  z-index: 46;
+  top: 13px;
+  left: 17px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #e0e9f8;
+  border-radius: 10px;
+  background: #fff;
+  color: #1765dc;
+  box-shadow: 0 5px 18px #21477716;
+}
+
+.admin-overview-menu-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-overview-shell .admin-sidebar {
+  position: fixed;
+  z-index: 44;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: min(290px, calc(100vw - 54px));
+  height: 100dvh;
+  transform: translateX(-105%);
+  transition: transform .22s ease;
+  box-shadow: 16px 0 40px #132c4d2e;
+}
+
+.admin-overview-shell .admin-sidebar.is-open {
+  transform: translateX(0);
+}
+
+.admin-overview-backdrop {
+  position: fixed;
+  z-index: 43;
+  inset: 0;
+  display: block;
+  border: 0;
+  background: #0d1e38a8;
+}
+
+.admin-overview-shell .admin-dashboard-page {
+  width: min(100%, 1160px);
+  margin: 0 auto;
+  padding-top: 27px;
+  gap: 20px;
+}
+
+.admin-overview-shell .admin-dashboard-header {
+  min-height: 0;
+  padding: 0 6px 3px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-overview-shell .admin-dashboard-header::after {
+  display: none;
+}
+
+.admin-overview-shell .admin-dashboard-header h1 {
+  margin-top: 7px;
+  font-size: clamp(30px, 3vw, 38px);
+  letter-spacing: -1.4px;
+}
+
+.admin-overview-shell .admin-dashboard-header p:not(.eyebrow) {
+  font-size: 11px;
+}
+
+.admin-overview-shell .admin-dashboard-header-actions {
+  align-self: flex-end;
+  padding-bottom: 4px;
+}
+
+.admin-overview-shell .admin-dashboard-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-overview-shell .admin-dashboard-metric {
+  min-height: 137px;
+  padding: 17px 18px;
+  border-radius: 14px;
+  box-shadow: 0 9px 20px #21477712, inset 0 1px #ffffffd9;
+}
+
+.admin-overview-shell .admin-dashboard-metric::before {
+  display: none;
+}
+
+.admin-overview-shell .admin-dashboard-metric::after {
+  right: -13px;
+  bottom: -48px;
+  width: 115px;
+  height: 115px;
+  background: #ffffff47;
+}
+
+.admin-overview-shell .admin-dashboard-metric:nth-child(1) {
+  border-color: #b8d2ff;
+  background: linear-gradient(145deg, #fff 0%, #f3f7ff 100%);
+}
+
+.admin-overview-shell .admin-dashboard-metric:nth-child(2),
+.admin-overview-shell .admin-dashboard-metric:nth-child(5) {
+  border-color: #b4e4d0;
+  background: linear-gradient(145deg, #fff 0%, #effbf5 100%);
+}
+
+.admin-overview-shell .admin-dashboard-metric:nth-child(3),
+.admin-overview-shell .admin-dashboard-metric:nth-child(7) {
+  border-color: #f4ca89;
+  background: linear-gradient(145deg, #fff 0%, #fff7e9 100%);
+}
+
+.admin-overview-shell .admin-dashboard-metric:nth-child(4) {
+  border-color: #d7c2ff;
+  background: linear-gradient(145deg, #fff 0%, #f7f1ff 100%);
+}
+
+.admin-overview-shell .admin-dashboard-metric:nth-child(6) {
+  border-color: #b8d2ff;
+  background: linear-gradient(145deg, #fff 0%, #f2f7ff 100%);
+}
+
+.admin-overview-shell .admin-dashboard-metric:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 26px #2147771b, inset 0 1px #fff;
+}
+
+.admin-overview-shell .admin-metric-heading {
+  margin-bottom: 5px;
+}
+
+.admin-overview-shell .admin-metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.admin-overview-shell .admin-dashboard-metric p {
+  color: #1f3767;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-overview-shell .admin-dashboard-metric strong {
+  color: #132d5d;
+  font-size: clamp(25px, 2.4vw, 31px);
+}
+
+.admin-overview-shell .admin-dashboard-metric .admin-metric-foot {
+  color: #6f82a3;
+  font-size: 9px;
+}
+
+.admin-overview-shell .admin-dashboard-lower {
+  grid-template-columns: minmax(0, 1.65fr) minmax(270px, .9fr);
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.admin-overview-shell .admin-dashboard-queue,
+.admin-overview-shell .admin-dashboard-shortcut {
+  min-height: 156px;
+  padding: 19px 22px;
+  border-radius: 15px;
+}
+
+.admin-overview-shell .admin-queue-summary {
+  margin: 12px 0 6px;
+}
+
+.admin-overview-shell .admin-queue-summary strong {
+  font-size: 30px;
+}
+
+.admin-overview-shell .admin-dashboard-shortcut {
+  background:
+    radial-gradient(circle at 92% 72%, #cbd9ff99 0, transparent 9rem),
+    linear-gradient(145deg, #fff, #f3f6ff);
+}
+
+.admin-overview-shell .admin-analytics-section {
+  gap: 14px;
+  margin-top: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-overview-shell .admin-analytics-section > .admin-section-heading {
+  padding: 0;
+}
+
+.admin-overview-shell .admin-analytics-section > .admin-section-heading h2 {
+  font-size: 17px;
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metrics {
+  gap: 12px;
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metric {
+  min-height: 128px;
+  padding: 16px 17px;
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metric:nth-child(1) {
+  border-color: #b4e4d0;
+  background: linear-gradient(145deg, #fff, #effbf5);
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metric:nth-child(2) {
+  border-color: #b8d2ff;
+  background: linear-gradient(145deg, #fff, #f2f7ff);
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metric:nth-child(3) {
+  border-color: #f4ca89;
+  background: linear-gradient(145deg, #fff, #fff7e9);
+}
+
+.admin-overview-shell .admin-analytics-section .admin-dashboard-metric:nth-child(4) {
+  border-color: #d7c2ff;
+  background: linear-gradient(145deg, #fff, #f7f1ff);
+}
+
+.admin-overview-shell .admin-analytics-panels {
+  gap: 12px;
+}
+
+.admin-overview-shell .admin-analytics-panel {
+  min-height: 280px;
+  padding: 18px;
+  border-radius: 15px;
+  background: #ffffffd9;
+}
+
+.admin-overview-shell .admin-dashboard-footer {
+  padding: 0 6px;
+}
+
+@media (max-width: 900px) {
+  .admin-overview-shell .admin-dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-overview-shell .admin-dashboard-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-overview-shell .admin-app-content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .admin-overview-shell .admin-console-topbar {
+    margin-right: -16px;
+    margin-left: -16px;
+    padding-right: 16px;
+    padding-left: 64px;
+  }
+
+  .admin-overview-shell .admin-dashboard-page {
+    padding-top: 22px;
+  }
+
+  .admin-overview-shell .admin-dashboard-header-actions {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .admin-overview-shell .admin-dashboard-header-actions .ui-button,
+  .admin-overview-shell .admin-dashboard-live {
+    flex: 1;
+  }
+}
+
+@media (max-width: 460px) {
+  .admin-overview-shell .admin-dashboard-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-overview-shell .admin-dashboard-header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-overview-shell .admin-dashboard-header-actions .ui-button,
+  .admin-overview-shell .admin-dashboard-live {
+    width: 100%;
+    flex: auto;
+  }
+}

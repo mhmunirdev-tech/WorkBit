@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, ArrowDownToLine, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, ArrowDownToLine, Banknote, ChevronDown, Grid2X2, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -59,6 +59,7 @@ const navigationGroups = [
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname().replace(/\/+$/, "") || "/";
   const router = useRouter();
+  const isOverview = pathname === "/admin";
   const [identity, setIdentity] = useState<AdminIdentity | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -113,9 +114,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AdminIdentityContext.Provider value={identity}>
-      <main className="app-shell admin-app-shell">
+      <main className={`app-shell admin-app-shell${isOverview ? " admin-overview-shell" : ""}`}>
       <Button
-        className="mobile-menu-toggle"
+        className={`mobile-menu-toggle${isOverview ? " admin-overview-menu-toggle" : ""}`}
         variant="ghost"
         size="icon"
         type="button"
@@ -124,11 +125,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         aria-controls="admin-navigation"
         onClick={() => setMenuOpen((open) => !open)}
       >
-        <span aria-hidden="true">{menuOpen ? <X /> : <Menu />}</span>
+        <span aria-hidden="true">{menuOpen ? <X /> : isOverview ? <Grid2X2 /> : <Menu />}</span>
       </Button>
       {menuOpen && (
         <Button
-          className="mobile-menu-backdrop"
+          className={`mobile-menu-backdrop${isOverview ? " admin-overview-backdrop" : ""}`}
           variant="ghost"
           type="button"
           aria-label="Close admin navigation"
@@ -190,12 +191,26 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <section className="app-content admin-app-content">
         <header className="admin-console-topbar">
           <div>
-            <p>WORKBIT <span>/</span> ADMIN CONSOLE</p>
-            <strong>{currentPage?.label ?? "Operations"}</strong>
+            {isOverview ? (
+              <>
+                <p>ADMIN CONSOLE</p>
+                <strong>View <ChevronDown size={13} aria-hidden="true" /></strong>
+              </>
+            ) : (
+              <>
+                <p>WORKBIT <span>/</span> ADMIN CONSOLE</p>
+                <strong>{currentPage?.label ?? "Operations"}</strong>
+              </>
+            )}
           </div>
           <div className="admin-console-session">
             <span className="admin-console-secure"><ShieldCheck size={15} /> Secure admin session</span>
             <span className="admin-console-user">{identity?.full_name || "Loading profile…"}</span>
+            {isOverview && (
+              <Avatar className="admin-console-avatar" aria-hidden="true">
+                <AvatarFallback>{initials || "AD"}</AvatarFallback>
+              </Avatar>
+            )}
           </div>
         </header>
         {children}
