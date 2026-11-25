@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, ArrowDownToLine, Banknote, ChevronDown, Grid2X2, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, ArrowDownToLine, Banknote, ChevronDown, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -116,7 +116,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <AdminIdentityContext.Provider value={identity}>
       <main className={`app-shell admin-app-shell${isOverview ? " admin-overview-shell" : ""}`}>
       <Button
-        className={`mobile-menu-toggle${isOverview ? " admin-overview-menu-toggle" : ""}`}
+        className="mobile-menu-toggle"
         variant="ghost"
         size="icon"
         type="button"
@@ -125,11 +125,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         aria-controls="admin-navigation"
         onClick={() => setMenuOpen((open) => !open)}
       >
-        <span aria-hidden="true">{menuOpen ? <X /> : isOverview ? <Grid2X2 /> : <Menu />}</span>
+        <span aria-hidden="true">{menuOpen ? <X /> : <Menu />}</span>
       </Button>
       {menuOpen && (
         <Button
-          className={`mobile-menu-backdrop${isOverview ? " admin-overview-backdrop" : ""}`}
+          className="mobile-menu-backdrop"
           variant="ghost"
           type="button"
           aria-label="Close admin navigation"

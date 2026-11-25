@@ -1860,13 +1860,15 @@
   }
 }
 
-/* Reference layout: the overview uses a full-width command canvas with an off-canvas menu. */
+/* Reference layout: keep the Overview content modern while preserving the desktop sidebar. */
 .admin-overview-shell {
-  display: block;
+  display: flex;
 }
 
 .admin-overview-shell .admin-app-content {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
   max-width: none;
   padding: 0 clamp(22px, 3.1vw, 38px) 42px;
 }
@@ -1874,7 +1876,7 @@
 .admin-overview-shell .admin-console-topbar {
   min-height: 62px;
   margin: 0 calc(clamp(22px, 3.1vw, 38px) * -1) 0;
-  padding: 10px clamp(22px, 3.1vw, 38px) 10px 76px;
+  padding: 10px clamp(22px, 3.1vw, 38px);
   border: 0;
   border-bottom: 1px solid #e2eaf7;
   border-radius: 0;
@@ -1908,54 +1910,6 @@
   color: #fff;
   font-size: 9px;
   font-weight: 800;
-}
-
-.admin-overview-menu-toggle {
-  position: fixed;
-  z-index: 46;
-  top: 13px;
-  left: 17px;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid #e0e9f8;
-  border-radius: 10px;
-  background: #fff;
-  color: #1765dc;
-  box-shadow: 0 5px 18px #21477716;
-}
-
-.admin-overview-menu-toggle svg {
-  width: 17px;
-  height: 17px;
-}
-
-.admin-overview-shell .admin-sidebar {
-  position: fixed;
-  z-index: 44;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  width: min(290px, calc(100vw - 54px));
-  height: 100dvh;
-  transform: translateX(-105%);
-  transition: transform .22s ease;
-  box-shadow: 16px 0 40px #132c4d2e;
-}
-
-.admin-overview-shell .admin-sidebar.is-open {
-  transform: translateX(0);
-}
-
-.admin-overview-backdrop {
-  position: fixed;
-  z-index: 43;
-  inset: 0;
-  display: block;
-  border: 0;
-  background: #0d1e38a8;
 }
 
 .admin-overview-shell .admin-dashboard-page {
@@ -2217,5 +2171,91 @@
   .admin-overview-shell .admin-dashboard-live {
     width: 100%;
     flex: auto;
+  }
+}
+
+/* Keep the admin sidebar light on desktop and mobile. */
+.admin-app-shell .admin-sidebar {
+  border-right: 1px solid #e1eaf6;
+  background: linear-gradient(180deg, #ffffff 0%, #f6f9ff 100%);
+  box-shadow: 8px 0 28px #173b5c08;
+  color: #526783;
+}
+
+.admin-app-shell .admin-sidebar .brand {
+  color: #142c4e;
+}
+
+.admin-app-shell .admin-sidebar .brand i {
+  background: linear-gradient(145deg, #eaf4ff, #d8eaff);
+  color: #1677f2;
+}
+
+.admin-app-shell .admin-sidebar .tagline {
+  color: #8192aa;
+}
+
+.admin-app-shell .admin-sidebar .nav-caption {
+  color: #8295b0;
+}
+
+.admin-app-shell .admin-sidebar .app-nav-link {
+  color: #526681;
+}
+
+.admin-app-shell .admin-sidebar .app-nav-link:hover {
+  border-color: #e6effb;
+  background: #f3f8ff;
+  color: #1c4f91;
+}
+
+.admin-app-shell .admin-sidebar .app-nav-link.is-active {
+  border-color: #d7e8ff;
+  background: linear-gradient(100deg, #eaf4ff, #f8fbff);
+  box-shadow: inset 3px 0 #1677f2;
+  color: #145eb9;
+}
+
+.admin-app-shell .admin-sidebar .app-nav-link.is-active .nav-icon,
+.admin-app-shell .admin-sidebar .app-nav-link:hover .nav-icon {
+  color: #1677f2;
+}
+
+.admin-app-shell .admin-sidebar .nav-icon {
+  color: #8297b4;
+}
+
+.admin-app-shell .admin-sidebar .sidebar-account {
+  border-color: #e1eaf6;
+}
+
+.admin-app-shell .admin-sidebar .sidebar-user-copy strong {
+  color: #263f65;
+}
+
+.admin-app-shell .admin-sidebar .sidebar-user-copy small {
+  color: #7588a2;
+}
+
+.admin-app-shell .admin-sidebar .logout-button {
+  color: #7185a0;
+}
+
+.admin-app-shell .admin-sidebar .logout-button:hover {
+  background: #eaf4ff;
+  color: #1677f2;
+}
+
+/* The drawer is a mobile-only control; never cover the desktop Overview canvas. */
+@media (min-width: 801px) {
+  .admin-app-shell .mobile-menu-toggle,
+  .admin-app-shell .mobile-menu-backdrop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 800px) {
+  .admin-app-shell .mobile-menu-backdrop {
+    background: rgb(16 29 49 / 42%) !important;
   }
 }
