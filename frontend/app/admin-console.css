@@ -1573,32 +1573,6 @@
     #f4f7fb;
 }
 
-.admin-app-shell .admin-sidebar {
-  border-right: 1px solid #ffffff1c;
-  background:
-    radial-gradient(circle at 12% 0, #39577f 0, transparent 25rem),
-    linear-gradient(180deg, #172a47 0%, #0c1a31 100%);
-  box-shadow: 12px 0 38px #142b4b16;
-}
-
-.admin-sidebar .brand {
-  letter-spacing: -.7px;
-}
-
-.admin-sidebar .brand i {
-  box-shadow: 0 8px 18px #7c9dff26;
-}
-
-.admin-sidebar .app-nav-link {
-  min-height: 44px;
-  border-radius: 13px;
-}
-
-.admin-sidebar .app-nav-link.is-active {
-  background: linear-gradient(105deg, #6680ed42, #6680ed12);
-  box-shadow: inset 3px 0 #78e1bf, 0 8px 20px #0713262e;
-}
-
 .admin-app-content {
   padding-bottom: 56px;
 }
