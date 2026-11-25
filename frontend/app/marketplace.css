@@ -106,12 +106,42 @@
   box-shadow: 0 16px 32px #284c7e14;
 }
 
+.marketplace-product-media {
+  display: grid;
+  gap: 6px;
+  overflow: hidden;
+  background: #eef3fa;
+}
+
 .marketplace-product-image,
 .marketplace-product-art {
   display: block;
   width: 100%;
   height: 170px;
   object-fit: cover;
+}
+
+.marketplace-product-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 6px 6px;
+}
+
+.marketplace-product-thumbnails img {
+  display: block;
+  width: 100%;
+  height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.marketplace-product-video {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  background: #0f1d33;
 }
 
 .marketplace-product-art {
@@ -371,6 +401,86 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.admin-marketplace-media-field {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e0e8f3;
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.admin-marketplace-media-field > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-marketplace-media-field strong {
+  color: #20385d;
+  font-size: 12px;
+}
+
+.admin-marketplace-media-field small {
+  color: #7487a1;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.admin-marketplace-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-marketplace-media-control {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-marketplace-media-control > span {
+  color: #536781;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-marketplace-upload {
+  display: flex !important;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  gap: 6px !important;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px dashed #a9bdd9;
+  border-radius: 8px;
+  background: #fff;
+  color: #3569c6 !important;
+  cursor: pointer;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.admin-marketplace-upload input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.admin-marketplace-media-control img,
+.admin-marketplace-media-control video {
+  display: block;
+  width: 100%;
+  height: 88px;
+  border-radius: 7px;
+  background: #e8eef8;
+  object-fit: cover;
 }
 
 .admin-marketplace-checkboxes label {

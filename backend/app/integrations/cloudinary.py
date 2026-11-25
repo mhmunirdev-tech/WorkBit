@@ -8,7 +8,13 @@ from fastapi import HTTPException
 from app.core.config import settings
 
 
-def upload_image(image: bytes, content_type: str, public_id: str) -> str:
+def _upload_media(
+    media: bytes,
+    content_type: str,
+    public_id: str,
+    resource_type: str,
+    media_label: str,
+) -> str:
     cloud_name = settings.cloudinary_cloud_name
     api_key = settings.cloudinary_api_key
     api_secret = settings.cloudinary_api_secret
@@ -25,19 +31,27 @@ def upload_image(image: bytes, content_type: str, public_id: str) -> str:
     signature = hashlib.sha1(f"{signed_params}{api_secret}".encode("utf-8")).hexdigest()
     try:
         response = httpx.post(
-            f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload",
+            f"https://api.cloudinary.com/v1_1/{cloud_name}/{resource_type}/upload",
             data={**params, "api_key": api_key, "signature": signature},
-            files={"file": ("image", image, content_type)},
+            files={"file": (media_label, media, content_type)},
             timeout=20,
         )
         response.raise_for_status()
         result = response.json()
     except (httpx.HTTPError, ValueError) as error:
-        logging.error("Cloudinary image upload failed")
-        raise HTTPException(502, "Image upload failed. Please try again.") from error
+        logging.error("Cloudinary %s upload failed", media_label)
+        raise HTTPException(502, f"{media_label.title()} upload failed. Please try again.") from error
 
     secure_url = result.get("secure_url") if isinstance(result, dict) else None
     if not isinstance(secure_url, str) or not secure_url.startswith("https://"):
-        logging.error("Cloudinary returned an invalid image URL")
-        raise HTTPException(502, "Image upload failed. Please try again.")
+        logging.error("Cloudinary returned an invalid %s URL", media_label)
+        raise HTTPException(502, f"{media_label.title()} upload failed. Please try again.")
     return secure_url
+
+
+def upload_image(image: bytes, content_type: str, public_id: str) -> str:
+    return _upload_media(image, content_type, public_id, "image", "image")
+
+
+def upload_video(video: bytes, content_type: str, public_id: str) -> str:
+    return _upload_media(video, content_type, public_id, "video", "video")

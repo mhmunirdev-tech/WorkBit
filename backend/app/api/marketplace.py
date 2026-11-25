@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import uuid
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from urllib.parse import quote
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -6,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from app.api.deps import current_user, require_permission
 from app.database.session import get_db
 from app.core.config import settings
+from app.integrations.cloudinary import upload_image, upload_video
 from app.models import (
     MarketplaceCartItem,
     MarketplaceCategory,
@@ -38,6 +40,20 @@ from app.services.marketplace import (
 
 router = APIRouter(tags=["marketplace"])
 marketplace_admin = require_permission("marketplace.manage")
+MAX_PRODUCT_IMAGE_SIZE = 5 * 1024 * 1024
+MAX_PRODUCT_VIDEO_SIZE = 50 * 1024 * 1024
+PRODUCT_IMAGE_SIGNATURES = {
+    "image/jpeg": lambda data: data.startswith(b"\xff\xd8\xff"),
+    "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
+    "image/webp": lambda data: data.startswith(b"RIFF") and data[8:12] == b"WEBP",
+}
+PRODUCT_VIDEO_TYPES = {"video/mp4", "video/webm", "video/quicktime"}
+
+
+def _valid_product_video(data: bytes, content_type: str) -> bool:
+    if content_type == "video/webm":
+        return data.startswith(b"\x1a\x45\xdf\xa3")
+    return len(data) >= 12 and data[4:8] == b"ftyp"
 
 
 @router.get("/marketplace/referral-link")
@@ -223,6 +239,51 @@ def admin_categories(_: User = Depends(marketplace_admin), db: Session = Depends
     )
     counts = _category_counts(db, categories)
     return [category_read(category, counts.get(category.id, 0)) for category in categories]
+
+
+@router.post("/admin/marketplace/products/upload-image")
+def upload_product_image(
+    file: UploadFile = File(...),
+    _: User = Depends(marketplace_admin),
+) -> dict[str, str]:
+    content_type = file.content_type or ""
+    signature_check = PRODUCT_IMAGE_SIGNATURES.get(content_type)
+    if signature_check is None:
+        raise HTTPException(415, "Choose a JPEG, PNG, or WebP product image.")
+    image = file.file.read(MAX_PRODUCT_IMAGE_SIZE + 1)
+    if len(image) > MAX_PRODUCT_IMAGE_SIZE:
+        raise HTTPException(413, "Product images must be 5 MB or smaller.")
+    if not signature_check(image):
+        raise HTTPException(415, "The uploaded file is not a valid supported image.")
+    return {
+        "media_url": upload_image(
+            image,
+            content_type,
+            f"workbit/products/{uuid.uuid4()}",
+        )
+    }
+
+
+@router.post("/admin/marketplace/products/upload-video")
+def upload_product_video(
+    file: UploadFile = File(...),
+    _: User = Depends(marketplace_admin),
+) -> dict[str, str]:
+    content_type = file.content_type or ""
+    if content_type not in PRODUCT_VIDEO_TYPES:
+        raise HTTPException(415, "Choose an MP4, WebM, or MOV product video.")
+    video = file.file.read(MAX_PRODUCT_VIDEO_SIZE + 1)
+    if len(video) > MAX_PRODUCT_VIDEO_SIZE:
+        raise HTTPException(413, "Product videos must be 50 MB or smaller.")
+    if not _valid_product_video(video, content_type):
+        raise HTTPException(415, "The uploaded file is not a valid supported video.")
+    return {
+        "media_url": upload_video(
+            video,
+            content_type,
+            f"workbit/products/{uuid.uuid4()}",
+        )
+    }
 
 
 @router.post("/admin/marketplace/categories", response_model=MarketplaceCategoryRead, status_code=201)

@@ -41,6 +41,9 @@ class MarketplaceProductCreate(BaseModel):
     slug: str = Field(min_length=1, max_length=180, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
     description: str = Field(default="", max_length=5000)
     image_url: str | None = Field(default=None, max_length=1024)
+    image_url_2: str | None = Field(default=None, max_length=1024)
+    image_url_3: str | None = Field(default=None, max_length=1024)
+    video_url: str | None = Field(default=None, max_length=1024)
     price: Decimal = Field(gt=0, max_digits=18, decimal_places=2)
     currency: Literal["BDT"] = "BDT"
     stock_quantity: int = Field(default=0, ge=0, le=2_000_000_000)
@@ -63,6 +66,9 @@ class MarketplaceProductRead(BaseModel):
     slug: str
     description: str
     image_url: str | None
+    image_url_2: str | None
+    image_url_3: str | None
+    video_url: str | None
     price: Decimal
     currency: str
     stock_quantity: int

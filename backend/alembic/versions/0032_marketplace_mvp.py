@@ -1,7 +1,5 @@
 """add the first-party marketplace catalog, cart, and orders"""
 
-from uuid import uuid4
-
 from alembic import op
 import sqlalchemy as sa
 
@@ -128,21 +126,6 @@ def upgrade():
             "ON CONFLICT DO NOTHING"
         )
     )
-    categories = (
-        ("Digital products", "digital-products", "Downloadable resources and digital goods."),
-        ("Electronics accessories", "electronics-accessories", "Useful accessories for phones, computers, and workspaces."),
-        ("Learning", "learning", "Courses, guides, and learning materials."),
-    )
-    for index, (name, slug, description) in enumerate(categories):
-        bind.execute(
-            sa.text(
-                "INSERT INTO marketplace_categories "
-                "(id, name, slug, description, is_active, sort_order, created_at, updated_at) "
-                "VALUES (:id, :name, :slug, :description, true, :sort_order, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-            ),
-            {"id": str(uuid4()), "name": name, "slug": slug, "description": description, "sort_order": index},
-        )
-
 
 def downgrade():
     bind = op.get_bind()

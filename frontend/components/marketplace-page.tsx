@@ -23,6 +23,9 @@ type Product = {
   slug: string;
   description: string;
   image_url: string | null;
+  image_url_2: string | null;
+  image_url_3: string | null;
+  video_url: string | null;
   price: string;
   currency: string;
   stock_quantity: number;
@@ -77,10 +80,13 @@ function money(value: string | number, currency = "BDT") {
 }
 
 function ProductArtwork({ product }: { product: Product | CartItem }) {
-  if (product.image_url) {
-    return <img className="marketplace-product-image" src={product.image_url} alt="" />;
+  const extraMedia = "video_url" in product ? [product.image_url_2, product.image_url_3].filter(Boolean) : [];
+  const images = [product.image_url, ...extraMedia].filter((url): url is string => Boolean(url));
+  const videoUrl = "video_url" in product ? product.video_url : null;
+  if (!images.length && !videoUrl) {
+    return <div className="marketplace-product-art" aria-hidden="true"><ShoppingBag size={30} /></div>;
   }
-  return <div className="marketplace-product-art" aria-hidden="true"><ShoppingBag size={30} /></div>;
+  return <div className="marketplace-product-media">{images.length > 0 ? <img className="marketplace-product-image" src={images[0]} alt="" /> : <video className="marketplace-product-video" src={videoUrl || undefined} muted playsInline controls preload="metadata" />}{images.length > 1 && <div className="marketplace-product-thumbnails">{images.slice(1).map((image) => <img key={image} src={image} alt="" />)}</div>}{videoUrl && images.length > 0 && <video className="marketplace-product-video" src={videoUrl} muted playsInline controls preload="metadata" />}</div>;
 }
 
 function MarketplaceContent() {
