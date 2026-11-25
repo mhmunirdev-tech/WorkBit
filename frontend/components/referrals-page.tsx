@@ -103,8 +103,9 @@ export function ReferralsPage() {
             <ul className="referral-terms-list">
               <li><strong>20%</strong><span>of the first package payment after admin approval</span></li>
               <li><strong>5%</strong><span>of each later package payment after admin approval</span></li>
+              <li><strong>5%</strong><span>of a referred marketplace product order after successful delivery</span></li>
             </ul>
-            <p className="muted">Package purchase is optional for earning from eligible offers. Referral commissions appear in your wallet ledger after approval.</p>
+            <p className="muted">Package purchase is optional for earning from eligible offers. Product affiliate rewards are converted to your USD wallet using the current exchange rate and appear as WBC in your ledger.</p>
           </Card>
           <section className="referral-stats referrals-page-stats" aria-label="Referral summary">
             <Card className="dashboard-metric"><article><p>Total referrals</p><h2>{data.stats.referrals}</h2><small>Accounts using your invite link</small></article></Card>

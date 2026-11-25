@@ -7,6 +7,7 @@ import "./styles.css";
 import "./dashboard.css";
 import "./admin-console.css";
 import "./landing-modern.css";
+import "./marketplace.css";
 
 export const metadata: Metadata = {
   title: "WorkBit | Work. Complete. Earn.",

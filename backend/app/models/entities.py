@@ -278,6 +278,132 @@ class DepositRequest(Base):
     reviewer: Mapped[User | None] = relationship(foreign_keys=[reviewed_by])
 
 
+class MarketplaceCategory(Base):
+    __tablename__ = "marketplace_categories"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+    slug: Mapped[str] = mapped_column(String(96), unique=True, index=True)
+    description: Mapped[str] = mapped_column(String(500), default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    products: Mapped[list[MarketplaceProduct]] = relationship(back_populates="category")
+
+
+class MarketplaceProduct(Base):
+    __tablename__ = "marketplace_products"
+    __table_args__ = (
+        UniqueConstraint("category_id", "sku", name="uq_marketplace_product_category_sku"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    category_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("marketplace_categories.id", ondelete="RESTRICT"), index=True
+    )
+    sku: Mapped[str] = mapped_column(String(64), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    slug: Mapped[str] = mapped_column(String(180), unique=True, index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    image_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    currency: Mapped[str] = mapped_column(String(3), default="BDT")
+    stock_quantity: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    category: Mapped[MarketplaceCategory] = relationship(back_populates="products")
+
+
+class MarketplaceCart(Base):
+    __tablename__ = "marketplace_carts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship()
+    items: Mapped[list[MarketplaceCartItem]] = relationship(
+        back_populates="cart", cascade="all, delete-orphan"
+    )
+
+
+class MarketplaceCartItem(Base):
+    __tablename__ = "marketplace_cart_items"
+    __table_args__ = (UniqueConstraint("cart_id", "product_id", name="uq_marketplace_cart_product"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    cart_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("marketplace_carts.id", ondelete="CASCADE"), index=True
+    )
+    product_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("marketplace_products.id", ondelete="RESTRICT"), index=True
+    )
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    cart: Mapped[MarketplaceCart] = relationship(back_populates="items")
+    product: Mapped[MarketplaceProduct] = relationship()
+
+
+class MarketplaceOrder(Base):
+    __tablename__ = "marketplace_orders"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="RESTRICT"), index=True
+    )
+    affiliate_referrer_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    affiliate_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=Decimal("0.0500"))
+    affiliate_commission_bdt: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    affiliate_reward_amount: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
+    affiliate_exchange_rate: Mapped[Decimal | None] = mapped_column(Numeric(18, 8), nullable=True)
+    affiliate_reward_status: Mapped[str] = mapped_column(String(24), default="NOT_ELIGIBLE")
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    payment_method: Mapped[str] = mapped_column(String(32), default="COD")
+    payment_reference: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    delivery_fee: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    total: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    currency: Mapped[str] = mapped_column(String(3), default="BDT")
+    shipping_name: Mapped[str] = mapped_column(String(120))
+    shipping_phone: Mapped[str] = mapped_column(String(32))
+    shipping_address: Mapped[str] = mapped_column(String(500))
+    shipping_city: Mapped[str] = mapped_column(String(80))
+    customer_note: Mapped[str] = mapped_column(String(500), default="")
+    admin_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    user: Mapped[User] = relationship(foreign_keys=[user_id])
+    affiliate_referrer: Mapped[User | None] = relationship(foreign_keys=[affiliate_referrer_id])
+    items: Mapped[list[MarketplaceOrderItem]] = relationship(
+        back_populates="order", cascade="all, delete-orphan"
+    )
+
+
+class MarketplaceOrderItem(Base):
+    __tablename__ = "marketplace_order_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid)
+    order_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("marketplace_orders.id", ondelete="CASCADE"), index=True
+    )
+    product_id: Mapped[str] = mapped_column(String(36), index=True)
+    product_name: Mapped[str] = mapped_column(String(160))
+    sku: Mapped[str] = mapped_column(String(64))
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    quantity: Mapped[int] = mapped_column(Integer)
+    line_total: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    order: Mapped[MarketplaceOrder] = relationship(back_populates="items")
+
+
 class PaymentReference(Base):
     __tablename__ = "payment_references"
     __table_args__ = (

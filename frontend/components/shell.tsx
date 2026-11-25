@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   PackageCheck,
+  ShoppingBag,
   Settings,
   Sparkles,
   UserRound,
@@ -77,6 +78,7 @@ const pageTitles: Record<string, string> = {
   "/rewards": "Reward history",
   "/profile": "Profile",
   "/settings": "Settings",
+  "/marketplace": "Marketplace",
 };
 
 const navigation = [
@@ -85,6 +87,7 @@ const navigation = [
   { href: "/referrals", label: "Referrals", icon: Gift },
   { href: "/support", label: "Support", icon: UserRound },
   { href: "/packages", label: "Earning packages", icon: PackageCheck },
+  { href: "/marketplace", label: "Marketplace", icon: ShoppingBag },
   { href: "/ranks", label: "Ranks", icon: Award, prefetch: false },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/rewards", label: "Reward history", icon: Gift },

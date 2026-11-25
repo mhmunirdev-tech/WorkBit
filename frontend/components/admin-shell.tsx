@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
-import { Activity, ArrowDownToLine, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, Users, X } from "lucide-react";
+import { Activity, ArrowDownToLine, Banknote, ImagePlus, LayoutDashboard, LogOut, Menu, MessageCircle, PackageCheck, Settings2, ShieldAlert, ShieldCheck, ShoppingBag, Users, X } from "lucide-react";
 import { api } from "../lib/api";
 import { showToast } from "../lib/toast";
 import { Avatar, AvatarFallback } from "./ui/avatar";
@@ -52,6 +52,12 @@ const navigationGroups = [
     items: [
       { href: "/admin/packages", label: "Package settings", icon: Settings2 },
       { href: "/admin/banners", label: "Dashboard banners", icon: ImagePlus },
+    ],
+  },
+  {
+    label: "Marketplace",
+    items: [
+      { href: "/admin/marketplace", label: "Products & orders", icon: ShoppingBag },
     ],
   },
 ];
